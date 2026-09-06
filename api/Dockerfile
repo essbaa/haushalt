@@ -2,7 +2,7 @@
 # Zielimage, das nur die fertige Binärdatei enthält. Ergebnis: rund 15 MB statt
 # rund 900 MB — und ein Container ohne Shell, in dem es wenig zu übernehmen gibt.
 
-FROM golang:1.24-alpine AS build
+FROM golang:1.25-alpine AS build
 WORKDIR /src
 
 # Erst nur die Modul-Dateien kopieren und die Abhängigkeiten holen. Dieser

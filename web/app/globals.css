@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Ruhige, helle Grundfläche mit leicht grünlichem Grau — die Farbwelt aus dem
+   Konzept: soft, family-friendly, wenig Reiz. */
+:root {
+  --background: #f7f8f5;
+  --surface: #ffffff;
+  --foreground: #1b241e;
+  --muted: #77857b;
+  --line: #dbe3d9;
+  --accent: #2e6b58;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #131813;
+    --surface: #1b211b;
+    --foreground: #e8eee7;
+    --muted: #8b998d;
+    --line: #2f382f;
+    --accent: #6fc2a2;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

@@ -30,13 +30,13 @@ docker-build:
 	docker build --build-arg VERSION=$(VERSION) -t haushalt-api .
 
 .PHONY: docker-run
-docker-run: docker-build
-	docker run --rm -p 8080:8080 \
-		-e PORT=8080 \
-		-e APP_ENV=development \
-		-e ALLOWED_ORIGINS=http://localhost:3000 \
-		haushalt-api
+docker-run: docker-build ## Image bauen und starten, Umgebung aus .env
+	docker run --rm -p 8080:8080 --env-file .env haushalt-api
 
 .PHONY: health
 health: ## Gegen den laufenden Dienst prüfen
 	curl -sS localhost:8080/healthz | jq .
+
+.PHONY: deploy
+deploy: ## Nach Fly deployen, mit Commit-Kennung in der Binärdatei
+	fly deploy --build-arg VERSION=$(VERSION)
