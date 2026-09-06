@@ -1,0 +1,174 @@
+package planner
+
+import (
+	"sort"
+	"time"
+)
+
+// candidate ist eine Vorlage, die diese Woche dran ist, zusammen mit den Tagen,
+// an denen sie liegen darf. Ein Zwischenschritt, der das Paket nicht verlässt.
+type candidate struct {
+	tmpl TaskTemplate
+	// days sind die möglichen Tage in bevorzugter Reihenfolge.
+	days []Date
+	// deadline ist der letzte mögliche Tag; Nullwert heißt: keine echte Frist.
+	deadline Date
+}
+
+// urgency ist die Sortierschlüsselzahl: je kleiner, desto früher wird
+// zugeteilt. Harte Fristen zuerst, dann hohe Kopflast, dann lange Aufgaben —
+// große Brocken zuerst zu platzieren füllt die Woche besser aus.
+func (c candidate) urgency(week Week) int {
+	score := 0
+	if c.tmpl.Failure == FailureHard {
+		score -= 1000
+	}
+	if !c.deadline.IsZero() {
+		score += week.Monday().DaysUntil(c.deadline) * 10
+	} else {
+		score += 70
+	}
+	score -= int(c.tmpl.HeadLoad) * 20
+	score -= c.tmpl.DurationMin / 10
+	return score
+}
+
+// selectDue entscheidet, welche der geltenden Vorlagen in dieser Woche
+// auftauchen — und an welchen Tagen sie liegen dürfen.
+func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
+	var out []candidate
+	var skipped []Skipped
+
+	monday := in.Week.Monday()
+	sunday := monday.AddDays(6)
+	days := in.Week.Days()
+
+	for _, t := range templates {
+		last := in.History.lastDone(t.ID)
+		var cs []candidate
+
+		switch t.Rhythm.Type {
+		case RhythmFixed:
+			cs = dueFixed(t, days)
+		case RhythmWindow, RhythmTrigger, RhythmPhase:
+			cs = dueEvery(t, last, monday, sunday)
+		case RhythmSeason:
+			cs = dueSeason(t, last, monday, sunday)
+		}
+
+		if len(cs) == 0 {
+			skipped = append(skipped, Skipped{t.ID, t.Title, SkipNotDue})
+			continue
+		}
+		out = append(out, cs...)
+	}
+
+	sort.SliceStable(out, func(i, j int) bool {
+		ui, uj := out[i].urgency(in.Week), out[j].urgency(in.Week)
+		if ui != uj {
+			return ui < uj
+		}
+		return out[i].tmpl.ID < out[j].tmpl.ID
+	})
+	return out, skipped
+}
+
+// dueFixed: feste Wochentage. Jeder passende Tag ergibt eine eigene Aufgabe —
+// Abendessen kochen ist an fünf Werktagen fünfmal zu tun, nicht einmal.
+func dueFixed(t TaskTemplate, days [7]Date) []candidate {
+	var out []candidate
+	for _, d := range days {
+		for _, wd := range t.Rhythm.Weekdays {
+			if d.Weekday() == wd {
+				out = append(out, candidate{tmpl: t, days: []Date{d}, deadline: d})
+			}
+		}
+	}
+	return out
+}
+
+// dueEvery: Fenster, Auslöser und Phase teilen sich dieselbe Rechnung. Der
+// nächste Termin ergibt sich aus der letzten Erledigung plus dem gewünschten
+// Abstand; wer noch nie erledigt hat, ist ab Montag dran.
+// TODO(T2): Eine Vorlage mit kurzem Abstand — Wäsche alle drei Tage — wird
+// hier höchstens einmal pro Woche fällig. Richtig wäre eine Aufgabe je
+// fälligem Termin. Bewusst offen gelassen: Es ist die erste sinnvolle
+// Erweiterung und ein guter Einstieg in den Kern.
+func dueEvery(t TaskTemplate, last, monday, sunday Date) []candidate {
+	every := t.Rhythm.EveryDays
+	if every <= 0 {
+		every = 7
+	}
+	next := monday
+	if !last.IsZero() {
+		next = last.AddDays(every)
+	}
+	if next.After(sunday) {
+		return nil
+	}
+	start := next
+	if start.Before(monday) {
+		start = monday
+	}
+	var days []Date
+	for d := start; !d.After(sunday); d = d.AddDays(1) {
+		days = append(days, d)
+	}
+	c := candidate{tmpl: t, days: days}
+	if t.Failure == FailureHard {
+		c.deadline = sunday
+	}
+	return []candidate{c}
+}
+
+// dueSeason: die Vorlage muss in einem bestimmten Monat erledigt sein und
+// taucht LeadDays vorher auf. Der Vorlauf ist hier die eigentliche Leistung —
+// im Juli an die Ferienbetreuung zu denken ist das Problem, nicht das
+// Anmelden selbst.
+func dueSeason(t TaskTemplate, last, monday, sunday Date) []candidate {
+	target := nextMonthStart(t.Rhythm.Months, monday)
+	if target.IsZero() {
+		return nil
+	}
+	// Innerhalb eines Jahres vor dem Ziel schon erledigt: dann ist gut.
+	if !last.IsZero() && last.DaysUntil(target) < 300 {
+		return nil
+	}
+	appearFrom := target.AddDays(-t.LeadDays)
+	if appearFrom.After(sunday) {
+		return nil
+	}
+	start := appearFrom
+	if start.Before(monday) {
+		start = monday
+	}
+	last3 := target
+	if last3.After(sunday) {
+		last3 = sunday
+	}
+	var days []Date
+	for d := start; !d.After(last3); d = d.AddDays(1) {
+		days = append(days, d)
+	}
+	if len(days) == 0 {
+		return nil
+	}
+	return []candidate{{tmpl: t, days: days, deadline: target}}
+}
+
+// nextMonthStart ist der erste Tag des nächsten gelisteten Monats ab from.
+func nextMonthStart(months []time.Month, from Date) Date {
+	best := Date{}
+	for _, m := range months {
+		for _, year := range []int{from.Year, from.Year + 1} {
+			d := Date{Year: year, Month: m, Day: 1}
+			if d.Before(from) {
+				continue
+			}
+			if best.IsZero() || d.Before(best) {
+				best = d
+			}
+		}
+	}
+	return best
+}

@@ -1,0 +1,24 @@
+# Umgebung — niemals eingecheckt
+.env
+.env.*
+!.env.example
+
+# Go
+/api/bin/
+/api/tmp/
+*.test
+*.out
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+.vercel/
+
+# Editor und System
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
