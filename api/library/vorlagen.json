@@ -7,7 +7,10 @@
       "art": "ausfuehrung",
       "dauer_min": 8,
       "kopflast": 0,
-      "rhythmus": { "typ": "ausloeser", "alle_tage": 2 },
+      "rhythmus": {
+        "typ": "ausloeser",
+        "alle_tage": 2
+      },
       "zeitfenster": "morgens",
       "ab_alter": 8,
       "verteilung": "rotiert",
@@ -21,7 +24,12 @@
       "art": "ausfuehrung",
       "dauer_min": 5,
       "kopflast": 1,
-      "rhythmus": { "typ": "fest", "wochentage": ["di"] },
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "di"
+        ]
+      },
       "zeitfenster": "abends",
       "ab_alter": 8,
       "verteilung": "rotiert",
@@ -35,7 +43,14 @@
       "art": "ausfuehrung",
       "dauer_min": 40,
       "kopflast": 2,
-      "rhythmus": { "typ": "fest", "wochentage": ["mo", "mi", "fr"] },
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "mi",
+          "fr"
+        ]
+      },
       "zeitfenster": "abends",
       "ab_alter": 14,
       "verteilung": "rotiert",
@@ -49,10 +64,15 @@
       "art": "ausfuehrung",
       "dauer_min": 27,
       "kopflast": 1,
-      "rhythmus": { "typ": "ausloeser", "alle_tage": 3 },
+      "rhythmus": {
+        "typ": "ausloeser",
+        "alle_tage": 3
+      },
       "ab_alter": 12,
       "verteilung": "rotiert",
-      "kette": ["t-waesche-zusammenlegen"],
+      "kette": [
+        "t-waesche-legen"
+      ],
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
@@ -63,7 +83,10 @@
       "art": "ausfuehrung",
       "dauer_min": 20,
       "kopflast": 0,
-      "rhythmus": { "typ": "fenster", "alle_tage": 14 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
       "ab_alter": 11,
       "verteilung": "rotiert",
       "ausfall": "weich",
@@ -76,7 +99,10 @@
       "art": "ausfuehrung",
       "dauer_min": 25,
       "kopflast": 0,
-      "rhythmus": { "typ": "fenster", "alle_tage": 7 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
       "ab_alter": 10,
       "verteilung": "rotiert",
       "ausfall": "weich",
@@ -89,7 +115,10 @@
       "art": "ausfuehrung",
       "dauer_min": 35,
       "kopflast": 0,
-      "rhythmus": { "typ": "fenster", "alle_tage": 7 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
       "ab_alter": 12,
       "verteilung": "rotiert",
       "ausfall": "weich",
@@ -102,13 +131,15 @@
       "art": "ausfuehrung",
       "dauer_min": 55,
       "kopflast": 1,
-      "rhythmus": { "typ": "fenster", "alle_tage": 7 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
       "ab_alter": 16,
       "verteilung": "rotiert",
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
-
     {
       "id": "t-vorraete",
       "titel": "Vorräte prüfen und Einkaufsliste schreiben",
@@ -116,9 +147,14 @@
       "art": "organisation",
       "dauer_min": 12,
       "kopflast": 3,
-      "rhythmus": { "typ": "fenster", "alle_tage": 7 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
       "verteilung": "nur_erwachsene",
-      "kette": ["t-wocheneinkauf"],
+      "kette": [
+        "t-wocheneinkauf"
+      ],
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
@@ -129,9 +165,14 @@
       "art": "organisation",
       "dauer_min": 6,
       "kopflast": 2,
-      "rhythmus": { "typ": "fenster", "alle_tage": 30 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 30
+      },
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "betreuung": "kita" },
+      "gilt_fuer": {
+        "betreuung": "kita"
+      },
       "ausfall": "hart",
       "quelle": "kuratiert"
     },
@@ -142,9 +183,16 @@
       "art": "organisation",
       "dauer_min": 10,
       "kopflast": 2,
-      "rhythmus": { "typ": "fenster", "alle_tage": 30 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 30
+      },
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "kind_alter_min": 1, "kind_alter_max": 6, "betreuung": "kita" },
+      "gilt_fuer": {
+        "kind_alter_min": 1,
+        "kind_alter_max": 6,
+        "betreuung": "kita"
+      },
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
@@ -155,7 +203,10 @@
       "art": "organisation",
       "dauer_min": 8,
       "kopflast": 3,
-      "rhythmus": { "typ": "fenster", "alle_tage": 180 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 180
+      },
       "verteilung": "nur_erwachsene",
       "ausfall": "weich",
       "quelle": "kuratiert"
@@ -167,10 +218,16 @@
       "art": "organisation",
       "dauer_min": 30,
       "kopflast": 3,
-      "rhythmus": { "typ": "ausloeser", "alle_tage": 45 },
+      "rhythmus": {
+        "typ": "ausloeser",
+        "alle_tage": 45
+      },
       "vorlauf_tage": 7,
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "kind_alter_min": 2, "kind_alter_max": 12 },
+      "gilt_fuer": {
+        "kind_alter_min": 2,
+        "kind_alter_max": 12
+      },
       "ausfall": "hart",
       "quelle": "kuratiert"
     },
@@ -181,10 +238,19 @@
       "art": "organisation",
       "dauer_min": 30,
       "kopflast": 3,
-      "rhythmus": { "typ": "saison", "monate": [4, 10] },
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          4,
+          10
+        ]
+      },
       "vorlauf_tage": 14,
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "kind_alter_min": 0, "kind_alter_max": 14 },
+      "gilt_fuer": {
+        "kind_alter_min": 0,
+        "kind_alter_max": 14
+      },
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
@@ -195,10 +261,17 @@
       "art": "organisation",
       "dauer_min": 10,
       "kopflast": 2,
-      "rhythmus": { "typ": "saison", "monate": [10] },
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          10
+        ]
+      },
       "vorlauf_tage": 21,
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "auto": true },
+      "gilt_fuer": {
+        "auto": true
+      },
       "ausfall": "weich",
       "quelle": "kuratiert"
     },
@@ -209,10 +282,18 @@
       "art": "organisation",
       "dauer_min": 25,
       "kopflast": 3,
-      "rhythmus": { "typ": "saison", "monate": [1] },
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          1
+        ]
+      },
       "vorlauf_tage": 60,
       "verteilung": "nur_erwachsene",
-      "gilt_fuer": { "kind_alter_min": 3, "kind_alter_max": 14 },
+      "gilt_fuer": {
+        "kind_alter_min": 3,
+        "kind_alter_max": 14
+      },
       "ausfall": "hart",
       "quelle": "kuratiert"
     },
@@ -223,7 +304,12 @@
       "art": "organisation",
       "dauer_min": 10,
       "kopflast": 2,
-      "rhythmus": { "typ": "saison", "monate": [3] },
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          3
+        ]
+      },
       "vorlauf_tage": 14,
       "ab_alter": 14,
       "verteilung": "rotiert",
@@ -237,10 +323,797 @@
       "art": "ausfuehrung",
       "dauer_min": 45,
       "kopflast": 0,
-      "rhythmus": { "typ": "fenster", "alle_tage": 10 },
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 10
+      },
       "ab_alter": 14,
       "verteilung": "rotiert",
-      "gilt_fuer": { "garten": true },
+      "gilt_fuer": {
+        "garten": true
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-essensplan",
+      "titel": "Essensplan für die Woche machen",
+      "kategorie": "kueche",
+      "art": "organisation",
+      "dauer_min": 20,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "verteilung": "nur_erwachsene",
+      "kette": [
+        "t-wocheneinkauf"
+      ],
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-tisch-decken",
+      "titel": "Tisch decken und abräumen",
+      "kategorie": "kueche",
+      "art": "ausfuehrung",
+      "dauer_min": 6,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ]
+      },
+      "zeitfenster": "abends",
+      "ab_alter": 5,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kuehlschrank",
+      "titel": "Kühlschrank ausräumen und wischen",
+      "kategorie": "kueche",
+      "art": "ausfuehrung",
+      "dauer_min": 20,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 12,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kueche-gruendlich",
+      "titel": "Küche gründlich putzen",
+      "kategorie": "kueche",
+      "art": "ausfuehrung",
+      "dauer_min": 40,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-waesche-legen",
+      "titel": "Wäsche zusammenlegen und einräumen",
+      "kategorie": "waesche",
+      "art": "ausfuehrung",
+      "dauer_min": 20,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "ausloeser",
+        "alle_tage": 3
+      },
+      "ab_alter": 8,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-bettwaesche",
+      "titel": "Bettwäsche waschen",
+      "kategorie": "waesche",
+      "art": "ausfuehrung",
+      "dauer_min": 15,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 12,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-boden-wischen",
+      "titel": "Böden wischen",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 25,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "ab_alter": 12,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-staubwischen",
+      "titel": "Staub wischen",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 15,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "ab_alter": 10,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-fenster-putzen",
+      "titel": "Fenster putzen",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 60,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 90
+      },
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-treppenhaus",
+      "titel": "Treppenhaus kehren",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 20,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 12,
+      "gilt_fuer": {
+        "wohnform": "haus"
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-keller",
+      "titel": "Keller und Abstellraum aufräumen",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 90,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          3,
+          10
+        ]
+      },
+      "vorlauf_tage": 14,
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-drogerie",
+      "titel": "Drogerieartikel auffüllen",
+      "kategorie": "vorrat",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 21
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-getraenke",
+      "titel": "Getränke nachkaufen",
+      "kategorie": "vorrat",
+      "art": "ausfuehrung",
+      "dauer_min": 20,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-brotdose",
+      "titel": "Brotdose vorbereiten",
+      "kategorie": "kind",
+      "art": "ausfuehrung",
+      "dauer_min": 8,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ]
+      },
+      "zeitfenster": "morgens",
+      "gilt_fuer": {
+        "kind_alter_min": 2,
+        "kind_alter_max": 14
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kita-tasche",
+      "titel": "Kita-Tasche packen",
+      "kategorie": "kind",
+      "art": "ausfuehrung",
+      "dauer_min": 5,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "so"
+        ]
+      },
+      "zeitfenster": "abends",
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "betreuung": "kita"
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-vorsorge",
+      "titel": "Vorsorgeuntersuchung beim Kinderarzt buchen",
+      "kategorie": "kind",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 180
+      },
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "kind_alter_min": 0,
+        "kind_alter_max": 6
+      },
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-elternabend",
+      "titel": "Elternabend im Kalender nachhalten",
+      "kategorie": "kind",
+      "art": "organisation",
+      "dauer_min": 10,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 60
+      },
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "kind_alter_min": 1,
+        "kind_alter_max": 18
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-schliesszeiten",
+      "titel": "Schließzeiten der Betreuung prüfen",
+      "kategorie": "kind",
+      "art": "organisation",
+      "dauer_min": 20,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          1,
+          6
+        ]
+      },
+      "vorlauf_tage": 30,
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "betreuung": "kita"
+      },
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-schulmaterial",
+      "titel": "Schulmaterial nachkaufen",
+      "kategorie": "kind",
+      "art": "organisation",
+      "dauer_min": 40,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          8
+        ]
+      },
+      "vorlauf_tage": 21,
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "betreuung": "schule"
+      },
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-hausaufgaben",
+      "titel": "Hausaufgaben begleiten",
+      "kategorie": "kind",
+      "art": "ausfuehrung",
+      "dauer_min": 30,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do"
+        ]
+      },
+      "zeitfenster": "abends",
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "betreuung": "schule",
+        "kind_alter_min": 6,
+        "kind_alter_max": 12
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-aussortieren",
+      "titel": "Kleidung und Spielzeug aussortieren",
+      "kategorie": "kind",
+      "art": "organisation",
+      "dauer_min": 60,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          4,
+          10
+        ]
+      },
+      "vorlauf_tage": 14,
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "kind_alter_min": 0,
+        "kind_alter_max": 16
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-hausarzt",
+      "titel": "Check-up beim Hausarzt buchen",
+      "kategorie": "termine",
+      "art": "organisation",
+      "dauer_min": 10,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 365
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-friseur",
+      "titel": "Friseurtermine machen",
+      "kategorie": "termine",
+      "art": "organisation",
+      "dauer_min": 10,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 60
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-post",
+      "titel": "Post und Rechnungen durchsehen",
+      "kategorie": "verwaltung",
+      "art": "organisation",
+      "dauer_min": 20,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-vertraege",
+      "titel": "Verträge und Abos durchgehen",
+      "kategorie": "verwaltung",
+      "art": "organisation",
+      "dauer_min": 45,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          11
+        ]
+      },
+      "vorlauf_tage": 21,
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-steuer",
+      "titel": "Steuerunterlagen zusammenstellen",
+      "kategorie": "verwaltung",
+      "art": "organisation",
+      "dauer_min": 120,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          5
+        ]
+      },
+      "vorlauf_tage": 45,
+      "verteilung": "nur_erwachsene",
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-versicherungen",
+      "titel": "Versicherungen prüfen",
+      "kategorie": "verwaltung",
+      "art": "organisation",
+      "dauer_min": 60,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          2
+        ]
+      },
+      "vorlauf_tage": 21,
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-heizung",
+      "titel": "Heizkörper entlüften",
+      "kategorie": "wartung",
+      "art": "ausfuehrung",
+      "dauer_min": 20,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          10
+        ]
+      },
+      "vorlauf_tage": 14,
+      "ab_alter": 16,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-dunstabzug",
+      "titel": "Filter der Dunstabzugshaube reinigen",
+      "kategorie": "wartung",
+      "art": "ausfuehrung",
+      "dauer_min": 15,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 60
+      },
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-inspektion",
+      "titel": "Inspektion für das Auto buchen",
+      "kategorie": "wartung",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 365
+      },
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "auto": true
+      },
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-fahrrad",
+      "titel": "Fahrräder warten",
+      "kategorie": "wartung",
+      "art": "ausfuehrung",
+      "dauer_min": 45,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          3
+        ]
+      },
+      "vorlauf_tage": 14,
+      "ab_alter": 14,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-gelber-sack",
+      "titel": "Gelben Sack rausstellen",
+      "kategorie": "aussen",
+      "art": "ausfuehrung",
+      "dauer_min": 5,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "ab_alter": 10,
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-pflanzen",
+      "titel": "Pflanzen gießen",
+      "kategorie": "aussen",
+      "art": "ausfuehrung",
+      "dauer_min": 10,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 3
+      },
+      "ab_alter": 6,
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-laub",
+      "titel": "Laub harken",
+      "kategorie": "aussen",
+      "art": "ausfuehrung",
+      "dauer_min": 45,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          11
+        ]
+      },
+      "vorlauf_tage": 14,
+      "ab_alter": 12,
+      "gilt_fuer": {
+        "garten": true
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-garten-winterfest",
+      "titel": "Garten winterfest machen",
+      "kategorie": "aussen",
+      "art": "ausfuehrung",
+      "dauer_min": 90,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "saison",
+        "monate": [
+          11
+        ]
+      },
+      "vorlauf_tage": 21,
+      "ab_alter": 16,
+      "gilt_fuer": {
+        "garten": true
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-gassi",
+      "titel": "Mit dem Hund rausgehen",
+      "kategorie": "aussen",
+      "art": "ausfuehrung",
+      "dauer_min": 30,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr",
+          "sa",
+          "so"
+        ]
+      },
+      "ab_alter": 12,
+      "gilt_fuer": {
+        "haustier_art": "hund"
+      },
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-katzenklo",
+      "titel": "Katzenklo säubern",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 10,
+      "kopflast": 0,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 2
+      },
+      "ab_alter": 10,
+      "gilt_fuer": {
+        "haustier_art": "katze"
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-tierarzt",
+      "titel": "Tierarzttermin machen",
+      "kategorie": "termine",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 365
+      },
+      "verteilung": "nur_erwachsene",
+      "gilt_fuer": {
+        "haustier": true
+      },
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-geburtstage",
+      "titel": "Geburtstage im nächsten Monat vorbereiten",
+      "kategorie": "sozial",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 3,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 30
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kontakt-familie",
+      "titel": "Bei den Eltern melden",
+      "kategorie": "sozial",
+      "art": "organisation",
+      "dauer_min": 20,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 14
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-verabredung",
+      "titel": "Verabredung mit Freunden ausmachen",
+      "kategorie": "sozial",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 21
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-paarzeit",
+      "titel": "Zeit zu zweit einplanen",
+      "kategorie": "sozial",
+      "art": "organisation",
+      "dauer_min": 15,
+      "kopflast": 2,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 21
+      },
+      "verteilung": "nur_erwachsene",
+      "ausfall": "weich",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-zimmer",
+      "titel": "Eigenes Zimmer aufräumen",
+      "kategorie": "reinigung",
+      "art": "ausfuehrung",
+      "dauer_min": 25,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "ab_alter": 8,
+      "ausfall": "weich",
+      "quelle": "kuratiert",
+      "verteilung": "nur_kinder",
+      "je_person": true
+    },
+    {
+      "id": "t-kleineinkauf",
+      "titel": "Kleineinkauf erledigen",
+      "kategorie": "vorrat",
+      "art": "ausfuehrung",
+      "dauer_min": 25,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fenster",
+        "alle_tage": 7
+      },
+      "ab_alter": 14,
       "ausfall": "weich",
       "quelle": "kuratiert"
     }

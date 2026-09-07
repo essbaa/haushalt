@@ -11,9 +11,13 @@ VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 run: ## Dienst lokal starten
 	go run -ldflags="-X main.version=$(VERSION)" ./cmd/server
 
+# Beispielhaushalt für `make plan`. Überschreibbar:
+#   make plan HAUSHALT=library/beispiele/familie-b.json
+HAUSHALT ?= library/beispiele/familie-a.json
+
 .PHONY: plan
 plan: ## Wochenplan auf der Konsole ausgeben
-	go run ./cmd/plan --woche 2026-W38 --uebersprungen
+	go run ./cmd/plan --haushalt $(HAUSHALT) --woche 2026-W38 --uebersprungen
 
 .PHONY: test
 test: ## Alle Tests

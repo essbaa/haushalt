@@ -53,7 +53,9 @@ jobs:
       - name: Vorlagen-Bibliothek einlesen
         # Fängt eine kaputte Vorlage in vorlagen.json ab, bevor sie deployt
         # wird. Der Fehler nennt die betroffene Vorlage beim Namen.
-        run: go run ./cmd/plan --woche 2026-W38 > /dev/null
+        run: |
+          go run ./cmd/plan --haushalt library/beispiele/familie-a.json --woche 2026-W38 > /dev/null
+          go run ./cmd/plan --haushalt library/beispiele/familie-b.json --woche 2026-W38 > /dev/null
 
   deploy:
     name: deployen

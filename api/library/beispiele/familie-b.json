@@ -1,0 +1,82 @@
+{
+  "id": "hh-familie-b",
+  "name": "Familie B",
+  "wohnform": "haus",
+  "auto": true,
+  "garten": true,
+  "haustiere": ["hund"],
+
+  "mitglieder": [
+    {
+      "id": "m-nadja",
+      "name": "Nadja",
+      "rolle": "planend",
+      "alter": 46,
+      "kapazitaet_minuten": [50, 50, 50, 50, 50, 150, 150]
+    },
+    {
+      "id": "m-tarek",
+      "name": "Tarek",
+      "rolle": "planend",
+      "alter": 48,
+      "kapazitaet_minuten": [45, 45, 45, 45, 60, 180, 120]
+    },
+    {
+      "id": "m-jonas",
+      "name": "Jonas",
+      "rolle": "ausfuehrend",
+      "alter": 15,
+      "betreuung": "schule",
+      "kapazitaet_minuten": [30, 30, 30, 30, 45, 90, 90]
+    },
+    {
+      "id": "m-mia",
+      "name": "Mia",
+      "rolle": "ausfuehrend",
+      "alter": 13,
+      "betreuung": "schule",
+      "kapazitaet_minuten": [25, 25, 25, 25, 40, 80, 80]
+    }
+  ],
+
+  "historie": {
+    "zuletzt_erledigt": {
+      "t-bad": "2026-09-07",
+      "t-staubsaugen": "2026-09-10",
+      "t-boden-wischen": "2026-09-08",
+      "t-staubwischen": "2026-09-09",
+      "t-betten": "2026-09-06",
+      "t-wocheneinkauf": "2026-09-09",
+      "t-waesche": "2026-09-11",
+      "t-waesche-legen": "2026-09-12",
+      "t-spuelmaschine": "2026-09-13",
+      "t-muell": "2026-09-08",
+      "t-katzenklo": "2026-09-12",
+      "t-zimmer": "2026-09-06",
+      "t-pflanzen": "2026-09-12",
+      "t-rasen": "2026-09-05",
+      "t-post": "2026-09-06",
+      "t-essensplan": "2026-09-07",
+      "t-kontakt-familie": "2026-08-30",
+      "t-geburtstage": "2026-08-20"
+    },
+    "zuletzt_zugeteilt": {
+      "t-bad": "m-nadja",
+      "t-staubsaugen": "m-jonas",
+      "t-boden-wischen": "m-tarek",
+      "t-betten": "m-mia",
+      "t-wocheneinkauf": "m-tarek",
+      "t-waesche": "m-nadja",
+      "t-waesche-legen": "m-mia",
+      "t-spuelmaschine": "m-jonas",
+      "t-muell": "m-jonas",
+      "t-zimmer": "m-mia",
+      "t-rasen": "m-tarek",
+      "t-post": "m-nadja",
+      "t-essensplan": "m-nadja",
+      "t-gassi": "m-jonas"
+    },
+    "abgewaehlt": ["t-fenster-putzen"],
+    "feste_person": {}
+  }
+}
