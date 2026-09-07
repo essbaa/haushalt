@@ -299,6 +299,133 @@ func TestStartdichteBegrenztKopfarbeitNichtHandarbeit(t *testing.T) {
 	}
 }
 
+// -------------------------------------------------------- Mehrfach fällig
+
+// waesche ist die Vorlage, an der sich zeigt, ob der Planer Abstände wirklich
+// versteht: alle drei Tage, also mehr als einmal pro Woche.
+func waesche() TaskTemplate {
+	return TaskTemplate{
+		ID: "t-waesche", Title: "Wäsche waschen",
+		Category: CatLaundry, Kind: KindDo,
+		DurationMin: 15, HeadLoad: HeadLoadLow,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 3},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+}
+
+// TestFensterVorlageWirdMehrfachFaellig prüft die Regel selbst: Eine Vorlage
+// mit einem Abstand kürzer als eine Woche ist mehrfach fällig, und jeder
+// Termin bekommt ein eigenes Fenster — sonst landen zwei Ladungen Wäsche am
+// selben Tag.
+//
+// Die Fenster dürfen sich nicht überlappen; sie reichen jeweils bis zum Tag
+// vor dem nächsten Termin, das letzte bis Sonntag.
+func TestFensterVorlageWirdMehrfachFaellig(t *testing.T) {
+	monday := MustDate("2026-09-14")
+	sunday := MustDate("2026-09-20")
+
+	tests := []struct {
+		name  string
+		every int
+		last  string
+		want  [][2]string // je Termin: erster und letzter erlaubter Tag
+	}{
+		{
+			name:  "alle drei Tage, noch nie erledigt",
+			every: 3,
+			want:  [][2]string{{"2026-09-14", "2026-09-16"}, {"2026-09-17", "2026-09-19"}, {"2026-09-20", "2026-09-20"}},
+		},
+		{
+			name:  "alle zwei Tage",
+			every: 2,
+			want:  [][2]string{{"2026-09-14", "2026-09-15"}, {"2026-09-16", "2026-09-17"}, {"2026-09-18", "2026-09-19"}, {"2026-09-20", "2026-09-20"}},
+		},
+		{
+			name:  "woechentlich bleibt ein einziger Termin",
+			every: 7,
+			want:  [][2]string{{"2026-09-14", "2026-09-20"}},
+		},
+		{
+			name:  "am Freitag zuletzt erledigt",
+			every: 3,
+			last:  "2026-09-11",
+			want:  [][2]string{{"2026-09-14", "2026-09-16"}, {"2026-09-17", "2026-09-19"}, {"2026-09-20", "2026-09-20"}},
+		},
+		{
+			// Sechs Wochen nicht gewaschen: Der Planer holt nicht nach, was
+			// liegen geblieben ist. Er beginnt am Montag neu. Ein Plan, der
+			// Versäumtes aufstapelt, wird gelöscht statt abgearbeitet.
+			name:  "laengst ueberfaellig haeuft sich nicht an",
+			every: 3,
+			last:  "2026-08-01",
+			want:  [][2]string{{"2026-09-14", "2026-09-16"}, {"2026-09-17", "2026-09-19"}, {"2026-09-20", "2026-09-20"}},
+		},
+		{
+			name:  "erst naechste Woche wieder dran",
+			every: 30,
+			last:  "2026-09-13",
+			want:  nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v := waesche()
+			v.Rhythm.EveryDays = tc.every
+			var last Date
+			if tc.last != "" {
+				last = MustDate(tc.last)
+			}
+
+			got := dueEvery(v, last, monday, sunday)
+
+			if len(got) != len(tc.want) {
+				t.Fatalf("%d Termine, erwartet %d", len(got), len(tc.want))
+			}
+			for i, c := range got {
+				if len(c.days) == 0 {
+					t.Fatalf("Termin %d hat kein einziges erlaubtes Datum", i)
+				}
+				erster, letzter := c.days[0].String(), c.days[len(c.days)-1].String()
+				if erster != tc.want[i][0] || letzter != tc.want[i][1] {
+					t.Errorf("Termin %d: Fenster %s..%s, erwartet %s..%s",
+						i, erster, letzter, tc.want[i][0], tc.want[i][1])
+				}
+			}
+		})
+	}
+}
+
+// TestWaescheLandetAnDreiVerschiedenenTagen prüft dasselbe eine Ebene höher:
+// Was im Plan ankommt, muss auch verteilt sein — drei Termine an drei Tagen,
+// nicht dreimal am Montag, und nicht alles bei derselben Person.
+func TestWaescheLandetAnDreiVerschiedenenTagen(t *testing.T) {
+	got, err := Plan(basisEingabe(familieMitKleinkind(), waesche()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tasks) != 3 {
+		t.Fatalf("%d Aufgaben, erwartet 3 — alle drei Tage heißt dreimal in dieser Woche (übersprungen: %+v)",
+			len(got.Tasks), got.Skipped)
+	}
+
+	tage := map[Date]int{}
+	personen := map[string]int{}
+	for _, task := range got.Tasks {
+		tage[task.Day]++
+		personen[task.AssigneeID]++
+	}
+	if len(tage) != 3 {
+		t.Errorf("die drei Ladungen liegen auf %d Tagen: %v", len(tage), tage)
+	}
+	if len(personen) < 2 {
+		t.Errorf("dreimal Wäsche landet komplett bei einer Person: %v", personen)
+	}
+}
+
 // ------------------------------------------------------------------ Kopflast
 
 func TestKopflastZaehltInDerBilanz(t *testing.T) {

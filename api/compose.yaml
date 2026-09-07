@@ -1,0 +1,25 @@
+# Entwicklungsdatenbank. Nur für lokal — in Produktion läuft Neon hinter Fly.
+#
+# Die Zugangsdaten sind absichtlich trivial: Der Port ist an 127.0.0.1
+# gebunden, es kommt niemand von außen dran, und ein Passwort, das man sich
+# merken muss, ist hier nur im Weg.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: haushalt
+      POSTGRES_PASSWORD: haushalt
+      POSTGRES_DB: haushalt
+    ports:
+      # Nur auf dem eigenen Rechner erreichbar, nicht im WLAN.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U haushalt -d haushalt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

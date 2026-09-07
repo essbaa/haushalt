@@ -25,6 +25,23 @@ check: ## Was auch die CI prüft
 	go vet ./...
 	go test -race ./...
 
+.PHONY: db-up
+db-up: ## Entwicklungsdatenbank starten (Postgres im Container)
+	docker compose up -d db
+
+.PHONY: db-down
+db-down: ## Entwicklungsdatenbank anhalten — die Daten bleiben im Volume
+	docker compose down
+
+.PHONY: db-reset
+db-reset: ## Entwicklungsdatenbank wegwerfen und neu anlegen
+	docker compose down -v
+	docker compose up -d db
+
+.PHONY: db-shell
+db-shell: ## psql in der Entwicklungsdatenbank
+	docker compose exec db psql -U haushalt -d haushalt
+
 .PHONY: docker-build
 docker-build:
 	docker build --build-arg VERSION=$(VERSION) -t haushalt-api .
