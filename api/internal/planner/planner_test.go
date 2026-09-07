@@ -294,8 +294,11 @@ func TestStartdichteBegrenztKopfarbeitNichtHandarbeit(t *testing.T) {
 	if org > 3 {
 		t.Fatalf("%d Organisationsaufgaben im Plan, erlaubt sind 3", org)
 	}
-	if do != 2 {
-		t.Fatalf("%d Ausführungsaufgaben im Plan, erwartet 2 — die Dichtegrenze darf sie nicht treffen", do)
+	// Fünf: Bad einmal, Spülmaschine alle zwei Tage — also viermal in der
+	// Woche. Vor der Fenster-Reparatur waren es zwei, weil jede Vorlage
+	// höchstens einen Termin ergab.
+	if do != 5 {
+		t.Fatalf("%d Ausführungsaufgaben im Plan, erwartet 5 — die Dichtegrenze darf sie nicht treffen", do)
 	}
 }
 

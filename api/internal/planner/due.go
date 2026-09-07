@@ -90,15 +90,25 @@ func dueFixed(t TaskTemplate, days [7]Date) []candidate {
 // dueEvery: Fenster, Auslöser und Phase teilen sich dieselbe Rechnung. Der
 // nächste Termin ergibt sich aus der letzten Erledigung plus dem gewünschten
 // Abstand; wer noch nie erledigt hat, ist ab Montag dran.
-// TODO(T2): Eine Vorlage mit kurzem Abstand — Wäsche alle drei Tage — wird
-// hier höchstens einmal pro Woche fällig. Richtig wäre eine Aufgabe je
-// fälligem Termin. Bewusst offen gelassen: Es ist die erste sinnvolle
-// Erweiterung und ein guter Einstieg in den Kern.
+//
+// Ist der Abstand kürzer als eine Woche, gibt es mehrere Termine: Wäsche alle
+// drei Tage ist von Montag bis Sonntag dreimal fällig, nicht einmal.
+//
+// Jeder Termin bekommt sein eigenes Fenster — vom Termin bis zum Tag vor dem
+// nächsten, der letzte bis Sonntag. Diese Trennung ist der eigentliche Punkt:
+// Ohne sie sucht die Zuteilung für jeden Termin denselben frühesten freien
+// Tag, und drei Ladungen Wäsche landen alle am Montag.
+//
+// Was liegen geblieben ist, wird nicht nachgeholt. Wer sechs Wochen nicht
+// gewaschen hat, bekommt diese Woche drei Termine, nicht vierzehn. Das ist
+// eine Produktentscheidung und keine Rechnung: Ein Plan, der Versäumtes
+// aufstapelt, wird gelöscht statt abgearbeitet.
 func dueEvery(t TaskTemplate, last, monday, sunday Date) []candidate {
 	every := t.Rhythm.EveryDays
 	if every <= 0 {
 		every = 7
 	}
+
 	next := monday
 	if !last.IsZero() {
 		next = last.AddDays(every)
@@ -106,19 +116,35 @@ func dueEvery(t TaskTemplate, last, monday, sunday Date) []candidate {
 	if next.After(sunday) {
 		return nil
 	}
-	start := next
-	if start.Before(monday) {
-		start = monday
+	// Überfällig: Der Termin liegt in der Vergangenheit. Die Woche beginnt neu,
+	// die verpassten Termine dazwischen entstehen nicht.
+	if next.Before(monday) {
+		next = monday
 	}
-	var days []Date
-	for d := start; !d.After(sunday); d = d.AddDays(1) {
-		days = append(days, d)
+
+	var out []candidate
+	for start := next; !start.After(sunday); start = start.AddDays(every) {
+		end := start.AddDays(every - 1)
+		if end.After(sunday) {
+			end = sunday
+		}
+		c := candidate{tmpl: t, days: daysBetween(start, end)}
+		if t.Failure == FailureHard {
+			c.deadline = end
+		}
+		out = append(out, c)
 	}
-	c := candidate{tmpl: t, days: days}
-	if t.Failure == FailureHard {
-		c.deadline = sunday
+	return out
+}
+
+// daysBetween sind alle Tage von from bis to, beide eingeschlossen. Liegt to
+// vor from, ist das Ergebnis leer.
+func daysBetween(from, to Date) []Date {
+	var out []Date
+	for d := from; !d.After(to); d = d.AddDays(1) {
+		out = append(out, d)
 	}
-	return []candidate{c}
+	return out
 }
 
 // dueSeason: die Vorlage muss in einem bestimmten Monat erledigt sein und
@@ -146,10 +172,7 @@ func dueSeason(t TaskTemplate, last, monday, sunday Date) []candidate {
 	if last3.After(sunday) {
 		last3 = sunday
 	}
-	var days []Date
-	for d := start; !d.After(last3); d = d.AddDays(1) {
-		days = append(days, d)
-	}
+	days := daysBetween(start, last3)
 	if len(days) == 0 {
 		return nil
 	}
