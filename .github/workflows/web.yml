@@ -7,10 +7,12 @@ on:
     branches: [main]
     paths:
       - 'web/**'
+      - 'openapi.yaml'
       - '.github/workflows/web.yml'
   pull_request:
     paths:
       - 'web/**'
+      - 'openapi.yaml'
       - '.github/workflows/web.yml'
 
 concurrency:

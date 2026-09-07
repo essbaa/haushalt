@@ -1,0 +1,292 @@
+openapi: 3.0.3
+
+info:
+  title: Haushalt API
+  version: 0.1.0
+  description: |
+    Der Vertrag zwischen der Web-App und dem Go-Dienst.
+
+    Diese Datei ist die Wahrheit: Go-Typen und Server-Rümpfe werden daraus
+    erzeugt (`make generate` in `api/`), der TypeScript-Client ebenso
+    (`npm run generate` in `web/`). Wer ein Feld ändert, ändert es hier —
+    alles andere folgt.
+
+    Feldnamen sind deutsch und in Kleinschreibung mit Unterstrich, wie in
+    der Vorlagen-Bibliothek. Die Domäne ist deutsch; eine halb übersetzte
+    API wäre in beiden Sprachen falsch.
+
+    `/healthz` steht bewusst nicht hier. Es gehört der Plattform, nicht dem
+    Vertrag: Fly ruft es auf, kein Client.
+
+servers:
+  - url: https://haushalt-api.fly.dev
+    description: Produktion
+  - url: http://localhost:8080
+    description: lokal
+
+tags:
+  - name: plan
+    description: Wochenpläne
+  - name: meta
+    description: Auskunft über den laufenden Dienst
+
+paths:
+  /api/version:
+    get:
+      tags: [meta]
+      summary: Welcher Stand läuft gerade
+      operationId: getVersion
+      responses:
+        "200":
+          description: die Commit-Kennung des laufenden Dienstes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Version"
+
+  /api/haushalte:
+    get:
+      tags: [plan]
+      summary: Verfügbare Haushalte
+      description: |
+        Bis zum Datenmodell (T5) sind das die Beispielhaushalte aus dem Repo.
+        Die Form der Antwort ändert sich dadurch nicht.
+      operationId: listHaushalte
+      responses:
+        "200":
+          description: alle sichtbaren Haushalte
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Haushalt"
+
+  /api/haushalte/{haushaltId}/plan/{woche}:
+    get:
+      tags: [plan]
+      summary: Wochenplan eines Haushalts
+      operationId: getWochenplan
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          description: Kennung des Haushalts, z. B. `familie-a`
+          schema:
+            type: string
+        - name: woche
+          in: path
+          required: true
+          description: ISO-Kalenderwoche, Montag als erster Tag
+          schema:
+            type: string
+            pattern: '^\d{4}-W\d{2}$'
+            example: 2026-W38
+      responses:
+        "200":
+          description: der berechnete Plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wochenplan"
+        "400":
+          description: die Woche ist nicht lesbar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+components:
+  schemas:
+
+    Version:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: kurze Commit-Kennung oder "dev"
+          example: f18a432
+
+    Fehler:
+      type: object
+      required: [fehler]
+      properties:
+        fehler:
+          type: string
+          description: für Menschen lesbar, deutsch
+          example: die Woche "2026-W99" liegt außerhalb von 1..53
+
+    Haushalt:
+      type: object
+      required: [id, name, mitglieder]
+      properties:
+        id:
+          type: string
+          example: familie-a
+        name:
+          type: string
+          example: Familie A
+        mitglieder:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mitglied"
+
+    Mitglied:
+      type: object
+      required: [id, name, rolle]
+      properties:
+        id:
+          type: string
+          example: m-anna
+        name:
+          type: string
+          example: Anna
+        rolle:
+          type: string
+          enum: [planend, ausfuehrend, betreut]
+          description: |
+            `planend` plant und führt aus, `ausfuehrend` führt nur aus,
+            `betreut` erzeugt Arbeit ohne welche zu übernehmen.
+
+    Wochenplan:
+      type: object
+      required: [woche, haushalt, aufgaben, bilanz, uebersprungen]
+      properties:
+        woche:
+          type: string
+          example: 2026-W38
+        haushalt:
+          $ref: "#/components/schemas/Haushalt"
+        aufgaben:
+          type: array
+          items:
+            $ref: "#/components/schemas/Aufgabe"
+        bilanz:
+          type: array
+          description: eine Zeile je Person, die Aufgaben übernehmen kann
+          items:
+            $ref: "#/components/schemas/Bilanz"
+        uebersprungen:
+          type: array
+          description: |
+            Was nicht im Plan steht, mit Grund. Ohne dieses Feld könnte die
+            App nicht erklären, warum etwas fehlt.
+          items:
+            $ref: "#/components/schemas/Uebersprungen"
+
+    Aufgabe:
+      type: object
+      required:
+        [vorlage_id, titel, kategorie, art, tag, zeitfenster, dauer_min, kopflast, zustaendig, begruendung]
+      properties:
+        vorlage_id:
+          type: string
+          example: t-bad
+        titel:
+          type: string
+          example: Bad putzen
+        kategorie:
+          $ref: "#/components/schemas/Kategorie"
+        art:
+          type: string
+          enum: [ausfuehrung, organisation]
+        tag:
+          type: string
+          format: date
+          x-go-type: string
+          description: |
+            Kalendertag ohne Uhrzeit und ohne Zeitzone (ADR-0002). Über die
+            Grenze geht die ISO-Zeichenkette; die Anzeige rechnet sie in
+            Europe/Berlin um.
+          example: "2026-09-19"
+        zeitfenster:
+          type: string
+          enum: [egal, morgens, abends]
+        dauer_min:
+          type: integer
+          minimum: 1
+          example: 35
+        kopflast:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Planungs- und Erinnerungsaufwand, unabhängig von der Dauer
+        zustaendig:
+          type: string
+          description: Kennung des Mitglieds
+          example: m-ben
+        frist:
+          type: string
+          format: date
+          x-go-type: string
+          nullable: true
+          description: gesetzt, wenn die Aufgabe eine echte Frist hat
+        begruendung:
+          $ref: "#/components/schemas/Begruendung"
+
+    Begruendung:
+      type: object
+      required: [code]
+      description: |
+        Maschinenlesbar. Das Sprachmodell formuliert daraus später einen Satz
+        für die Oberfläche — es erfindet keine Begründung, es übersetzt eine.
+      properties:
+        code:
+          type: string
+          enum:
+            [rotation, ausgleich, feste_person, einzige_moeglichkeit, frist, eigene_aufgabe]
+        zuletzt_bei:
+          type: string
+          nullable: true
+          description: bei `rotation` die Person, die die Aufgabe zuletzt hatte
+
+    Bilanz:
+      type: object
+      required:
+        [mitglied_id, minuten, kopflast, gewichtet, kapazitaet_minuten, auslastung_prozent, aufgaben]
+      properties:
+        mitglied_id:
+          type: string
+        minuten:
+          type: integer
+        kopflast:
+          type: integer
+        gewichtet:
+          type: integer
+          description: Minuten + Kopflast × 15
+        kapazitaet_minuten:
+          type: integer
+          description: verfügbare Minuten der ganzen Woche
+        auslastung_prozent:
+          type: integer
+          description: |
+            Verplante Minuten im Verhältnis zur verfügbaren Zeit. Gerechnet
+            wird mit den reinen Minuten — Kopflast kostet Aufmerksamkeit,
+            aber keine Uhrzeit (ADR-0004).
+        aufgaben:
+          type: integer
+
+    Uebersprungen:
+      type: object
+      required: [vorlage_id, titel, grund]
+      properties:
+        vorlage_id:
+          type: string
+        titel:
+          type: string
+        grund:
+          type: string
+          enum:
+            [gilt_nicht, abgewaehlt, nicht_faellig, startdichte, keine_kapazitaet, niemand_geeignet]
+
+    Kategorie:
+      type: string
+      enum:
+        [kueche, waesche, reinigung, kind, vorrat, termine, verwaltung, wartung, sozial, aussen]

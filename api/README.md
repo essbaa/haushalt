@@ -10,6 +10,17 @@ make test
 make docker-run   # baut das Image und startet es
 ```
 
+Der Vertrag liegt eine Ebene höher: [`../openapi.yaml`](../openapi.yaml).
+Er ist die Wahrheit — Typen und Server-Rümpfe entstehen daraus:
+
+```bash
+go get -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest  # einmalig
+make generate     # erzeugt internal/httpapi/openapi/openapi.gen.go
+```
+
+Der erzeugte Code liegt im Repo, damit ein Bau keinen Generator braucht. Dass
+er zur Spezifikation passt, prüft die CI mit `git diff --exit-code`.
+
 ```
 api/
 ├─ cmd/

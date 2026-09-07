@@ -1,0 +1,14 @@
+# Steuert oapi-codegen. Aufruf: make generate
+#
+# strict-server erzeugt eine Schnittstelle mit typisierten Ein- und Ausgaben:
+# Der Handler bekommt geparste Parameter und gibt einen Antworttyp zurück,
+# statt selbst in einen ResponseWriter zu schreiben. Damit bricht der Bau,
+# sobald die Spezifikation und der Code auseinanderlaufen — das ist der ganze
+# Zweck der Übung.
+package: openapi
+output: internal/httpapi/openapi/openapi.gen.go
+
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true

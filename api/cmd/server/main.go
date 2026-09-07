@@ -17,6 +17,7 @@ import (
 
 	"github.com/zakaria/haushalt/api/internal/config"
 	"github.com/zakaria/haushalt/api/internal/httpapi"
+	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/storage"
 
 	// Datenbanktreiber. Leerer Import: Wir benutzen aus dem Paket nichts
@@ -84,9 +85,22 @@ func run() error {
 		}
 	}
 
+	// Die Bibliothek und die Beispielhaushalte werden einmal beim Start
+	// gelesen. Schlägt das fehl, startet der Dienst nicht: Ein Dienst, der
+	// ohne seine Daten hochkommt, meldet später 500 statt jetzt einen
+	// verständlichen Fehler.
+	catalog, err := library.LoadCatalog(cfg.LibraryDir)
+	if err != nil {
+		return err
+	}
+	log.Info("bibliothek gelesen",
+		"verzeichnis", cfg.LibraryDir,
+		"vorlagen", len(catalog.Templates()),
+		"haushalte", len(catalog.Households()))
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: httpapi.New(cfg, log, db, version).Handler(),
+		Handler: httpapi.New(cfg, log, db, version, catalog).Handler(),
 
 		// Ohne Zeitgrenzen kann ein einziger langsamer Client eine Verbindung
 		// dauerhaft belegen. http.ListenAndServe ohne diese Werte ist der

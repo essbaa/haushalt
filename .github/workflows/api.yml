@@ -9,10 +9,12 @@ on:
     branches: [main]
     paths:
       - 'api/**'
+      - 'openapi.yaml'
       - '.github/workflows/api.yml'
   pull_request:
     paths:
       - 'api/**'
+      - 'openapi.yaml'
       - '.github/workflows/api.yml'
 
 concurrency:
@@ -35,6 +37,15 @@ jobs:
           # Liest die Version aus go.mod — so gibt es nur eine Wahrheit.
           go-version-file: api/go.mod
           cache-dependency-path: api/go.sum
+
+      - name: Erzeugter Code passt zur Spezifikation
+        # openapi.yaml ist die Wahrheit. Wer die Spezifikation ändert und
+        # vergisst, make generate laufen zu lassen, bekommt hier einen Diff —
+        # und nicht drei Tage später einen Client, der Felder erwartet, die
+        # der Server nicht schickt.
+        run: |
+          go tool oapi-codegen -config oapi.yaml ../openapi.yaml
+          git diff --exit-code -- internal/httpapi/openapi
 
       - name: Formatierung
         # gofmt -l listet unformatierte Dateien. Gibt es welche, soll der Lauf

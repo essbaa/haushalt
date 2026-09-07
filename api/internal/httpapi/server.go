@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/zakaria/haushalt/api/internal/config"
+	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
 )
 
 // Pinger ist alles, was sagen kann, ob es erreichbar ist.
@@ -32,10 +33,13 @@ type Server struct {
 	db Pinger
 	// version wird beim Bauen hineingereicht (siehe Makefile).
 	version string
+	// plans liefert die Wochenpläne. Heute aus dem Repo, ab T5 aus der
+	// Datenbank.
+	plans Plans
 }
 
-func New(cfg config.Config, log *slog.Logger, db Pinger, version string) *Server {
-	return &Server{cfg: cfg, log: log, db: db, version: version}
+func New(cfg config.Config, log *slog.Logger, db Pinger, version string, plans Plans) *Server {
+	return &Server{cfg: cfg, log: log, db: db, version: version, plans: plans}
 }
 
 // Handler baut den Router und legt die Middleware darum.
@@ -46,17 +50,52 @@ func New(cfg config.Config, log *slog.Logger, db Pinger, version string) *Server
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
+	// /healthz gehört der Plattform, nicht dem Vertrag: Fly ruft es auf, kein
+	// Client. Deshalb steht es nicht in openapi.yaml und wird hier von Hand
+	// eingehängt.
 	mux.HandleFunc("GET /healthz", s.handleHealth)
-	mux.HandleFunc("GET /api/version", s.handleVersion)
+
+	// Alles andere kommt aus der Spezifikation. NewStrictHandler übersetzt
+	// zwischen den erzeugten Antworttypen und dem ResponseWriter; die beiden
+	// Fehlerfunktionen sorgen dafür, dass auch Fehler als JSON herauskommen —
+	// die Vorgabe des Generators schreibt reinen Text und würde den Vertrag
+	// brechen.
+	strict := openapi.NewStrictHandlerWithOptions(
+		api{plans: s.plans, version: s.version},
+		nil,
+		openapi.StrictHTTPServerOptions{
+			RequestErrorHandlerFunc:  s.badRequest,
+			ResponseErrorHandlerFunc: s.serverError,
+		},
+	)
+	handler := openapi.HandlerWithOptions(strict, openapi.StdHTTPServerOptions{
+		BaseRouter:       mux,
+		ErrorHandlerFunc: s.badRequest,
+	})
 
 	// Die Reihenfolge ist von außen nach innen zu lesen: Eine Anfrage läuft
 	// erst durch recoverPanic, dann durch logging, dann durch cors, dann in
 	// den Mux.
 	return recoverPanic(s.log)(
 		logging(s.log)(
-			cors(s.cfg.AllowedOrigins)(mux),
+			cors(s.cfg.AllowedOrigins)(handler),
 		),
 	)
+}
+
+// badRequest beantwortet, was der Client falsch gemacht hat.
+func (s *Server) badRequest(w http.ResponseWriter, _ *http.Request, err error) {
+	writeJSON(w, s.log, http.StatusBadRequest, openapi.Fehler{Fehler: err.Error()})
+}
+
+// serverError beantwortet, was wir falsch gemacht haben.
+//
+// Der Fehlertext geht ins Log, nicht an den Client: Interne Meldungen können
+// Pfade, Abfragen oder Namen enthalten, die niemanden draußen etwas angehen.
+func (s *Server) serverError(w http.ResponseWriter, r *http.Request, err error) {
+	s.log.Error("anfrage fehlgeschlagen", "pfad", r.URL.Path, "fehler", err)
+	writeJSON(w, s.log, http.StatusInternalServerError,
+		openapi.Fehler{Fehler: "im dienst ist ein fehler aufgetreten"})
 }
 
 type healthResponse struct {
@@ -95,10 +134,6 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, s.log, code, res)
-}
-
-func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, s.log, http.StatusOK, map[string]string{"version": s.version})
 }
 
 // writeJSON ist der einzige Ort, an dem eine Antwort geschrieben wird.

@@ -23,6 +23,14 @@ plan: ## Wochenplan auf der Konsole ausgeben
 test: ## Alle Tests
 	go test ./...
 
+.PHONY: generate
+generate: ## Typen und Server-Rümpfe aus ../openapi.yaml erzeugen
+	go tool oapi-codegen -config oapi.yaml ../openapi.yaml
+
+.PHONY: verify-generate
+verify-generate: generate ## Prüfen, dass der erzeugte Code zur Spezifikation passt
+	git diff --exit-code -- internal/httpapi/openapi
+
 .PHONY: check
 check: ## Was auch die CI prüft
 	gofmt -l . | tee /dev/stderr | (! read)

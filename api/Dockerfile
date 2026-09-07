@@ -26,6 +26,11 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /
 COPY --from=build /out/server /server
 
+# Die Vorlagen und die Beispielhaushalte sind Daten, keine Binärdatei — sie
+# müssen mit ins Image. WORKDIR ist /, deshalb findet der Dienst sie unter dem
+# Vorgabepfad "library" ohne weitere Konfiguration.
+COPY --from=build /src/library /library
+
 # Nur Dokumentation — Fly nutzt die PORT-Variable, nicht diese Zeile.
 EXPOSE 8080
 USER nonroot:nonroot

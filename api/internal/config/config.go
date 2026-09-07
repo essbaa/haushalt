@@ -29,6 +29,10 @@ type Config struct {
 	// AllowedOrigins sind die Web-Adressen, die den Dienst aufrufen dürfen.
 	// Kommagetrennt, damit Vorschau-Domains später dazukommen können.
 	AllowedOrigins []string
+
+	// LibraryDir ist das Verzeichnis mit vorlagen.json und beispiele/.
+	// Relativ zum Arbeitsverzeichnis: lokal "library", im Container "/library".
+	LibraryDir string
 }
 
 const (
@@ -47,6 +51,7 @@ func Load() (Config, error) {
 		Port:           get("PORT", "8080"),
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
 		AllowedOrigins: splitAndTrim(get("ALLOWED_ORIGINS", "http://localhost:3000")),
+		LibraryDir:     get("LIBRARY_DIR", "library"),
 	}
 
 	var problems []error
