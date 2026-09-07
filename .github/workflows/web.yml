@@ -42,6 +42,14 @@ jobs:
       # package-lock.json und schlägt fehl, wenn der nicht zu package.json passt.
       - run: npm ci
 
+      - name: Erzeugte Typen passen zur Spezifikation
+        # Dieselbe Prüfung wie auf der Go-Seite: openapi.yaml ist die Wahrheit.
+        # Ein Feld, das im Vertrag umbenannt wurde, fällt hier auf und nicht
+        # erst im Browser.
+        run: |
+          npm run generate
+          git diff --exit-code -- lib/api-types.ts
+
       - run: npm run lint
 
       - name: Build
