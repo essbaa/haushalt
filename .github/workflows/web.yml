@@ -1,0 +1,50 @@
+# Prüft die Web-App. Ausgeliefert wird sie von Vercel selbst — deshalb gibt es
+# hier keinen Deploy-Schritt.
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/web.yml'
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  build:
+    name: prüfen
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # npm ci statt npm install: installiert exakt den Stand aus dem
+      # package-lock.json und schlägt fehl, wenn der nicht zu package.json passt.
+      - run: npm ci
+
+      - run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          # Zur Bauzeit eingesetzt. Muss auf den Fly-Dienst zeigen, damit der
+          # Build hier dem auf Vercel entspricht.
+          NEXT_PUBLIC_API_URL: https://haushalt-api.fly.dev

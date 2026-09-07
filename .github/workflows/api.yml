@@ -1,0 +1,70 @@
+# Prüft und deployt den Go-Dienst.
+#
+# Der Pfadfilter sorgt dafür, dass eine reine Frontend-Änderung hier nichts
+# auslöst — ein Repo, zwei Dienste, zwei unabhängige Auslieferungen.
+name: api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/api.yml'
+  pull_request:
+    paths:
+      - 'api/**'
+      - '.github/workflows/api.yml'
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: api
+
+jobs:
+  test:
+    name: prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Liest die Version aus go.mod — so gibt es nur eine Wahrheit.
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Formatierung
+        # gofmt -l listet unformatierte Dateien. Gibt es welche, soll der Lauf
+        # rot werden — deshalb die explizite Prüfung statt eines nackten gofmt.
+        run: |
+          unformatiert=$(gofmt -l .)
+          if [ -n "$unformatiert" ]; then
+            echo "Nicht formatiert:"; echo "$unformatiert"; exit 1
+          fi
+
+      - run: go vet ./...
+
+      - name: Tests
+        run: go test -race ./...
+
+      - name: Vorlagen-Bibliothek einlesen
+        # Fängt eine kaputte Vorlage in vorlagen.json ab, bevor sie deployt
+        # wird. Der Fehler nennt die betroffene Vorlage beim Namen.
+        run: go run ./cmd/plan --woche 2026-W38 > /dev/null
+
+  deploy:
+    name: deployen
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Fly deploy
+        run: flyctl deploy --remote-only --build-arg VERSION="${GITHUB_SHA::7}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
