@@ -12,7 +12,7 @@ export default function Page() {
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-10 px-6 py-16">
       <header className="space-y-3">
         <p className="font-mono text-xs uppercase tracking-widest text-muted">
-          Tag 0 · Durchstich
+          Tag 0 · Durchstichhhh
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-balance">
           Haushalt
@@ -31,8 +31,8 @@ export default function Page() {
       </section>
 
       <footer className="border-t border-line pt-6 text-sm leading-relaxed text-muted">
-        Diese Seite ruft den Go-Dienst wirklich auf. Steht oben
-        &bdquo;API erreichbar&ldquo;, sind zwei Deployments, zwei Sprachen, CORS und die
+        Diese Seite ruft den Go-Dienst wirklich auf. Steht oben &bdquo;API
+        erreichbar&ldquo;, sind zwei Deployments, zwei Sprachen, CORS und die
         Datenbank auf einmal bewiesen.
       </footer>
     </main>

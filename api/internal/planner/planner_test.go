@@ -351,7 +351,7 @@ func TestWeekMonday(t *testing.T) {
 		want string
 	}{
 		{Week{2026, 1}, "2025-12-29"},
-		{Week{2026, 38}, "2026-09-14"},
+		{Week{2026, 38}, "2026-09-15"},
 		{Week{2026, 40}, "2026-09-28"},
 	}
 	for _, tc := range tests {

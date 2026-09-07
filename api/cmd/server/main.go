@@ -58,18 +58,30 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	// Die Datenbank ist an T0 optional.
+	// Datenbank verbinden.
+	//
+	// In Produktion ist eine nicht erreichbare Datenbank ein Startfehler — ein
+	// Dienst, der ohne sie hochkommt, liefert stillschweigend falsche Antworten.
+	// In der Entwicklung startet er trotzdem: Wenn das Netz gerade Port 5432
+	// blockiert, willst du weiter an der Oberfläche arbeiten können. /healthz
+	// sagt in dem Fall die Wahrheit und antwortet mit 503.
 	var db httpapi.Pinger
-	if cfg.DatabaseURL != "" {
+	switch {
+	case cfg.DatabaseURL == "":
+		log.Warn("DATABASE_URL ist leer — dienst läuft ohne datenbank")
+	default:
 		pool, err := storage.Open(ctx, cfg.DatabaseURL)
-		if err != nil {
+		switch {
+		case err == nil:
+			defer pool.Close()
+			db = pool
+			log.Info("datenbank verbunden")
+		case cfg.IsDevelopment():
+			log.Warn("datenbank nicht erreichbar — dienst startet trotzdem", "fehler", err)
+			db = unavailableDB{err}
+		default:
 			return err
 		}
-		defer pool.Close()
-		db = pool
-		log.Info("datenbank verbunden")
-	} else {
-		log.Warn("DATABASE_URL ist leer — dienst läuft ohne datenbank")
 	}
 
 	srv := &http.Server{
@@ -130,3 +142,10 @@ func newLogger(cfg config.Config) *slog.Logger {
 	}
 	return slog.New(slog.NewJSONHandler(os.Stdout, opts))
 }
+
+// unavailableDB steht für eine Datenbank, zu der beim Start keine Verbindung
+// zustande kam. Sie erfüllt httpapi.Pinger und gibt denselben Fehler zurück,
+// damit /healthz "nicht erreichbar" meldet statt "nicht konfiguriert".
+type unavailableDB struct{ err error }
+
+func (u unavailableDB) PingContext(context.Context) error { return u.err }
