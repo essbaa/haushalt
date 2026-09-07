@@ -160,6 +160,11 @@ const (
 	DistRotate     Distribution = "rotiert"
 	DistFixed      Distribution = "feste_person"
 	DistAdultsOnly Distribution = "nur_erwachsene"
+	// DistChildrenOnly ist das Gegenstück zu DistAdultsOnly: Aufgaben, die
+	// ausdrücklich den Kindern gehören. Ohne diesen Wert landet „eigenes
+	// Zimmer aufräumen" bei einem Achtundvierzigjährigen, sobald seine
+	// Auslastung gerade die niedrigste ist.
+	DistChildrenOnly Distribution = "nur_kinder"
 )
 
 // Failure beschreibt, was passiert, wenn die Aufgabe liegen bleibt. Steuert,
@@ -242,6 +247,10 @@ type Conditions struct {
 	RequiresCar  bool
 	RequiresYard bool
 	RequiresPet  bool
+	// RequiresPetKind grenzt auf eine Tierart ein ("hund", "katze"). Leer
+	// heißt: irgendein Tier genügt. Ohne dieses Feld steht das Katzenklo im
+	// Plan eines Haushalts mit Hund.
+	RequiresPetKind string
 	// RequiresHome ist leer, wenn die Wohnform egal ist.
 	RequiresHome Home
 }
@@ -267,6 +276,12 @@ type TaskTemplate struct {
 	// MinAge gilt für Aufgaben, die auch Kinder übernehmen dürfen.
 	MinAge       int
 	Distribution Distribution
+
+	// PerPerson macht aus einem Termin eine Aufgabe je berechtigter Person,
+	// fest an sie gebunden. Für alles, was jedem selbst gehört: das eigene
+	// Zimmer, die eigene Wäsche, die eigene Schultasche. Rotation ergibt dort
+	// keinen Sinn — niemand räumt abwechselnd das Zimmer eines anderen auf.
+	PerPerson bool
 
 	AppliesTo Conditions
 

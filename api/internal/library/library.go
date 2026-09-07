@@ -40,6 +40,7 @@ type templateDTO struct {
 	Slot        string       `json:"zeitfenster" yaml:"zeitfenster"`
 	MinAge      int          `json:"ab_alter" yaml:"ab_alter"`
 	Dist        string       `json:"verteilung" yaml:"verteilung"`
+	PerPerson   bool         `json:"je_person" yaml:"je_person"`
 	AppliesTo   conditionDTO `json:"gilt_fuer" yaml:"gilt_fuer"`
 	ChainNext   []string     `json:"kette" yaml:"kette"`
 	Failure     string       `json:"ausfall" yaml:"ausfall"`
@@ -60,6 +61,7 @@ type conditionDTO struct {
 	Car         bool   `json:"auto" yaml:"auto"`
 	Yard        bool   `json:"garten" yaml:"garten"`
 	Pet         bool   `json:"haustier" yaml:"haustier"`
+	PetKind     string `json:"haustier_art" yaml:"haustier_art"`
 	Home        string `json:"wohnform" yaml:"wohnform"`
 }
 
@@ -137,6 +139,7 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 		Slot:         parseSlot(d.Slot),
 		MinAge:       d.MinAge,
 		Distribution: dist,
+		PerPerson:    d.PerPerson,
 		AppliesTo:    cond,
 		ChainNext:    d.ChainNext,
 		Failure:      parseFailure(d.Failure),
@@ -146,9 +149,10 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 
 func (c conditionDTO) toConditions() (planner.Conditions, error) {
 	out := planner.Conditions{
-		RequiresCar:  c.Car,
-		RequiresYard: c.Yard,
-		RequiresPet:  c.Pet,
+		RequiresCar:     c.Car,
+		RequiresYard:    c.Yard,
+		RequiresPet:     c.Pet,
+		RequiresPetKind: c.PetKind,
 	}
 	if c.Care != "" {
 		care, err := parseCare(c.Care)
@@ -352,6 +356,8 @@ func parseDistribution(s string) (planner.Distribution, error) {
 		return planner.DistFixed, nil
 	case "nur_erwachsene":
 		return planner.DistAdultsOnly, nil
+	case "nur_kinder":
+		return planner.DistChildrenOnly, nil
 	}
 	return "", fmt.Errorf("verteilung %q ist unbekannt", s)
 }

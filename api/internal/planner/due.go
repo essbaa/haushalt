@@ -13,6 +13,9 @@ type candidate struct {
 	days []Date
 	// deadline ist der letzte mögliche Tag; Nullwert heißt: keine echte Frist.
 	deadline Date
+	// pinned bindet den Termin an eine Person (PerPerson-Vorlagen). Leer
+	// heißt: die Zuteilung entscheidet.
+	pinned string
 }
 
 // urgency ist die Sortierschlüsselzahl: je kleiner, desto früher wird
@@ -60,6 +63,9 @@ func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
 			skipped = append(skipped, Skipped{t.ID, t.Title, SkipNotDue})
 			continue
 		}
+		if t.PerPerson {
+			cs = perPerson(cs, eligibleMembers(t, in))
+		}
 		out = append(out, cs...)
 	}
 
@@ -71,6 +77,27 @@ func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
 		return out[i].tmpl.ID < out[j].tmpl.ID
 	})
 	return out, skipped
+}
+
+// perPerson macht aus jedem Termin eine Aufgabe je Person, fest an sie
+// gebunden. Aus einem „Zimmer aufräumen" werden zwei, wenn zwei Kinder im
+// Haushalt leben — und keines der beiden räumt das Zimmer des anderen.
+//
+// Das vervielfacht die Last bewusst: Zwei Kinder bedeuten zwei Aufgaben, nicht
+// eine, die zwischen ihnen wandert. In der Bilanz taucht sie bei beiden auf,
+// und das ist richtig so.
+func perPerson(cs []candidate, members []Member) []candidate {
+	if len(members) == 0 {
+		return nil
+	}
+	out := make([]candidate, 0, len(cs)*len(members))
+	for _, c := range cs {
+		for _, m := range members {
+			c.pinned = m.ID
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // dueFixed: feste Wochentage. Jeder passende Tag ergibt eine eigene Aufgabe —

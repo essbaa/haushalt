@@ -8,6 +8,21 @@ type state struct {
 	remaining [7]int // freie Minuten je Wochentag, Index 0 = Montag
 	count     [7]int // bereits zugeteilte Aufgaben je Wochentag
 	weighted  int    // Minuten + Kopflast × HeadLoadMinutes
+	capacity  int    // verfügbare Minuten der ganzen Woche
+}
+
+// utilization ist die Auslastung in Promille: Last im Verhältnis zu dem, was
+// diese Person überhaupt an Zeit hat.
+//
+// Verglichen wird die Auslastung und nicht die absolute Last. Sonst bekommt
+// eine Dreizehnjährige mit 300 verfügbaren Minuten genauso viel aufgeladen wie
+// ihre Mutter mit 550 — und ist damit ausgebucht, während die Mutter die halbe
+// Woche frei hat.
+func (s *state) utilization() int {
+	if s.capacity <= 0 {
+		return 1 << 30
+	}
+	return s.weighted * 1000 / s.capacity
 }
 
 // assign verteilt die fälligen Aufgaben auf Personen und Tage.
@@ -42,6 +57,10 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 
 	for _, c := range cands {
 		eligible := eligibleMembers(c.tmpl, in)
+		// Gehört der Termin einer bestimmten Person, gibt es nichts zu wählen.
+		if c.pinned != "" {
+			eligible = onlyMember(eligible, c.pinned)
+		}
 		if len(eligible) == 0 {
 			skipped = append(skipped, Skipped{c.tmpl.ID, c.tmpl.Title, SkipNoOneEligible})
 			continue
@@ -74,8 +93,14 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 				Deadline:    c.deadline,
 				Reason:      reasonFor(c.tmpl, in, m, eligible, previous),
 			}
+			if c.pinned != "" {
+				task.Reason = Reason{Code: ReasonOwn}
+			}
 			charge(st, day, task, in.Limits)
-			recent[c.tmpl.ID] = m.ID
+			// Personengebundene Termine nehmen nicht an der Rotation teil.
+			if c.pinned == "" {
+				recent[c.tmpl.ID] = m.ID
+			}
 			tasks = append(tasks, task)
 			placed = true
 			break
@@ -93,15 +118,15 @@ func newStates(h Household) map[string]*state {
 		if !m.CanPerform() {
 			continue
 		}
-		out[m.ID] = &state{member: m, remaining: m.CapacityMinutes}
+		out[m.ID] = &state{member: m, remaining: m.CapacityMinutes, capacity: weeklyCapacity(m)}
 	}
 	return out
 }
 
 // rankMembers bringt die in Frage kommenden Personen in die Reihenfolge, in
 // der sie gefragt werden: erst die, die die Aufgabe zuletzt nicht hatten, dann
-// die mit der geringsten gewichteten Last, zuletzt nach ID — damit das
-// Ergebnis bei Gleichstand reproduzierbar bleibt.
+// die mit der geringsten Auslastung, zuletzt nach ID — damit das Ergebnis bei
+// Gleichstand reproduzierbar bleibt.
 func rankMembers(eligible []Member, states map[string]*state, previous string) []Member {
 	out := make([]Member, len(eligible))
 	copy(out, eligible)
@@ -119,9 +144,19 @@ func rankMembers(eligible []Member, states map[string]*state, previous string) [
 	return out
 }
 
+// onlyMember reduziert die Liste auf genau eine Person, falls sie dabei ist.
+func onlyMember(members []Member, id string) []Member {
+	for _, m := range members {
+		if m.ID == id {
+			return []Member{m}
+		}
+	}
+	return nil
+}
+
 func loadOf(states map[string]*state, id string) int {
 	if st, ok := states[id]; ok {
-		return st.weighted
+		return st.utilization()
 	}
 	return 1 << 30
 }

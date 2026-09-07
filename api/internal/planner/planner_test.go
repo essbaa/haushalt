@@ -442,6 +442,379 @@ func TestKopflastZaehltInDerBilanz(t *testing.T) {
 	}
 }
 
+// ------------------------------------------------------------------ Ausgleich
+
+// TestZweiterDurchgangGleichtAus beschreibt den Fall aus ADR-0003 in Zahlen.
+//
+// Drei Aufgaben, zwei Erwachsene, keine Historie — und eine Verteilung, die
+// aufgehen kann: zwei Organisationsaufgaben zu je 10 Minuten mit Kopflast 3
+// (gewichtet je 10 + 3×15 = 55) und eine Putzaufgabe über 110 Minuten. Zusammen
+// 220 gewichtete Minuten, also 110 für jeden.
+//
+// Der gierige Durchgang allein kommt auf 165 zu 55: Er verteilt die beiden
+// kleinen Aufgaben auf beide Personen und legt die große danach auf die, die
+// zufällig zuerst dran war. Erst ein Tausch macht daraus 110 zu 110.
+func TestZweiterDurchgangGleichtAus(t *testing.T) {
+	org := func(id string) TaskTemplate {
+		return TaskTemplate{
+			ID: id, Title: "Organisation " + id,
+			Category: CatAdmin, Kind: KindOrg,
+			DurationMin: 10, HeadLoad: HeadLoadHigh,
+			Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+			Distribution: DistAdultsOnly,
+			Failure:      FailureSoft,
+			Source:       SourceCurated,
+		}
+	}
+	putzen := TaskTemplate{
+		ID: "t-grossputz", Title: "Wohnung gründlich putzen",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 110, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+
+	got, err := Plan(basisEingabe(familieMitKleinkind(), org("t-org-a"), org("t-org-b"), putzen))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tasks) != 3 {
+		t.Fatalf("%d Aufgaben, erwartet 3 (übersprungen: %+v)", len(got.Tasks), got.Skipped)
+	}
+
+	for _, l := range got.Balance {
+		if l.Weighted != 110 {
+			t.Errorf("%s trägt %d gewichtete Minuten, erwartet 110 — die Verteilung geht auf, der Planer findet sie nur nicht",
+				l.MemberID, l.Weighted)
+		}
+	}
+}
+
+// TestAusgleichRespektiertRotation stellt sicher, dass der zweite Durchgang
+// die wichtigere Regel nicht überfährt. Anna hatte das Bad zuletzt; auch wenn
+// ein Tausch die Last gleichmäßiger machen würde, darf es nicht zu ihr
+// zurückwandern.
+func TestAusgleichRespektiertRotation(t *testing.T) {
+	klein := TaskTemplate{
+		ID: "t-klein", Title: "Küche wischen",
+		Category: CatKitchen, Kind: KindDo,
+		DurationMin: 10, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+
+	in := basisEingabe(familieMitKleinkind(), bad(), klein)
+	in.History = History{LastAssignee: map[string]string{"t-bad": "m-anna"}}
+
+	got, err := Plan(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, task := range got.Tasks {
+		if task.TemplateID == "t-bad" && task.AssigneeID == "m-anna" {
+			t.Fatalf("das Bad ist zu Anna zurückgetauscht worden — Rotation geht vor Ausgleich")
+		}
+	}
+}
+
+// TestAusgleichHaeuftKeineTermineDerselbenVorlageAn ist die Regressionsprüfung
+// zu einem Fehler, den die Tests nicht gefunden haben — er stand im Wochenplan
+// auf der Konsole: Anna kochte an allen drei Abenden, weil der Ausgleich das
+// zusammengeführt hatte, was die Zuteilung getrennt hatte.
+//
+// Der Aufbau hier ist so gewählt, dass der Tausch verlockend ist: Anna trägt
+// 180 gewichtete Minuten, Ben 70. Zöge das Kochen vom Mittwoch zu Anna und der
+// Großputz zu Ben, stünde es 140 zu 110 — deutlich gleichmäßiger. Trotzdem darf
+// es nicht passieren.
+func TestAusgleichHaeuftKeineTermineDerselbenVorlageAn(t *testing.T) {
+	kochen := TaskTemplate{
+		ID: "t-kochen", Title: "Abendessen kochen",
+		Category: CatKitchen, Kind: KindDo,
+		DurationMin: 40, HeadLoad: HeadLoadMid,
+		Rhythm:       Rhythm{Type: RhythmFixed, Weekdays: []time.Weekday{time.Monday, time.Wednesday}},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+	gross := TaskTemplate{
+		ID: "t-grossputz", Title: "Wohnung gründlich putzen",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 110, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+
+	in := basisEingabe(familieMitKleinkind(), kochen, gross)
+	tasks := []PlannedTask{
+		{TemplateID: "t-kochen", Title: kochen.Title, Kind: KindDo, Day: MustDate("2026-09-14"),
+			DurationMin: 40, HeadLoad: HeadLoadMid, AssigneeID: "m-anna"},
+		{TemplateID: "t-kochen", Title: kochen.Title, Kind: KindDo, Day: MustDate("2026-09-16"),
+			DurationMin: 40, HeadLoad: HeadLoadMid, AssigneeID: "m-ben"},
+		{TemplateID: "t-grossputz", Title: gross.Title, Kind: KindDo, Day: MustDate("2026-09-19"),
+			DurationMin: 110, HeadLoad: HeadLoadNone, AssigneeID: "m-anna"},
+	}
+
+	got := rebalance(in, tasks)
+
+	proPerson := map[string]int{}
+	for _, task := range got {
+		if task.TemplateID == "t-kochen" {
+			proPerson[task.AssigneeID]++
+		}
+	}
+	for id, n := range proPerson {
+		if n > 1 {
+			t.Fatalf("%s kocht %d von 2 Abenden — der Ausgleich hat die Rotation innerhalb der Woche überfahren", id, n)
+		}
+	}
+}
+
+// ------------------------------------------------------------- Auslastung
+
+// erwachseneUndTeenager: zwei Personen mit sehr unterschiedlicher Kapazität —
+// 660 Minuten die Woche gegen 330. Der Zuschnitt, an dem sich zeigt, ob der
+// Planer Belastung oder nur Minuten vergleicht.
+func erwachseneUndTeenager() Household {
+	return Household{
+		ID: "hh-3",
+		Members: []Member{
+			{ID: "m-erw", Name: "Erwachsene", Role: RolePlanner, Age: 40,
+				CapacityMinutes: [7]int{60, 60, 60, 60, 60, 180, 180}},
+			{ID: "m-teen", Name: "Teenager", Role: RoleDoer, Age: 14, Care: CareSchool,
+				CapacityMinutes: [7]int{30, 30, 30, 30, 30, 90, 90}},
+		},
+		Context: Context{Home: HomeFlat},
+	}
+}
+
+// TestAuslastungSchlaegtAbsoluteMinuten prüft die Kennzahl selbst: Von zwei
+// Plänen mit derselben Gesamtlast muss der gewinnen, der sie im Verhältnis zur
+// verfügbaren Zeit verteilt — nicht der, der gleich viele Minuten vergibt.
+func TestAuslastungSchlaegtAbsoluteMinuten(t *testing.T) {
+	in := Input{Household: erwachseneUndTeenager(), Week: Week{2026, 38}, Limits: DefaultLimits()}
+	tag := MustDate("2026-09-14")
+
+	aufgabe := func(id, wer string) PlannedTask {
+		return PlannedTask{TemplateID: id, Kind: KindDo, Day: tag, DurationMin: 30, AssigneeID: wer}
+	}
+
+	// 180 Minuten insgesamt, Kapazität 660 zu 330 — der gerechte Anteil ist
+	// also 120 zu 60, beide bei 18 Prozent.
+	nachAuslastung := []PlannedTask{
+		aufgabe("t-1", "m-erw"), aufgabe("t-2", "m-erw"),
+		aufgabe("t-3", "m-erw"), aufgabe("t-4", "m-erw"),
+		aufgabe("t-5", "m-teen"), aufgabe("t-6", "m-teen"),
+	}
+	// Gleich viele Minuten für beide: 90 zu 90 — und damit 14 Prozent gegen
+	// 27 Prozent. Genau der Plan, den die alte Kennzahl bevorzugte.
+	nachMinuten := []PlannedTask{
+		aufgabe("t-1", "m-erw"), aufgabe("t-2", "m-erw"), aufgabe("t-3", "m-erw"),
+		aufgabe("t-4", "m-teen"), aufgabe("t-5", "m-teen"), aufgabe("t-6", "m-teen"),
+	}
+
+	if imbalanceOf(in, nachAuslastung) >= imbalanceOf(in, nachMinuten) {
+		t.Fatalf("gleiche Minuten (%d) gelten als mindestens so fair wie gleiche Auslastung (%d)",
+			imbalanceOf(in, nachMinuten), imbalanceOf(in, nachAuslastung))
+	}
+}
+
+// TestKopflastEntscheidetMit prüft die zweite Hälfte von ADR-0004: Bei
+// identischer gewichteter Last muss der Plan gewinnen, der die Kopfarbeit
+// teilt. Unter der alten Regel entschied die Kopflast nur bei exakter
+// Gleichheit — was praktisch nie eintrat.
+func TestKopflastEntscheidetMit(t *testing.T) {
+	in := Input{Household: familieMitKleinkind(), Week: Week{2026, 38}, Limits: DefaultLimits()}
+	tag := MustDate("2026-09-14")
+
+	// Vier Aufgaben, jede gewichtet 55: zwei kurze mit Kopflast 3, zwei lange
+	// ohne. Wie man sie auch aufteilt, jede Person kommt auf 110.
+	kopf := func(id, wer string) PlannedTask {
+		return PlannedTask{TemplateID: id, Kind: KindOrg, Day: tag, DurationMin: 10, HeadLoad: HeadLoadHigh, AssigneeID: wer}
+	}
+	hand := func(id, wer string) PlannedTask {
+		return PlannedTask{TemplateID: id, Kind: KindDo, Day: tag, DurationMin: 55, AssigneeID: wer}
+	}
+
+	geteilt := []PlannedTask{
+		kopf("t-k1", "m-anna"), hand("t-h1", "m-anna"),
+		kopf("t-k2", "m-ben"), hand("t-h2", "m-ben"),
+	}
+	gebuendelt := []PlannedTask{
+		kopf("t-k1", "m-anna"), kopf("t-k2", "m-anna"),
+		hand("t-h1", "m-ben"), hand("t-h2", "m-ben"),
+	}
+
+	if imbalanceOf(in, geteilt) >= imbalanceOf(in, gebuendelt) {
+		t.Fatalf("die gesamte Kopfarbeit bei einer Person (%d) gilt als ebenso fair wie geteilte (%d)",
+			imbalanceOf(in, gebuendelt), imbalanceOf(in, geteilt))
+	}
+}
+
+// TestJugendlicheTragenAnteiligWeniger prüft dasselbe durch den ganzen Planer:
+// Sechs gleich große Aufgaben, zwei Personen mit doppelt so großem
+// Kapazitätsunterschied — am Ende müssen beide ähnlich ausgelastet sein, nicht
+// gleich viele Minuten haben.
+func TestJugendlicheTragenAnteiligWeniger(t *testing.T) {
+	var vorlagen []TaskTemplate
+	for _, id := range []string{"t-1", "t-2", "t-3", "t-4", "t-5", "t-6"} {
+		vorlagen = append(vorlagen, TaskTemplate{
+			ID: id, Title: "Aufgabe " + id,
+			Category: CatCleaning, Kind: KindDo,
+			DurationMin: 30, HeadLoad: HeadLoadNone,
+			Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+			MinAge:       12,
+			Distribution: DistRotate,
+			Failure:      FailureSoft,
+			Source:       SourceCurated,
+		})
+	}
+
+	got, err := Plan(basisEingabe(erwachseneUndTeenager(), vorlagen...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tasks) != 6 {
+		t.Fatalf("%d Aufgaben, erwartet 6 (übersprungen: %+v)", len(got.Tasks), got.Skipped)
+	}
+
+	last := map[string]MemberLoad{}
+	for _, l := range got.Balance {
+		last[l.MemberID] = l
+	}
+	erw, teen := last["m-erw"], last["m-teen"]
+
+	if abstand(erw.Utilization(), teen.Utilization()) > 5 {
+		t.Errorf("Auslastung %d %% gegen %d %% — der Unterschied gehört unter 5 Punkte",
+			erw.Utilization(), teen.Utilization())
+	}
+	if teen.Weighted >= erw.Weighted {
+		t.Errorf("der Teenager trägt %d gewichtete Minuten, die Erwachsene %d — bei halber Kapazität gehört das umgekehrt",
+			teen.Weighted, erw.Weighted)
+	}
+}
+
+func abstand(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+// --------------------------------------------------- Eigene Aufgaben, Tiere
+
+// TestHaustierartGrenztEin: Ein Haushalt mit Hund bekommt kein Katzenklo.
+// Vorher war die Bedingung ein Ja/Nein — der Haushalt wusste, dass es ein Hund
+// ist, die Vorlage konnte aber nicht danach fragen.
+func TestHaustierartGrenztEin(t *testing.T) {
+	tier := func(id, titel, art string) TaskTemplate {
+		return TaskTemplate{
+			ID: id, Title: titel,
+			Category: CatCleaning, Kind: KindDo,
+			DurationMin: 10, HeadLoad: HeadLoadNone,
+			Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+			MinAge:       10,
+			Distribution: DistRotate,
+			AppliesTo:    Conditions{RequiresPetKind: art},
+			Failure:      FailureSoft,
+			Source:       SourceCurated,
+		}
+	}
+
+	mitHund := familieMitKleinkind()
+	mitHund.Context.Pets = []string{"hund"}
+
+	got, err := Plan(basisEingabe(mitHund,
+		tier("t-katzenklo", "Katzenklo säubern", "katze"),
+		tier("t-gassi", "Mit dem Hund rausgehen", "hund")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got.Tasks) != 1 || got.Tasks[0].TemplateID != "t-gassi" {
+		t.Fatalf("im Plan steht %+v, erwartet wurde allein t-gassi", got.Tasks)
+	}
+	var grund SkipCode
+	for _, s := range got.Skipped {
+		if s.TemplateID == "t-katzenklo" {
+			grund = s.Code
+		}
+	}
+	if grund != SkipNotApplicable {
+		t.Errorf("das Katzenklo fällt mit %q heraus, erwartet %q", grund, SkipNotApplicable)
+	}
+}
+
+// TestEigeneAufgabeGehoertJedemSelbst prüft die PerPerson-Vervielfachung:
+// Zwei Kinder ergeben zwei Aufgaben, je eine fest an das eigene Kind gebunden
+// — und keine bei den Erwachsenen.
+func TestEigeneAufgabeGehoertJedemSelbst(t *testing.T) {
+	zimmer := TaskTemplate{
+		ID: "t-zimmer", Title: "Eigenes Zimmer aufräumen",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 25, HeadLoad: HeadLoadLow,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       8,
+		Distribution: DistChildrenOnly,
+		PerPerson:    true,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+
+	h := Household{
+		ID: "hh-4",
+		Members: []Member{
+			{ID: "m-eltern", Role: RolePlanner, Age: 44,
+				CapacityMinutes: [7]int{60, 60, 60, 60, 60, 180, 180}},
+			{ID: "m-kind-1", Role: RoleDoer, Age: 15, Care: CareSchool,
+				CapacityMinutes: [7]int{30, 30, 30, 30, 30, 90, 90}},
+			{ID: "m-kind-2", Role: RoleDoer, Age: 12, Care: CareSchool,
+				CapacityMinutes: [7]int{25, 25, 25, 25, 25, 80, 80}},
+		},
+		Context: Context{Home: HomeFlat},
+	}
+
+	got, err := Plan(basisEingabe(h, zimmer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tasks) != 2 {
+		t.Fatalf("%d Aufgaben, erwartet 2 — je Kind eine (übersprungen: %+v)", len(got.Tasks), got.Skipped)
+	}
+
+	wer := map[string]int{}
+	for _, task := range got.Tasks {
+		wer[task.AssigneeID]++
+		if task.Reason.Code != ReasonOwn {
+			t.Errorf("Begründung %q, erwartet %q", task.Reason.Code, ReasonOwn)
+		}
+	}
+	if wer["m-kind-1"] != 1 || wer["m-kind-2"] != 1 {
+		t.Errorf("Verteilung %v — jedes Kind räumt genau sein eigenes Zimmer auf", wer)
+	}
+	if wer["m-eltern"] != 0 {
+		t.Errorf("das Elternteil räumt das Zimmer eines Kindes auf: %v", wer)
+	}
+
+	// Und im Haushalt mit einem Dreijährigen gibt es die Aufgabe gar nicht.
+	ohne, err := Plan(basisEingabe(familieMitKleinkind(), zimmer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ohne.Tasks) != 0 {
+		t.Errorf("%d Aufgaben, erwartet 0 — ein Dreijähriger räumt sein Zimmer nicht selbst auf", len(ohne.Tasks))
+	}
+}
+
 // -------------------------------------------------------------------- Vorlauf
 
 func TestSaisonaufgabeErscheintMitVorlauf(t *testing.T) {

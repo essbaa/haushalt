@@ -90,6 +90,7 @@ const (
 	ReasonFixed    ReasonCode = "feste_person"
 	ReasonOnlyOne  ReasonCode = "einzige_moeglichkeit"
 	ReasonDeadline ReasonCode = "frist"
+	ReasonOwn      ReasonCode = "eigene_aufgabe" // gehört dieser Person selbst
 )
 
 type Reason struct {
@@ -107,6 +108,29 @@ type MemberLoad struct {
 	// verteilt wird.
 	Weighted int
 	Tasks    int
+	// Capacity sind die für Haushaltsaufgaben verfügbaren Minuten der ganzen
+	// Woche. Ohne diese Zahl ist Weighted nicht zu deuten: 280 Minuten sind
+	// für einen Erwachsenen die halbe Woche und für eine Dreizehnjährige
+	// alles, was sie hat.
+	Capacity int
+}
+
+// Utilization ist der Anteil der verfügbaren Zeit, der verplant ist, in
+// Prozent.
+//
+// Gerechnet wird mit Minutes, nicht mit Weighted: Kopflast kostet Aufmerksamkeit,
+// aber keine Uhrzeit, und wird deshalb auch nicht gegen die Kapazität
+// verrechnet. Eine Zahl mit Kopflast durch eine Zahl ohne zu teilen ergibt
+// Werte über 100 Prozent und damit eine Prozentangabe, die keine ist.
+//
+// Verteilt wird trotzdem nach der gewichteten Last im Verhältnis zur
+// Kapazität — das ist eine Vergleichsgröße zwischen Personen und keine
+// Prozentangabe. Sie bleibt deshalb im Paket.
+func (l MemberLoad) Utilization() int {
+	if l.Capacity <= 0 {
+		return 0
+	}
+	return l.Minutes * 100 / l.Capacity
 }
 
 // SkipCode sagt, warum eine Vorlage nicht im Plan steht.
@@ -133,12 +157,13 @@ type Skipped struct {
 // würfelt nicht. Zwei Aufrufe mit derselben Eingabe liefern dasselbe Ergebnis,
 // Feld für Feld und in derselben Reihenfolge.
 //
-// Der Ablauf in vier Schritten, jeder in einer eigenen Datei:
+// Der Ablauf in fünf Schritten, jeder in einer eigenen Datei:
 //
 //	auswaehlen  – welche Vorlagen gelten für diesen Haushalt   (select.go)
 //	faellig     – welche davon sind diese Woche dran           (due.go)
 //	verdichten  – wie viele davon zeigen wir wirklich          (density.go)
 //	zuteilen    – wer macht was an welchem Tag                 (assign.go)
+//	ausgleichen – tauschen, solange es gleichmäßiger wird      (rebalance.go)
 func Plan(in Input) (Result, error) {
 	if err := in.validate(); err != nil {
 		return Result{}, err
@@ -157,6 +182,8 @@ func Plan(in Input) (Result, error) {
 
 	tasks, s4 := assign(in, kept)
 	skipped = append(skipped, s4...)
+
+	tasks = rebalance(in, tasks)
 
 	sortTasks(tasks)
 	sortSkipped(skipped)
@@ -211,7 +238,7 @@ func balance(in Input, tasks []PlannedTask) []MemberLoad {
 		if !m.CanPerform() {
 			continue
 		}
-		byID[m.ID] = &MemberLoad{MemberID: m.ID}
+		byID[m.ID] = &MemberLoad{MemberID: m.ID, Capacity: weeklyCapacity(m)}
 		order = append(order, m.ID)
 	}
 	for _, t := range tasks {
@@ -229,6 +256,15 @@ func balance(in Input, tasks []PlannedTask) []MemberLoad {
 		out = append(out, *byID[id])
 	}
 	return out
+}
+
+// weeklyCapacity summiert die verfügbaren Minuten der Woche.
+func weeklyCapacity(m Member) int {
+	total := 0
+	for _, min := range m.CapacityMinutes {
+		total += min
+	}
+	return total
 }
 
 func sortTasks(tasks []PlannedTask) {

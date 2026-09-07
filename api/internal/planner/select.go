@@ -35,6 +35,9 @@ func conditionsMet(c Conditions, h Household) bool {
 	if c.RequiresPet && len(h.Context.Pets) == 0 {
 		return false
 	}
+	if c.RequiresPetKind != "" && !hasPet(h, c.RequiresPetKind) {
+		return false
+	}
 	if c.RequiresHome != "" && h.Context.Home != c.RequiresHome {
 		return false
 	}
@@ -45,6 +48,15 @@ func conditionsMet(c Conditions, h Household) bool {
 		return false
 	}
 	return true
+}
+
+func hasPet(h Household, kind string) bool {
+	for _, p := range h.Context.Pets {
+		if p == kind {
+			return true
+		}
+	}
+	return false
 }
 
 func hasChildAged(h Household, r AgeRange) bool {
@@ -85,6 +97,9 @@ func eligibleMembers(t TaskTemplate, in Input) []Member {
 			continue
 		}
 		if t.Distribution == DistAdultsOnly && !m.IsAdult() {
+			continue
+		}
+		if t.Distribution == DistChildrenOnly && m.IsAdult() {
 			continue
 		}
 		if !m.IsAdult() && m.Age < t.MinAge {

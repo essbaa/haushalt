@@ -99,10 +99,11 @@ func print(h planner.Household, r planner.Result, withSkipped bool) {
 
 	fmt.Println("Bilanz")
 	for _, l := range r.Balance {
-		fmt.Printf("  %-9s %3d min · Kopflast %2d · gewichtet %3d · %d Aufgaben\n",
-			names[l.MemberID], l.Minutes, l.HeadLoad, l.Weighted, l.Tasks)
+		fmt.Printf("  %-9s %3d min · Kopflast %2d · gewichtet %3d · Zeit %3d %% · %d Aufgaben\n",
+			names[l.MemberID], l.Minutes, l.HeadLoad, l.Weighted, l.Utilization(), l.Tasks)
 	}
-	fmt.Printf("\n  %s\n", dim("* = Organisationsaufgabe. Gewichtet = Minuten + Kopflast × 15."))
+	fmt.Printf("\n  %s\n", dim("* = Organisationsaufgabe. Gewichtet = Minuten + Kopflast × 15. Zeit = verplante Minuten im Verhältnis zur verfügbaren Zeit."))
+	fmt.Printf("  %s\n", dim("Verteilt wird nach gewichteter Last im Verhältnis zur Kapazität — wer weniger Zeit hat, trägt weniger."))
 
 	if withSkipped && len(r.Skipped) > 0 {
 		fmt.Println("\nNicht im Plan")
@@ -128,6 +129,8 @@ func reason(t planner.PlannedTask, names map[string]string) string {
 		return dim("zuletzt bei " + names[t.Reason.Previous])
 	case planner.ReasonBalance:
 		return dim("geringste Last")
+	case planner.ReasonOwn:
+		return dim("eigene Aufgabe")
 	case planner.ReasonFixed:
 		return dim("feste Person")
 	case planner.ReasonOnlyOne:
