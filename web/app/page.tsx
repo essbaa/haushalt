@@ -12,7 +12,7 @@ export default function Page() {
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-10 px-6 py-16">
       <header className="space-y-3">
         <p className="font-mono text-xs uppercase tracking-widest text-muted">
-          Tag 0 · Durchstichhhh
+          Tag 0 · Durchstich
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-balance">
           Haushalt
