@@ -1,0 +1,28 @@
+# sqlc erzeugt aus SQL typsichere Go-Funktionen. Die Richtung ist wichtig: Du
+# schreibst SQL, nicht Go-Bausteine, die SQL erzeugen. Damit steht im Diff eine
+# lesbare Abfrage statt einer Kette von Methodenaufrufen — und was die
+# Datenbank tatsächlich tut, ist beim Lesen sichtbar.
+#
+# Aufruf: make sqlc
+version: "2"
+sql:
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/query
+    gen:
+      go:
+        package: db
+        out: internal/storage/db
+        sql_package: pgx/v5
+        emit_json_tags: false
+        emit_pointers_for_null_types: true
+        emit_empty_slices: true
+        # Namen, die sqlc nicht von selbst richtig ableitet.
+        rename:
+          id: "ID"
+          household_id: "HouseholdID"
+          member_id: "MemberID"
+          template_id: "TemplateID"
+          task_instance_id: "TaskInstanceID"
+          auth_user_id: "AuthUserID"
+          iso_week: "ISOWeek"

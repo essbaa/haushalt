@@ -5,6 +5,15 @@ include .env
 export
 endif
 
+# Der Go-Proxy wird hier unbedingt gesetzt, nicht nur als Vorgabe.
+#
+# Auf diesem Rechner steht in den Shell-Profilen noch der Athens-Proxy des
+# früheren Arbeitgebers, und eine echte Umgebungsvariable schlägt `go env -w`.
+# Ein Repo, das sich nur bauen lässt, wenn vorher jemand von Hand die richtige
+# Variable exportiert hat, ist kaputt — auch wenn die Ursache woanders liegt.
+GOPROXY := https://proxy.golang.org,direct
+export GOPROXY
+
 VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
 .PHONY: run
@@ -26,6 +35,22 @@ test: ## Alle Tests
 .PHONY: generate
 generate: ## Typen und Server-Rümpfe aus ../openapi.yaml erzeugen
 	go tool oapi-codegen -config oapi.yaml ../openapi.yaml
+
+.PHONY: migrate-up
+migrate-up: ## Migrationen einspielen
+	go tool goose -dir db/migrations postgres "$(DATABASE_URL)" up
+
+.PHONY: migrate-down
+migrate-down: ## Letzte Migration zurücknehmen
+	go tool goose -dir db/migrations postgres "$(DATABASE_URL)" down
+
+.PHONY: migrate-status
+migrate-status: ## Was ist eingespielt
+	go tool goose -dir db/migrations postgres "$(DATABASE_URL)" status
+
+.PHONY: sqlc
+sqlc: ## Typsichere Abfragen aus db/query erzeugen
+	go tool sqlc generate
 
 .PHONY: verify-generate
 verify-generate: generate ## Prüfen, dass der erzeugte Code zur Spezifikation passt
