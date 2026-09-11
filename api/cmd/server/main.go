@@ -19,11 +19,6 @@ import (
 	"github.com/zakaria/haushalt/api/internal/httpapi"
 	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/storage"
-
-	// Datenbanktreiber. Leerer Import: Wir benutzen aus dem Paket nichts
-	// direkt, wir wollen nur seine Nebenwirkung — es registriert sich beim
-	// Laden unter dem Namen "pgx", den storage.Open verwendet.
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // version wird beim Bauen gesetzt:
@@ -66,16 +61,19 @@ func run() error {
 	// In der Entwicklung startet er trotzdem: Wenn das Netz gerade Port 5432
 	// blockiert, willst du weiter an der Oberfläche arbeiten können. /healthz
 	// sagt in dem Fall die Wahrheit und antwortet mit 503.
-	var db httpapi.Pinger
+	var (
+		db   httpapi.Pinger
+		pool *storage.DB
+	)
 	switch {
 	case cfg.DatabaseURL == "":
 		log.Warn("DATABASE_URL ist leer — dienst läuft ohne datenbank")
 	default:
-		pool, err := storage.Open(ctx, cfg.DatabaseURL)
+		p, err := storage.Open(ctx, cfg.DatabaseURL)
 		switch {
 		case err == nil:
-			defer pool.Close()
-			db = pool
+			defer p.Close()
+			pool, db = p, p
 			log.Info("datenbank verbunden")
 		case cfg.IsDevelopment():
 			log.Warn("datenbank nicht erreichbar — dienst startet trotzdem", "fehler", err)
@@ -85,22 +83,36 @@ func run() error {
 		}
 	}
 
-	// Die Bibliothek und die Beispielhaushalte werden einmal beim Start
-	// gelesen. Schlägt das fehl, startet der Dienst nicht: Ein Dienst, der
-	// ohne seine Daten hochkommt, meldet später 500 statt jetzt einen
-	// verständlichen Fehler.
-	catalog, err := library.LoadCatalog(cfg.LibraryDir)
-	if err != nil {
-		return err
+	// Woher die Wochenpläne kommen.
+	//
+	// Mit Datenbank aus der Datenbank, sonst aus dem Repo. Beide erfüllen
+	// dieselbe Schnittstelle, die HTTP-Schicht sieht keinen Unterschied — und
+	// solange die Beispielhaushalte importiert sind, sieht auch der Nutzer
+	// keinen.
+	//
+	// Der Rückfall auf die Dateien ist kein Notbehelf, sondern praktisch: Er
+	// hält den Dienst ohne Datenbank lauffähig, und die Bibliothek im Repo
+	// bleibt die Quelle, aus der importiert wird.
+	var plans httpapi.Plans
+	if pool != nil {
+		plans = pool.AsPlans()
+		log.Info("wochenpläne kommen aus der datenbank")
+	} else {
+		catalog, err := library.LoadCatalog(cfg.LibraryDir)
+		if err != nil {
+			return err
+		}
+		plans = catalog
+		haushalte, _ := catalog.Households(ctx)
+		log.Info("wochenpläne kommen aus dem repo",
+			"verzeichnis", cfg.LibraryDir,
+			"vorlagen", len(catalog.Templates()),
+			"haushalte", len(haushalte))
 	}
-	log.Info("bibliothek gelesen",
-		"verzeichnis", cfg.LibraryDir,
-		"vorlagen", len(catalog.Templates()),
-		"haushalte", len(catalog.Households()))
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: httpapi.New(cfg, log, db, version, catalog).Handler(),
+		Handler: httpapi.New(cfg, log, db, version, plans).Handler(),
 
 		// Ohne Zeitgrenzen kann ein einziger langsamer Client eine Verbindung
 		// dauerhaft belegen. http.ListenAndServe ohne diese Werte ist der
@@ -162,4 +174,4 @@ func newLogger(cfg config.Config) *slog.Logger {
 // damit /healthz "nicht erreichbar" meldet statt "nicht konfiguriert".
 type unavailableDB struct{ err error }
 
-func (u unavailableDB) PingContext(context.Context) error { return u.err }
+func (u unavailableDB) Ping(context.Context) error { return u.err }

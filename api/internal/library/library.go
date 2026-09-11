@@ -97,6 +97,20 @@ func LoadTemplates(path string) ([]planner.TaskTemplate, error) {
 	return out, nil
 }
 
+// ParseTemplate liest eine einzelne Vorlage aus ihrem JSON.
+//
+// Dieselbe Übersetzung wie beim Einlesen der Datei — gebraucht wird sie von
+// der Datenbank-Quelle, die die Vorlage als jsonb-Spalte liest. Ein zweiter
+// Parser wäre die sicherste Art, dass die beiden Wege irgendwann verschiedene
+// Ergebnisse liefern.
+func ParseTemplate(raw []byte) (planner.TaskTemplate, error) {
+	var d templateDTO
+	if err := json.Unmarshal(raw, &d); err != nil {
+		return planner.TaskTemplate{}, fmt.Errorf("vorlage: %w", err)
+	}
+	return d.toTemplate()
+}
+
 func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 	var t planner.TaskTemplate
 

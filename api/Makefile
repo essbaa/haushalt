@@ -36,6 +36,10 @@ test: ## Alle Tests
 generate: ## Typen und Server-Rümpfe aus ../openapi.yaml erzeugen
 	go tool oapi-codegen -config oapi.yaml ../openapi.yaml
 
+.PHONY: import
+import: ## Bibliothek und Beispielhaushalte in die Datenbank schreiben
+	go run ./cmd/import
+
 .PHONY: migrate-up
 migrate-up: ## Migrationen einspielen
 	go tool goose -dir db/migrations postgres "$(DATABASE_URL)" up
@@ -62,18 +66,25 @@ check: ## Was auch die CI prüft
 	go vet ./...
 	go test -race ./...
 
+# --wait wartet, bis der Health-Check in der compose.yaml grün ist.
+#
+# Ohne das kehrt `docker compose up -d` zurück, sobald der Container läuft —
+# Postgres nimmt da noch keine Verbindungen an, und der nächste Befehl
+# scheitert an etwas, das nach einem Fehler im Programm aussieht.
 .PHONY: db-up
 db-up: ## Entwicklungsdatenbank starten (Postgres im Container)
-	docker compose up -d db
+	docker compose up -d --wait db
 
 .PHONY: db-down
 db-down: ## Entwicklungsdatenbank anhalten — die Daten bleiben im Volume
 	docker compose down
 
 .PHONY: db-reset
-db-reset: ## Entwicklungsdatenbank wegwerfen und neu anlegen
+db-reset: ## Entwicklungsdatenbank wegwerfen, neu anlegen, Migrationen und Beispieldaten
 	docker compose down -v
-	docker compose up -d db
+	docker compose up -d --wait db
+	$(MAKE) migrate-up
+	$(MAKE) import
 
 .PHONY: db-shell
 db-shell: ## psql in der Entwicklungsdatenbank

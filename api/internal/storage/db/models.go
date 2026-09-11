@@ -37,6 +37,7 @@ type Household struct {
 	Pets      []string
 	Timezone  string
 	CreatedAt pgtype.Timestamptz
+	Slug      *string
 }
 
 type Member struct {

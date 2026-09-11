@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
-	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
 
@@ -14,8 +13,8 @@ import (
 // wo es gebraucht wird. Heute erfüllt es der Katalog aus dem Repo, ab T5 die
 // Datenbank. Dieses Paket merkt den Unterschied nicht.
 type Plans interface {
-	Households() []library.IdentifiedHousehold
-	Plan(id string, week planner.Week) (planner.Result, planner.Household, error)
+	Households(ctx context.Context) ([]planner.Household, error)
+	Plan(ctx context.Context, id string, week planner.Week) (planner.Result, planner.Household, error)
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -33,23 +32,27 @@ func (a api) GetVersion(context.Context, openapi.GetVersionRequestObject) (opena
 	return openapi.GetVersion200JSONResponse{Version: a.version}, nil
 }
 
-func (a api) ListHaushalte(context.Context, openapi.ListHaushalteRequestObject) (openapi.ListHaushalteResponseObject, error) {
-	var out openapi.ListHaushalte200JSONResponse
-	for _, h := range a.plans.Households() {
-		out = append(out, haushaltNachAussen(h.ID, h.Household))
+func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestObject) (openapi.ListHaushalteResponseObject, error) {
+	haushalte, err := a.plans.Households(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := openapi.ListHaushalte200JSONResponse{}
+	for _, h := range haushalte {
+		out = append(out, haushaltNachAussen(h))
 	}
 	return out, nil
 }
 
-func (a api) GetWochenplan(_ context.Context, r openapi.GetWochenplanRequestObject) (openapi.GetWochenplanResponseObject, error) {
+func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestObject) (openapi.GetWochenplanResponseObject, error) {
 	week, err := planner.ParseWeek(r.Woche)
 	if err != nil {
 		return openapi.GetWochenplan400JSONResponse{Fehler: err.Error()}, nil
 	}
 
-	result, household, err := a.plans.Plan(r.HaushaltId, week)
+	result, household, err := a.plans.Plan(ctx, r.HaushaltId, week)
 	switch {
-	case errors.Is(err, library.ErrUnknownHousehold):
+	case errors.Is(err, planner.ErrUnknownHousehold):
 		return openapi.GetWochenplan404JSONResponse{
 			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
 		}, nil
@@ -60,7 +63,7 @@ func (a api) GetWochenplan(_ context.Context, r openapi.GetWochenplanRequestObje
 		return nil, err
 	}
 
-	return openapi.GetWochenplan200JSONResponse(planNachAussen(r.HaushaltId, household, result)), nil
+	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result)), nil
 }
 
 // ------------------------------------------------------------ Übersetzung
@@ -71,10 +74,10 @@ func (a api) GetWochenplan(_ context.Context, r openapi.GetWochenplanRequestObje
 // Kern nichts zu suchen haben. Der Preis ist diese Übersetzung; sie steht an
 // einer Stelle und ist langweilig, und das ist genau richtig.
 
-func planNachAussen(id string, h planner.Household, r planner.Result) openapi.Wochenplan {
+func planNachAussen(h planner.Household, r planner.Result) openapi.Wochenplan {
 	plan := openapi.Wochenplan{
 		Woche:    r.Week.String(),
-		Haushalt: haushaltNachAussen(id, h),
+		Haushalt: haushaltNachAussen(h),
 		// Nicht-nil, damit leere Listen als [] und nicht als null im JSON
 		// stehen. Ein Client, der `.map()` darauf aufruft, dankt es.
 		Aufgaben:      []openapi.Aufgabe{},
@@ -129,8 +132,8 @@ func planNachAussen(id string, h planner.Household, r planner.Result) openapi.Wo
 	return plan
 }
 
-func haushaltNachAussen(id string, h planner.Household) openapi.Haushalt {
-	out := openapi.Haushalt{Id: id, Name: h.Name, Mitglieder: []openapi.Mitglied{}}
+func haushaltNachAussen(h planner.Household) openapi.Haushalt {
+	out := openapi.Haushalt{Id: h.ID, Name: h.Name, Mitglieder: []openapi.Mitglied{}}
 	for _, m := range h.Members {
 		out.Mitglieder = append(out.Mitglieder, openapi.Mitglied{
 			Id:    m.ID,

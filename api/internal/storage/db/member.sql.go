@@ -76,7 +76,7 @@ func (q *Queries) GetMemberByAuthUserID(ctx context.Context, authUserID *string)
 }
 
 const listMembers = `-- name: ListMembers :many
-SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member WHERE household_id = $1 ORDER BY created_at
+SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member WHERE household_id = $1 ORDER BY created_at, name
 `
 
 func (q *Queries) ListMembers(ctx context.Context, householdID pgtype.UUID) ([]Member, error) {
@@ -122,6 +122,53 @@ type SetMemberAuthUserParams struct {
 // in einen Haushalt eingeladen wird, der ihn schon als Mitglied führt.
 func (q *Queries) SetMemberAuthUser(ctx context.Context, arg SetMemberAuthUserParams) (Member, error) {
 	row := q.db.QueryRow(ctx, setMemberAuthUser, arg.ID, arg.AuthUserID)
+	var i Member
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.Name,
+		&i.Role,
+		&i.BirthYear,
+		&i.Care,
+		&i.CapacityMinutes,
+		&i.AuthUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const upsertMember = `-- name: UpsertMember :one
+INSERT INTO member (household_id, name, role, birth_year, care, capacity_minutes)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (household_id, name) DO UPDATE
+    SET role             = EXCLUDED.role,
+        birth_year       = EXCLUDED.birth_year,
+        care             = EXCLUDED.care,
+        capacity_minutes = EXCLUDED.capacity_minutes
+RETURNING id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at
+`
+
+type UpsertMemberParams struct {
+	HouseholdID     pgtype.UUID
+	Name            string
+	Role            string
+	BirthYear       *int32
+	Care            *string
+	CapacityMinutes []int32
+}
+
+// Schlüssel ist der Name im Haushalt. auth_user_id bleibt unangetastet: Wer
+// sich einmal angemeldet hat, verliert die Verbindung nicht, weil jemand die
+// Beispieldaten neu einliest.
+func (q *Queries) UpsertMember(ctx context.Context, arg UpsertMemberParams) (Member, error) {
+	row := q.db.QueryRow(ctx, upsertMember,
+		arg.HouseholdID,
+		arg.Name,
+		arg.Role,
+		arg.BirthYear,
+		arg.Care,
+		arg.CapacityMinutes,
+	)
 	var i Member
 	err := row.Scan(
 		&i.ID,

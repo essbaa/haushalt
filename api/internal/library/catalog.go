@@ -1,7 +1,7 @@
 package library
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -9,11 +9,6 @@ import (
 
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
-
-// ErrUnknownHousehold sagt, dass es diesen Haushalt nicht gibt. Ein
-// Wachposten-Fehler statt einer Zeichenkette: Die HTTP-Schicht prüft ihn mit
-// errors.Is und macht daraus eine 404, ohne den Text zu lesen.
-var ErrUnknownHousehold = errors.New("library: unbekannter haushalt")
 
 // Catalog ist die eingelesene Bibliothek samt Beispielhaushalten.
 //
@@ -64,6 +59,10 @@ func LoadCatalog(dir string) (*Catalog, error) {
 		if _, doppelt := c.households[id]; doppelt {
 			return nil, fmt.Errorf("library: die Haushalts-Kennung %q kommt doppelt vor", id)
 		}
+		// Die Kennung aus dem Dateinamen wird zur Kennung des Haushalts.
+		// In der Datenbank ist es später der Slug — dieselbe Rolle, andere
+		// Quelle.
+		h.ID = id
 		c.households[id] = entry{household: h, history: hist}
 		c.order = append(c.order, id)
 	}
@@ -73,31 +72,28 @@ func LoadCatalog(dir string) (*Catalog, error) {
 // Templates ist die Vorlagen-Bibliothek.
 func (c *Catalog) Templates() []planner.TaskTemplate { return c.templates }
 
-// Households liefert die Haushalte in stabiler Reihenfolge, jeweils mit ihrer
-// Kennung.
-func (c *Catalog) Households() []IdentifiedHousehold {
-	out := make([]IdentifiedHousehold, 0, len(c.order))
+// Households liefert die Haushalte in stabiler Reihenfolge. Household.ID
+// trägt dabei die Kennung aus dem Dateinamen — dieselbe, die in der URL steht.
+//
+// Der Kontext wird nicht gebraucht und steht trotzdem in der Signatur: Die
+// zweite Quelle ist eine Datenbank, und die HTTP-Schicht soll die beiden nicht
+// unterscheiden können.
+func (c *Catalog) Households(context.Context) ([]planner.Household, error) {
+	out := make([]planner.Household, 0, len(c.order))
 	for _, id := range c.order {
-		out = append(out, IdentifiedHousehold{ID: id, Household: c.households[id].household})
+		out = append(out, c.households[id].household)
 	}
-	return out
-}
-
-// IdentifiedHousehold verbindet die Kennung aus dem Dateinamen mit dem
-// Haushalt. Der Planer selbst kennt keine URLs und soll auch keine kennen.
-type IdentifiedHousehold struct {
-	ID        string
-	Household planner.Household
+	return out, nil
 }
 
 // Plan berechnet den Wochenplan eines Haushalts.
 //
 // Der Catalog hält die Daten, die Rechnung macht der Planer — dieses Paket
 // entscheidet nichts, es reicht durch.
-func (c *Catalog) Plan(id string, week planner.Week) (planner.Result, planner.Household, error) {
+func (c *Catalog) Plan(_ context.Context, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	e, ok := c.households[id]
 	if !ok {
-		return planner.Result{}, planner.Household{}, fmt.Errorf("%w: %q", ErrUnknownHousehold, id)
+		return planner.Result{}, planner.Household{}, fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, id)
 	}
 	res, err := planner.Plan(planner.Input{
 		Household: e.household,

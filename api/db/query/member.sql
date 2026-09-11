@@ -4,7 +4,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: ListMembers :many
-SELECT * FROM member WHERE household_id = $1 ORDER BY created_at;
+SELECT * FROM member WHERE household_id = $1 ORDER BY created_at, name;
 
 -- name: GetMemberByAuthUserID :one
 -- Der Übergang von der Anmeldung in die Fachwelt: Better Auth kennt nur eine
@@ -15,3 +15,16 @@ SELECT * FROM member WHERE auth_user_id = $1;
 -- Verbindet eine bestehende Person mit einem Login — der Fall, dass jemand
 -- in einen Haushalt eingeladen wird, der ihn schon als Mitglied führt.
 UPDATE member SET auth_user_id = $2 WHERE id = $1 RETURNING *;
+
+-- name: UpsertMember :one
+-- Schlüssel ist der Name im Haushalt. auth_user_id bleibt unangetastet: Wer
+-- sich einmal angemeldet hat, verliert die Verbindung nicht, weil jemand die
+-- Beispieldaten neu einliest.
+INSERT INTO member (household_id, name, role, birth_year, care, capacity_minutes)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (household_id, name) DO UPDATE
+    SET role             = EXCLUDED.role,
+        birth_year       = EXCLUDED.birth_year,
+        care             = EXCLUDED.care,
+        capacity_minutes = EXCLUDED.capacity_minutes
+RETURNING *;

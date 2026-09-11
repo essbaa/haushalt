@@ -22,7 +22,7 @@ import (
 // eine Attrappe, die Produktion die echte Datenbank, und keiner der beiden muss
 // vom anderen wissen.
 type Pinger interface {
-	PingContext(ctx context.Context) error
+	Ping(ctx context.Context) error
 }
 
 type Server struct {
@@ -123,7 +123,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		// r.Context() wird abgebrochen, wenn der Client die Verbindung
 		// schließt. Den Kontext weiterzureichen ist in Go die Regel, nicht
 		// die Ausnahme.
-		if err := s.db.PingContext(r.Context()); err != nil {
+		if err := s.db.Ping(r.Context()); err != nil {
 			s.log.Error("datenbank nicht erreichbar", "fehler", err)
 			res.Status = "degraded"
 			res.Database = "nicht erreichbar"

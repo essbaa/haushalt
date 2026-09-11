@@ -1,58 +1,63 @@
 // Package storage kapselt die Datenbankverbindung.
-//
-// An T0 macht es nur eines: die Verbindung aufbauen und beantworten, ob sie
-// steht. Tabellen und Abfragen kommen an T5 dazu.
 package storage
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/zakaria/haushalt/api/internal/storage/db"
 )
 
-// DB umschließt den Verbindungspool aus der Standardbibliothek.
+// DB ist der Verbindungspool samt der erzeugten Abfragen.
 //
-// sql.DB ist kein einzelner Verbindungs-Handle, sondern ein Pool. Man baut ihn
-// einmal beim Start und reicht ihn herum — nicht pro Anfrage einen neuen.
+// Eingebettet, nicht als Feld: Damit liegen alle sqlc-Funktionen direkt auf
+// *DB — storage.Queries wäre ein Umweg, den niemand braucht.
 type DB struct {
-	*sql.DB
+	*pgxpool.Pool
+	*db.Queries
 }
 
 // Open baut den Pool auf und prüft ihn sofort.
 //
-// sql.Open verbindet nichts — es prüft nur den Verbindungsstring. Erst der Ping
-// stellt wirklich eine Verbindung her. Wer das nicht weiß, wundert sich, warum
-// ein falsches Passwort erst bei der ersten Abfrage auffällt.
+// pgxpool statt database/sql: Die von sqlc erzeugten Funktionen sprechen
+// pgx-Signaturen (pgx.Rows statt sql.Rows), und der Umweg über den
+// stdlib-Adapter würde genau die Typen kosten, wegen derer wir sqlc benutzen —
+// etwa Postgres-Felder wie int[] oder jsonb ohne Handarbeit.
 //
-// Der Treiber wird nicht hier eingebunden, sondern per leerem Import in
-// cmd/server/main.go registriert:
-//
-//	go get github.com/jackc/pgx/v5
-//	import _ "github.com/jackc/pgx/v5/stdlib"
+// ParseConfig statt New(ctx, dsn): Nur so lassen sich die Poolgrenzen setzen,
+// bevor die erste Verbindung entsteht.
 func Open(ctx context.Context, dsn string) (*DB, error) {
-	db, err := sql.Open("pgx", dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("storage: verbindungsstring: %w", err)
 	}
 
 	// Neon schließt inaktive Verbindungen. Ohne Obergrenzen sammelt der Pool
 	// tote Verbindungen an, und die erste Abfrage nach einer Pause schlägt fehl.
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
-	db.SetConnMaxIdleTime(5 * time.Minute)
+	cfg.MaxConns = 10
+	cfg.MinConns = 0
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.MaxConnIdleTime = 5 * time.Minute
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("storage: pool: %w", err)
+	}
 
 	// 15 Sekunden, nicht 5: Neon fährt inaktive Datenbanken herunter, der
 	// erste Verbindungsaufbau danach weckt sie und dauert länger.
 	pingCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	if err := db.PingContext(pingCtx); err != nil {
+	if err := pool.Ping(pingCtx); err != nil {
 		// Aufräumen, bevor der Fehler nach oben geht — sonst bleibt ein
 		// halboffener Pool zurück.
-		_ = db.Close()
+		pool.Close()
 		return nil, fmt.Errorf("storage: datenbank nicht erreichbar: %w", err)
 	}
-	return &DB{db}, nil
+
+	return &DB{Pool: pool, Queries: db.New(pool)}, nil
 }

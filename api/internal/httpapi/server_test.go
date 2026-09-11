@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/zakaria/haushalt/api/internal/config"
-	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
 
@@ -20,19 +19,19 @@ import (
 // "implements", keine Registrierung.
 type fakePinger struct{ err error }
 
-func (f fakePinger) PingContext(context.Context) error { return f.err }
+func (f fakePinger) Ping(context.Context) error { return f.err }
 
 // fakePlans ist die Attrappe für die Planquelle. Ein Haushalt, ein Plan, kein
 // Dateisystem — die HTTP-Schicht wird geprüft, nicht der Planer.
 type fakePlans struct{}
 
-func (fakePlans) Households() []library.IdentifiedHousehold {
-	return []library.IdentifiedHousehold{{ID: "familie-a", Household: testHaushalt()}}
+func (fakePlans) Households(context.Context) ([]planner.Household, error) {
+	return []planner.Household{testHaushalt()}, nil
 }
 
-func (fakePlans) Plan(id string, week planner.Week) (planner.Result, planner.Household, error) {
+func (fakePlans) Plan(_ context.Context, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	if id != "familie-a" {
-		return planner.Result{}, planner.Household{}, library.ErrUnknownHousehold
+		return planner.Result{}, planner.Household{}, planner.ErrUnknownHousehold
 	}
 	return planner.Result{
 		Week: week,
@@ -52,7 +51,7 @@ func (fakePlans) Plan(id string, week planner.Week) (planner.Result, planner.Hou
 
 func testHaushalt() planner.Household {
 	return planner.Household{
-		ID: "hh-1", Name: "Familie A",
+		ID: "familie-a", Name: "Familie A",
 		Members: []planner.Member{
 			{ID: "m-anna", Name: "Anna", Role: planner.RolePlanner, Age: 36},
 			{ID: "m-ben", Name: "Ben", Role: planner.RolePlanner, Age: 38},

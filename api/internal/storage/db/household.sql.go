@@ -14,7 +14,7 @@ import (
 const createHousehold = `-- name: CreateHousehold :one
 INSERT INTO household (name, home, has_car, has_yard, pets, timezone)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
 `
 
 type CreateHouseholdParams struct {
@@ -45,12 +45,13 @@ func (q *Queries) CreateHousehold(ctx context.Context, arg CreateHouseholdParams
 		&i.Pets,
 		&i.Timezone,
 		&i.CreatedAt,
+		&i.Slug,
 	)
 	return i, err
 }
 
 const getHousehold = `-- name: GetHousehold :one
-SELECT id, name, home, has_car, has_yard, pets, timezone, created_at FROM household WHERE id = $1
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE id = $1
 `
 
 func (q *Queries) GetHousehold(ctx context.Context, id pgtype.UUID) (Household, error) {
@@ -65,12 +66,70 @@ func (q *Queries) GetHousehold(ctx context.Context, id pgtype.UUID) (Household, 
 		&i.Pets,
 		&i.Timezone,
 		&i.CreatedAt,
+		&i.Slug,
 	)
 	return i, err
 }
 
+const getHouseholdBySlug = `-- name: GetHouseholdBySlug :one
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE slug = $1
+`
+
+func (q *Queries) GetHouseholdBySlug(ctx context.Context, slug *string) (Household, error) {
+	row := q.db.QueryRow(ctx, getHouseholdBySlug, slug)
+	var i Household
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Home,
+		&i.HasCar,
+		&i.HasYard,
+		&i.Pets,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.Slug,
+	)
+	return i, err
+}
+
+const listHouseholds = `-- name: ListHouseholds :many
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household ORDER BY created_at
+`
+
+// Alle Haushalte. Ab der Anmeldung tritt ListHouseholdsForAuthUser an diese
+// Stelle — bis dahin sind es die Beispielhaushalte aus dem Repo.
+func (q *Queries) ListHouseholds(ctx context.Context) ([]Household, error) {
+	rows, err := q.db.Query(ctx, listHouseholds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Household{}
+	for rows.Next() {
+		var i Household
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Home,
+			&i.HasCar,
+			&i.HasYard,
+			&i.Pets,
+			&i.Timezone,
+			&i.CreatedAt,
+			&i.Slug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listHouseholdsForAuthUser = `-- name: ListHouseholdsForAuthUser :many
-SELECT h.id, h.name, h.home, h.has_car, h.has_yard, h.pets, h.timezone, h.created_at
+SELECT h.id, h.name, h.home, h.has_car, h.has_yard, h.pets, h.timezone, h.created_at, h.slug
 FROM household h
 JOIN member m ON m.household_id = h.id
 WHERE m.auth_user_id = $1
@@ -98,6 +157,7 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 			&i.Pets,
 			&i.Timezone,
 			&i.CreatedAt,
+			&i.Slug,
 		); err != nil {
 			return nil, err
 		}
@@ -107,4 +167,54 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertDemoHousehold = `-- name: UpsertDemoHousehold :one
+INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (slug) DO UPDATE
+    SET name     = EXCLUDED.name,
+        home     = EXCLUDED.home,
+        has_car  = EXCLUDED.has_car,
+        has_yard = EXCLUDED.has_yard,
+        pets     = EXCLUDED.pets,
+        timezone = EXCLUDED.timezone
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
+`
+
+type UpsertDemoHouseholdParams struct {
+	Slug     *string
+	Name     string
+	Home     string
+	HasCar   bool
+	HasYard  bool
+	Pets     []string
+	Timezone string
+}
+
+// Haushalte aus dem Repo. Der Slug ist der Schlüssel, damit ein zweiter
+// Import dieselbe Zeile trifft statt eine neue anzulegen.
+func (q *Queries) UpsertDemoHousehold(ctx context.Context, arg UpsertDemoHouseholdParams) (Household, error) {
+	row := q.db.QueryRow(ctx, upsertDemoHousehold,
+		arg.Slug,
+		arg.Name,
+		arg.Home,
+		arg.HasCar,
+		arg.HasYard,
+		arg.Pets,
+		arg.Timezone,
+	)
+	var i Household
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Home,
+		&i.HasCar,
+		&i.HasYard,
+		&i.Pets,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.Slug,
+	)
+	return i, err
 }

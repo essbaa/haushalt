@@ -6,6 +6,14 @@ import (
 	"sort"
 )
 
+// ErrUnknownHousehold sagt, dass es diesen Haushalt nicht gibt.
+//
+// Der Fehler steht hier und nicht bei einer der beiden Quellen (Dateien oder
+// Datenbank), weil beide ihn brauchen und die HTTP-Schicht ihn prüfen muss,
+// ohne zu wissen, woher die Daten kommen. Ein Wachposten-Fehler statt einer
+// Zeichenkette: errors.Is entscheidet, nicht ein Textvergleich.
+var ErrUnknownHousehold = errors.New("planner: unbekannter haushalt")
+
 // Input ist alles, was der Planer braucht. Nichts wird nachgeladen.
 type Input struct {
 	Household Household
