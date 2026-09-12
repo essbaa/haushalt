@@ -14,6 +14,20 @@ import (
 // Zeichenkette: errors.Is entscheidet, nicht ein Textvergleich.
 var ErrUnknownHousehold = errors.New("planner: unbekannter haushalt")
 
+// ErrNotAllowed sagt, dass der Aufrufer darf, was er will, nur das nicht.
+//
+// Anders als ErrUnknownHousehold: Der Aufrufer gehört dazu, ihm fehlt die
+// Rolle. Das darf er erfahren — verschwiegen wird nur die Existenz von
+// Dingen, die ihn nichts angehen.
+var ErrNotAllowed = errors.New("planner: dafür fehlt die berechtigung")
+
+// ErrUnknownInvitation deckt beides ab: es gibt den Code nicht, er ist
+// abgelaufen, oder er wurde schon benutzt.
+//
+// Absichtlich eine Antwort für drei Fälle. Wer einen Code durchprobiert, soll
+// nicht erfahren, welcher davon zutrifft.
+var ErrUnknownInvitation = errors.New("planner: einladung ungültig")
+
 // Input ist alles, was der Planer braucht. Nichts wird nachgeladen.
 type Input struct {
 	Household Household

@@ -6,10 +6,14 @@ RETURNING *;
 -- name: ListMembers :many
 SELECT * FROM member WHERE household_id = $1 ORDER BY created_at, name;
 
--- name: GetMemberByAuthUserID :one
+-- name: GetMemberInHousehold :one
 -- Der Übergang von der Anmeldung in die Fachwelt: Better Auth kennt nur eine
 -- Nutzerkennung, alles Weitere hängt an dieser einen Zeile.
-SELECT * FROM member WHERE auth_user_id = $1;
+--
+-- Immer MIT Haushalt gefragt. Dieselbe Anmeldung kann in mehreren Haushalten
+-- eine Person sein, mit verschiedenen Rollen und verschiedenen Namen — eine
+-- Abfrage ohne household_id würde irgendeine davon zurückgeben.
+SELECT * FROM member WHERE household_id = $1 AND auth_user_id = $2;
 
 -- name: SetMemberAuthUser :one
 -- Verbindet eine bestehende Person mit einem Login — der Fall, dass jemand

@@ -27,6 +27,8 @@ servers:
 tags:
   - name: plan
     description: Wochenpläne
+  - name: haushalt
+    description: Mitgliedschaft und Einladungen
   - name: meta
     description: Auskunft über den laufenden Dienst
 
@@ -119,6 +121,87 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/haushalte/{haushaltId}/einladungen:
+    post:
+      tags: [haushalt]
+      summary: Jemanden einladen
+      description: |
+        Erzeugt einen einmalig gültigen Code. Nur planende Personen dürfen das.
+
+        Die Rolle wird beim Einladen festgelegt und nicht beim Beitritt: Wer
+        dazukommt, soll nicht selbst entscheiden, was er im Haushalt darf.
+      operationId: createEinladung
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rolle]
+              properties:
+                rolle:
+                  type: string
+                  enum: [planend, ausfuehrend]
+      responses:
+        "201":
+          description: der Code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Einladung"
+        "403":
+          description: nur planende Personen dürfen einladen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/einladungen/{code}/annehmen:
+    post:
+      tags: [haushalt]
+      summary: Einer Einladung folgen
+      description: |
+        Verbindet die angemeldete Person mit dem Haushalt aus der Einladung.
+        Ein Code gilt einmal und läuft ab.
+      operationId: acceptEinladung
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: der Haushalt, zu dem die Person jetzt gehört
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Haushalt"
+        "401":
+          description: dafür muss man angemeldet sein
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Code gibt es nicht, er ist abgelaufen oder verbraucht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
 components:
   schemas:
 
@@ -161,6 +244,20 @@ components:
           description: für Menschen lesbar, deutsch
           example: die Woche "2026-W99" liegt außerhalb von 1..53
 
+    Einladung:
+      type: object
+      required: [code, rolle, gueltig_bis]
+      properties:
+        code:
+          type: string
+          example: K7MQ2XPD
+        rolle:
+          type: string
+          enum: [planend, ausfuehrend]
+        gueltig_bis:
+          type: string
+          format: date-time
+
     Haushalt:
       type: object
       required: [id, name, mitglieder]
@@ -195,7 +292,7 @@ components:
 
     Wochenplan:
       type: object
-      required: [woche, haushalt, aufgaben, bilanz, uebersprungen]
+      required: [woche, haushalt, aufgaben, uebersprungen]
       properties:
         woche:
           type: string
@@ -206,9 +303,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Aufgabe"
+        meine_rolle:
+          type: string
+          enum: [planend, ausfuehrend, betreut]
+          nullable: true
+          description: |
+            Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
+            Demo-Haushalten und ohne Anmeldung.
         bilanz:
           type: array
-          description: eine Zeile je Person, die Aufgaben übernehmen kann
+          description: |
+            Eine Zeile je Person, die Aufgaben übernehmen kann — **nur für
+            planende Personen**. Wer ausführt, sieht den ganzen Plan, aber
+            nicht die Auswertung darüber, wer im Haushalt wie viel trägt.
+
+            Fehlt das Feld, ist das kein Fehler: Der Aufrufer darf es nicht
+            sehen. Demo-Haushalte liefern es mit, sie haben nichts zu
+            verbergen.
           items:
             $ref: "#/components/schemas/Bilanz"
         uebersprungen:

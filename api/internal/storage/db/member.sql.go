@@ -52,14 +52,23 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Mem
 	return i, err
 }
 
-const getMemberByAuthUserID = `-- name: GetMemberByAuthUserID :one
-SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member WHERE auth_user_id = $1
+const getMemberInHousehold = `-- name: GetMemberInHousehold :one
+SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member WHERE household_id = $1 AND auth_user_id = $2
 `
+
+type GetMemberInHouseholdParams struct {
+	HouseholdID pgtype.UUID
+	AuthUserID  *string
+}
 
 // Der Übergang von der Anmeldung in die Fachwelt: Better Auth kennt nur eine
 // Nutzerkennung, alles Weitere hängt an dieser einen Zeile.
-func (q *Queries) GetMemberByAuthUserID(ctx context.Context, authUserID *string) (Member, error) {
-	row := q.db.QueryRow(ctx, getMemberByAuthUserID, authUserID)
+//
+// Immer MIT Haushalt gefragt. Dieselbe Anmeldung kann in mehreren Haushalten
+// eine Person sein, mit verschiedenen Rollen und verschiedenen Namen — eine
+// Abfrage ohne household_id würde irgendeine davon zurückgeben.
+func (q *Queries) GetMemberInHousehold(ctx context.Context, arg GetMemberInHouseholdParams) (Member, error) {
+	row := q.db.QueryRow(ctx, getMemberInHousehold, arg.HouseholdID, arg.AuthUserID)
 	var i Member
 	err := row.Scan(
 		&i.ID,

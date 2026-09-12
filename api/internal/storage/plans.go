@@ -306,6 +306,10 @@ func (p *Plans) history(ctx context.Context, haushalt pgtype.UUID) (planner.Hist
 	return hist, nil
 }
 
+func zeitpunkt(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
 // ------------------------------------------------------------------ UUID
 
 // publicID ist der Slug, wenn es einen gibt, sonst die Kennung.

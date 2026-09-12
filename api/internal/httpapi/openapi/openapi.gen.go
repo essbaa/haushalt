@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/oapi-codegen/runtime"
 )
@@ -84,6 +85,24 @@ func (e BegruendungCode) Valid() bool {
 	}
 }
 
+// Defines values for EinladungRolle.
+const (
+	EinladungRolleAusfuehrend EinladungRolle = "ausfuehrend"
+	EinladungRollePlanend     EinladungRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the EinladungRolle enum.
+func (e EinladungRolle) Valid() bool {
+	switch e {
+	case EinladungRolleAusfuehrend:
+		return true
+	case EinladungRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Kategorie.
 const (
 	Aussen     Kategorie = "aussen"
@@ -128,19 +147,19 @@ func (e Kategorie) Valid() bool {
 
 // Defines values for MitgliedRolle.
 const (
-	Ausfuehrend MitgliedRolle = "ausfuehrend"
-	Betreut     MitgliedRolle = "betreut"
-	Planend     MitgliedRolle = "planend"
+	MitgliedRolleAusfuehrend MitgliedRolle = "ausfuehrend"
+	MitgliedRolleBetreut     MitgliedRolle = "betreut"
+	MitgliedRollePlanend     MitgliedRolle = "planend"
 )
 
 // Valid indicates whether the value is a known member of the MitgliedRolle enum.
 func (e MitgliedRolle) Valid() bool {
 	switch e {
-	case Ausfuehrend:
+	case MitgliedRolleAusfuehrend:
 		return true
-	case Betreut:
+	case MitgliedRolleBetreut:
 		return true
-	case Planend:
+	case MitgliedRollePlanend:
 		return true
 	default:
 		return false
@@ -171,6 +190,45 @@ func (e UebersprungenGrund) Valid() bool {
 	case NiemandGeeignet:
 		return true
 	case Startdichte:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WochenplanMeineRolle.
+const (
+	WochenplanMeineRolleAusfuehrend WochenplanMeineRolle = "ausfuehrend"
+	WochenplanMeineRolleBetreut     WochenplanMeineRolle = "betreut"
+	WochenplanMeineRollePlanend     WochenplanMeineRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the WochenplanMeineRolle enum.
+func (e WochenplanMeineRolle) Valid() bool {
+	switch e {
+	case WochenplanMeineRolleAusfuehrend:
+		return true
+	case WochenplanMeineRolleBetreut:
+		return true
+	case WochenplanMeineRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateEinladungJSONBodyRolle.
+const (
+	CreateEinladungJSONBodyRolleAusfuehrend CreateEinladungJSONBodyRolle = "ausfuehrend"
+	CreateEinladungJSONBodyRollePlanend     CreateEinladungJSONBodyRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the CreateEinladungJSONBodyRolle enum.
+func (e CreateEinladungJSONBodyRolle) Valid() bool {
+	switch e {
+	case CreateEinladungJSONBodyRolleAusfuehrend:
+		return true
+	case CreateEinladungJSONBodyRollePlanend:
 		return true
 	default:
 		return false
@@ -253,6 +311,17 @@ type Bilanz struct {
 	MitgliedId        string `json:"mitglied_id"`
 }
 
+// Einladung defines model for Einladung.
+type Einladung struct {
+	// Code Example: K7MQ2XPD
+	Code       string         `json:"code"`
+	GueltigBis time.Time      `json:"gueltig_bis"`
+	Rolle      EinladungRolle `json:"rolle"`
+}
+
+// EinladungRolle defines model for Einladung.Rolle.
+type EinladungRolle string
+
 // Fehler defines model for Fehler.
 type Fehler struct {
 	// Fehler für Menschen lesbar, deutsch
@@ -325,9 +394,19 @@ type Version struct {
 type Wochenplan struct {
 	Aufgaben []Aufgabe `json:"aufgaben"`
 
-	// Bilanz eine Zeile je Person, die Aufgaben übernehmen kann
-	Bilanz   []Bilanz `json:"bilanz"`
-	Haushalt Haushalt `json:"haushalt"`
+	// Bilanz Eine Zeile je Person, die Aufgaben übernehmen kann — **nur für
+	// planende Personen**. Wer ausführt, sieht den ganzen Plan, aber
+	// nicht die Auswertung darüber, wer im Haushalt wie viel trägt.
+	//
+	// Fehlt das Feld, ist das kein Fehler: Der Aufrufer darf es nicht
+	// sehen. Demo-Haushalte liefern es mit, sie haben nichts zu
+	// verbergen.
+	Bilanz   *[]Bilanz `json:"bilanz,omitempty"`
+	Haushalt Haushalt  `json:"haushalt"`
+
+	// MeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
+	// Demo-Haushalten und ohne Anmeldung.
+	MeineRolle *WochenplanMeineRolle `json:"meine_rolle,omitempty"`
 
 	// Uebersprungen Was nicht im Plan steht, mit Grund. Ohne dieses Feld könnte die
 	// App nicht erklären, warum etwas fehlt.
@@ -337,11 +416,32 @@ type Wochenplan struct {
 	Woche string `json:"woche"`
 }
 
+// WochenplanMeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
+// Demo-Haushalten und ohne Anmeldung.
+type WochenplanMeineRolle string
+
+// CreateEinladungJSONBody defines parameters for CreateEinladung.
+type CreateEinladungJSONBody struct {
+	Rolle CreateEinladungJSONBodyRolle `json:"rolle"`
+}
+
+// CreateEinladungJSONBodyRolle defines parameters for CreateEinladung.
+type CreateEinladungJSONBodyRolle string
+
+// CreateEinladungJSONRequestBody defines body for CreateEinladung for application/json ContentType.
+type CreateEinladungJSONRequestBody CreateEinladungJSONBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// AcceptEinladung Einer Einladung folgen
+	// (POST /api/einladungen/{code}/annehmen)
+	AcceptEinladung(w http.ResponseWriter, r *http.Request, code string)
 	// ListHaushalte Verfügbare Haushalte
 	// (GET /api/haushalte)
 	ListHaushalte(w http.ResponseWriter, r *http.Request)
+	// CreateEinladung Jemanden einladen
+	// (POST /api/haushalte/{haushaltId}/einladungen)
+	CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string)
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
@@ -362,11 +462,63 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// AcceptEinladung operation middleware
+func (siw *ServerInterfaceWrapper) AcceptEinladung(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "code" -------------
+	var code string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "code", r.PathValue("code"), &code, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptEinladung(w, r, code)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListHaushalte operation middleware
 func (siw *ServerInterfaceWrapper) ListHaushalte(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListHaushalte(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateEinladung operation middleware
+func (siw *ServerInterfaceWrapper) CreateEinladung(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEinladung(w, r, haushaltId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -563,8 +715,60 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/ich", wrapper.GetIch)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte", wrapper.ListHaushalte)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/einladungen/{code}/annehmen", wrapper.AcceptEinladung)
 
 	return m
+}
+
+type AcceptEinladungRequestObject struct {
+	Code string `json:"code"`
+}
+
+type AcceptEinladungResponseObject interface {
+	VisitAcceptEinladungResponse(w http.ResponseWriter) error
+}
+
+type AcceptEinladung200JSONResponse Haushalt
+
+func (response AcceptEinladung200JSONResponse) VisitAcceptEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptEinladung401JSONResponse Fehler
+
+func (response AcceptEinladung401JSONResponse) VisitAcceptEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptEinladung404JSONResponse Fehler
+
+func (response AcceptEinladung404JSONResponse) VisitAcceptEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type ListHaushalteRequestObject struct {
@@ -584,6 +788,57 @@ func (response ListHaushalte200JSONResponse) VisitListHaushalteResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEinladungRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *CreateEinladungJSONRequestBody
+}
+
+type CreateEinladungResponseObject interface {
+	VisitCreateEinladungResponse(w http.ResponseWriter) error
+}
+
+type CreateEinladung201JSONResponse Einladung
+
+func (response CreateEinladung201JSONResponse) VisitCreateEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEinladung403JSONResponse Fehler
+
+func (response CreateEinladung403JSONResponse) VisitCreateEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEinladung404JSONResponse Fehler
+
+func (response CreateEinladung404JSONResponse) VisitCreateEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -683,9 +938,15 @@ func (response GetVersion200JSONResponse) VisitGetVersionResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// AcceptEinladung Einer Einladung folgen
+	// (POST /api/einladungen/{code}/annehmen)
+	AcceptEinladung(ctx context.Context, request AcceptEinladungRequestObject) (AcceptEinladungResponseObject, error)
 	// ListHaushalte Verfügbare Haushalte
 	// (GET /api/haushalte)
 	ListHaushalte(ctx context.Context, request ListHaushalteRequestObject) (ListHaushalteResponseObject, error)
+	// CreateEinladung Jemanden einladen
+	// (POST /api/haushalte/{haushaltId}/einladungen)
+	CreateEinladung(ctx context.Context, request CreateEinladungRequestObject) (CreateEinladungResponseObject, error)
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(ctx context.Context, request GetWochenplanRequestObject) (GetWochenplanResponseObject, error)
@@ -736,6 +997,32 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// AcceptEinladung operation middleware
+func (sh *strictHandler) AcceptEinladung(w http.ResponseWriter, r *http.Request, code string) {
+	var request AcceptEinladungRequestObject
+
+	request.Code = code
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptEinladung(ctx, request.(AcceptEinladungRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptEinladung")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptEinladungResponseObject); ok {
+		if err := validResponse.VisitAcceptEinladungResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListHaushalte operation middleware
 func (sh *strictHandler) ListHaushalte(w http.ResponseWriter, r *http.Request) {
 	var request ListHaushalteRequestObject
@@ -753,6 +1040,39 @@ func (sh *strictHandler) ListHaushalte(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListHaushalteResponseObject); ok {
 		if err := validResponse.VisitListHaushalteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateEinladung operation middleware
+func (sh *strictHandler) CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request CreateEinladungRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body CreateEinladungJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateEinladung(ctx, request.(CreateEinladungRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateEinladung")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateEinladungResponseObject); ok {
+		if err := validResponse.VisitCreateEinladungResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

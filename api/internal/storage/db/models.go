@@ -40,6 +40,17 @@ type Household struct {
 	Slug      *string
 }
 
+type Invitation struct {
+	Code        string
+	HouseholdID pgtype.UUID
+	Role        string
+	CreatedBy   pgtype.UUID
+	CreatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	UsedAt      pgtype.Timestamptz
+	UsedBy      pgtype.UUID
+}
+
 type Member struct {
 	ID              pgtype.UUID
 	HouseholdID     pgtype.UUID

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
@@ -78,9 +79,22 @@ func (c *Catalog) Templates() []planner.TaskTemplate { return c.templates }
 // Der Kontext wird nicht gebraucht und steht trotzdem in der Signatur: Die
 // zweite Quelle ist eine Datenbank, und die HTTP-Schicht soll die beiden nicht
 // unterscheiden können.
-// Arrive gibt es hier nur, damit der Katalog dieselbe Schnittstelle erfüllt
-// wie die Datenbank. Dateien kennen keine Nutzer.
+// Die vier Methoden unten gibt es nur, damit der Katalog dieselbe
+// Schnittstelle erfüllt wie die Datenbank. Dateien kennen keine Nutzer: Ohne
+// Datenbank gibt es nur die Beispielhaushalte, und die sind öffentlich.
 func (c *Catalog) Arrive(context.Context, string, string) error { return nil }
+
+func (c *Catalog) RoleOf(context.Context, string, string) (planner.Role, error) {
+	return "", nil
+}
+
+func (c *Catalog) Invite(context.Context, string, string, planner.Role) (string, time.Time, error) {
+	return "", time.Time{}, planner.ErrNotAllowed
+}
+
+func (c *Catalog) Accept(context.Context, string, string, string) (planner.Household, error) {
+	return planner.Household{}, planner.ErrUnknownInvitation
+}
 
 func (c *Catalog) Households(context.Context, string) ([]planner.Household, error) {
 	out := make([]planner.Household, 0, len(c.order))

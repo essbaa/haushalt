@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
@@ -24,6 +25,14 @@ type Plans interface {
 	// Prüfung gehört zur Quelle und nicht in den Handler — ein Handler kann
 	// sie vergessen.
 	Plan(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error)
+	// RoleOf ist die Rolle des Aufrufers in diesem Haushalt. Leer heißt: kein
+	// Mitglied — bei Demo-Haushalten der Normalfall.
+	RoleOf(ctx context.Context, subject, id string) (planner.Role, error)
+	// Invite erzeugt einen einmalig gültigen Code. Nur planende Personen.
+	Invite(ctx context.Context, subject, id string, role planner.Role) (string, time.Time, error)
+	// Accept verbindet die angemeldete Person mit dem Haushalt aus der
+	// Einladung.
+	Accept(ctx context.Context, subject, name, code string) (planner.Household, error)
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -111,7 +120,77 @@ func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestOb
 		return nil, err
 	}
 
-	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result)), nil
+	// Die Bilanz ist der einzige Teil, der an die Rolle gebunden ist: Wer
+	// ausführt, sieht den ganzen Plan, aber nicht die Auswertung darüber, wer
+	// im Haushalt wie viel trägt.
+	//
+	// Bei Demo-Haushalten ist die Rolle leer und die Bilanz sichtbar — sie
+	// haben nichts zu verbergen, und sie sind der Teil, der das Produkt
+	// erklärt.
+	rolle, err := a.plans.RoleOf(ctx, subject, r.HaushaltId)
+	if err != nil {
+		return nil, err
+	}
+	mitBilanz := rolle == planner.RolePlanner || rolle == ""
+
+	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result, rolle, mitBilanz)), nil
+}
+
+// CreateEinladung erzeugt einen Code, mit dem jemand in den Haushalt kommt.
+func (a api) CreateEinladung(ctx context.Context, r openapi.CreateEinladungRequestObject) (openapi.CreateEinladungResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.CreateEinladung403JSONResponse{Fehler: "dafür muss man angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.CreateEinladung403JSONResponse{Fehler: "es fehlt die rolle"}, nil
+	}
+
+	code, bis, err := a.plans.Invite(ctx, id.Subject, r.HaushaltId, planner.Role(r.Body.Rolle))
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.CreateEinladung404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.CreateEinladung403JSONResponse{
+			Fehler: "nur planende Personen dürfen einladen",
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	return openapi.CreateEinladung201JSONResponse{
+		Code:       code,
+		Rolle:      openapi.EinladungRolle(r.Body.Rolle),
+		GueltigBis: bis,
+	}, nil
+}
+
+// AcceptEinladung verbindet die angemeldete Person mit dem Haushalt.
+func (a api) AcceptEinladung(ctx context.Context, r openapi.AcceptEinladungRequestObject) (openapi.AcceptEinladungResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.AcceptEinladung401JSONResponse{Fehler: "dafür muss man angemeldet sein"}, nil
+	}
+
+	haushalt, err := a.plans.Accept(ctx, id.Subject, id.Name, r.Code)
+	switch {
+	case errors.Is(err, planner.ErrUnknownInvitation):
+		// Eine Antwort für drei Fälle: gibt es nicht, abgelaufen, verbraucht.
+		// Wer Codes durchprobiert, soll nicht erfahren, welcher zutrifft.
+		return openapi.AcceptEinladung404JSONResponse{
+			Fehler: "diese Einladung gilt nicht mehr",
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.AcceptEinladung401JSONResponse{
+			Fehler: "dafür muss man angemeldet sein",
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	return openapi.AcceptEinladung200JSONResponse(haushaltNachAussen(haushalt)), nil
 }
 
 // ------------------------------------------------------------ Übersetzung
@@ -122,15 +201,21 @@ func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestOb
 // Kern nichts zu suchen haben. Der Preis ist diese Übersetzung; sie steht an
 // einer Stelle und ist langweilig, und das ist genau richtig.
 
-func planNachAussen(h planner.Household, r planner.Result) openapi.Wochenplan {
+func planNachAussen(h planner.Household, r planner.Result, rolle planner.Role, mitBilanz bool) openapi.Wochenplan {
 	plan := openapi.Wochenplan{
 		Woche:    r.Week.String(),
 		Haushalt: haushaltNachAussen(h),
 		// Nicht-nil, damit leere Listen als [] und nicht als null im JSON
 		// stehen. Ein Client, der `.map()` darauf aufruft, dankt es.
 		Aufgaben:      []openapi.Aufgabe{},
-		Bilanz:        []openapi.Bilanz{},
 		Uebersprungen: []openapi.Uebersprungen{},
+	}
+	if rolle != "" {
+		r := openapi.WochenplanMeineRolle(rolle)
+		plan.MeineRolle = &r
+	}
+	if mitBilanz {
+		plan.Bilanz = &[]openapi.Bilanz{}
 	}
 
 	for _, t := range r.Tasks {
@@ -158,7 +243,10 @@ func planNachAussen(h planner.Household, r planner.Result) openapi.Wochenplan {
 	}
 
 	for _, l := range r.Balance {
-		plan.Bilanz = append(plan.Bilanz, openapi.Bilanz{
+		if !mitBilanz {
+			break
+		}
+		*plan.Bilanz = append(*plan.Bilanz, openapi.Bilanz{
 			MitgliedId:        l.MemberID,
 			Minuten:           l.Minutes,
 			Kopflast:          l.HeadLoad,
