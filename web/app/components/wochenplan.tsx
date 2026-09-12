@@ -41,7 +41,14 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         </div>
       )}
 
-      <BilanzTafel bilanz={plan.bilanz} namen={namen} />
+      {plan.bilanz ? (
+        <BilanzTafel bilanz={plan.bilanz} namen={namen} />
+      ) : (
+        <p className="rounded-lg border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
+          Die Bilanz sehen die planenden Personen im Haushalt. Du siehst den
+          ganzen Plan — nur nicht die Auswertung darüber, wer wie viel trägt.
+        </p>
+      )}
 
       {plan.uebersprungen.length > 0 && (
         <details className="rounded-lg border border-line bg-surface p-4">

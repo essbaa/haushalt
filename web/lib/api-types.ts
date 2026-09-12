@@ -21,6 +21,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wer fragt
+         * @description Beantwortet, was das mitgeschickte Token beweist — und nicht mehr.
+         *     Ohne Token ist `angemeldet` false; das ist kein Fehler, sondern die
+         *     Antwort. Die Demo-Haushalte sind ohne Anmeldung sichtbar.
+         */
+        get: operations["getIch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/haushalte": {
         parameters: {
             query?: never;
@@ -59,6 +81,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/haushalte/{haushaltId}/einladungen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Jemanden einladen
+         * @description Erzeugt einen einmalig gültigen Code. Nur planende Personen dürfen das.
+         *
+         *     Die Rolle wird beim Einladen festgelegt und nicht beim Beitritt: Wer
+         *     dazukommt, soll nicht selbst entscheiden, was er im Haushalt darf.
+         */
+        post: operations["createEinladung"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/einladungen/{code}/annehmen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einer Einladung folgen
+         * @description Verbindet die angemeldete Person mit dem Haushalt aus der Einladung.
+         *     Ein Code gilt einmal und läuft ab.
+         */
+        post: operations["acceptEinladung"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -70,12 +136,32 @@ export interface components {
              */
             version: string;
         };
+        /**
+         * @description Absichtlich schmal: Hier steht nur, was der Aussteller signiert hat.
+         *     Welche Person in welchem Haushalt dahintersteckt, ist eine Frage an die
+         *     Datenbank und kommt mit dem Onboarding dazu.
+         */
+        Ich: {
+            angemeldet: boolean;
+            /** @description Nutzerkennung des Anmeldedienstes */
+            subject?: string | null;
+            name?: string | null;
+            email?: string | null;
+        };
         Fehler: {
             /**
              * @description für Menschen lesbar, deutsch
              * @example die Woche "2026-W99" liegt außerhalb von 1..53
              */
             fehler: string;
+        };
+        Einladung: {
+            /** @example K7MQ2XPD */
+            code: string;
+            /** @enum {string} */
+            rolle: "planend" | "ausfuehrend";
+            /** Format: date-time */
+            gueltig_bis: string;
         };
         Haushalt: {
             /** @example familie-a */
@@ -101,8 +187,22 @@ export interface components {
             woche: string;
             haushalt: components["schemas"]["Haushalt"];
             aufgaben: components["schemas"]["Aufgabe"][];
-            /** @description eine Zeile je Person, die Aufgaben übernehmen kann */
-            bilanz: components["schemas"]["Bilanz"][];
+            /**
+             * @description Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
+             *     Demo-Haushalten und ohne Anmeldung.
+             * @enum {string|null}
+             */
+            meine_rolle?: "planend" | "ausfuehrend" | "betreut" | null;
+            /**
+             * @description Eine Zeile je Person, die Aufgaben übernehmen kann — **nur für
+             *     planende Personen**. Wer ausführt, sieht den ganzen Plan, aber
+             *     nicht die Auswertung darüber, wer im Haushalt wie viel trägt.
+             *
+             *     Fehlt das Feld, ist das kein Fehler: Der Aufrufer darf es nicht
+             *     sehen. Demo-Haushalte liefern es mit, sie haben nichts zu
+             *     verbergen.
+             */
+            bilanz?: components["schemas"]["Bilanz"][];
             /**
              * @description Was nicht im Plan steht, mit Grund. Ohne dieses Feld könnte die
              *     App nicht erklären, warum etwas fehlt.
@@ -206,6 +306,26 @@ export interface operations {
             };
         };
     };
+    getIch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description die Identität des Aufrufers, soweit belegt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ich"];
+                };
+            };
+        };
+    };
     listHaushalte: {
         parameters: {
             query?: never;
@@ -259,6 +379,93 @@ export interface operations {
                 };
             };
             /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    createEinladung: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    rolle: "planend" | "ausfuehrend";
+                };
+            };
+        };
+        responses: {
+            /** @description der Code */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Einladung"];
+                };
+            };
+            /** @description nur planende Personen dürfen einladen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    acceptEinladung: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description der Haushalt, zu dem die Person jetzt gehört */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Haushalt"];
+                };
+            };
+            /** @description dafür muss man angemeldet sein */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Code gibt es nicht, er ist abgelaufen oder verbraucht */
             404: {
                 headers: {
                     [name: string]: unknown;

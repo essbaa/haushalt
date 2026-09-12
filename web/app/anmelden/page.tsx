@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 
 /**
@@ -12,6 +13,7 @@ import { signIn, signUp, useSession } from "@/lib/auth-client";
  * CORS und ohne Token.
  */
 export default function Anmelden() {
+  const router = useRouter();
   const { data: sitzung, isPending } = useSession();
   const [neu, setNeu] = useState(false);
   const [name, setName] = useState("");
@@ -35,7 +37,27 @@ export default function Anmelden() {
       setFehler(antwort.error.message ?? "Das hat nicht funktioniert.");
       return;
     }
-    window.location.href = "/";
+    // push statt window.location: Next kennt die Route und muss die Seite
+    // nicht neu laden. refresh danach, weil die Startseite auf dem Server
+    // gerendert wird und die frische Sitzung noch nicht kennt.
+    router.push(weiter());
+    router.refresh();
+  }
+
+  /**
+   * Wohin nach dem Anmelden.
+   *
+   * Aus der Adresse gelesen, damit ein Einladungslink nicht verloren geht:
+   * /anmelden?weiter=/beitreten?code=… führt hinterher dorthin zurück.
+   *
+   * Nur Pfade, und keine, die mit zwei Schrägstrichen beginnen. Sonst wäre
+   * ?weiter=//fremde.example eine offene Weiterleitung — der klassische Weg,
+   * eine vertrauenswürdige Anmeldeseite als Sprungbrett zu missbrauchen.
+   */
+  function weiter(): string {
+    const ziel = new URLSearchParams(window.location.search).get("weiter");
+    if (!ziel || !ziel.startsWith("/") || ziel.startsWith("//")) return "/";
+    return ziel;
   }
 
   if (isPending) {

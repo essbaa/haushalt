@@ -100,6 +100,15 @@ export default async function Page({
 
       {plan && <Wochenplan plan={plan} />}
 
+      {plan?.meine_rolle === "planend" && (
+        <Link
+          href={`/einladen?haushalt=${plan.haushalt.id}`}
+          className="self-start rounded-md border border-line px-4 py-2 text-sm transition-colors hover:border-accent hover:text-accent"
+        >
+          Jemanden einladen
+        </Link>
+      )}
+
       <section className="space-y-3 border-t border-line pt-8">
         <h2 className="font-mono text-xs uppercase tracking-widest text-muted">
           Verbindung
