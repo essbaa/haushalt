@@ -90,11 +90,10 @@ export async function fetchHealth(signal?: AbortSignal): Promise<Health> {
  * auch ohne JavaScript. Die Statuszeile bleibt trotzdem im Browser, weil sie
  * genau das beweisen soll, was hier bewusst umgangen wird: die CORS-Grenze.
  *
- * revalidate: 300 heißt, dass Next die Antwort fünf Minuten zwischenspeichert.
- * Für Beispielhaushalte reicht das; sobald Pläne pro Nutzer entstehen (T5),
- * muss das hier weg.
+ * Zwischengespeichert wird nur, was öffentlich ist — siehe unten. Angemeldete
+ * Anfragen tragen ein Token und werden nie gespeichert.
  */
-async function hole<T>(pfad: string): Promise<T> {
+async function hole<T>(pfad: string, token?: string | null): Promise<T> {
   if (!API_BASE) {
     throw new ApiError(
       "NEXT_PUBLIC_API_URL ist nicht gesetzt",
@@ -102,9 +101,17 @@ async function hole<T>(pfad: string): Promise<T> {
     );
   }
 
+  // Mit Token ist die Antwort persönlich und darf NICHT zwischengespeichert
+  // werden — sonst bekäme der nächste Besucher den Plan des vorigen zu sehen.
+  // Ohne Token ist es die öffentliche Demo, und fünf Minuten Puffer ersparen
+  // dem schlafenden Fly-Dienst jeden Aufruf.
+  const wie: RequestInit = token
+    ? { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
+    : { next: { revalidate: 300 } };
+
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${pfad}`, { next: { revalidate: 300 } });
+    res = await fetch(`${API_BASE}${pfad}`, wie);
   } catch {
     throw new ApiError(`${API_BASE} ist nicht erreichbar`, "Läuft der Go-Dienst?");
   }
@@ -125,12 +132,17 @@ async function hole<T>(pfad: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function ladeHaushalte(): Promise<Haushalt[]> {
-  return hole<Haushalt[]>("/api/haushalte");
+export function ladeHaushalte(token?: string | null): Promise<Haushalt[]> {
+  return hole<Haushalt[]>("/api/haushalte", token);
 }
 
-export function ladePlan(haushaltId: string, woche: string): Promise<Wochenplan> {
+export function ladePlan(
+  haushaltId: string,
+  woche: string,
+  token?: string | null,
+): Promise<Wochenplan> {
   return hole<Wochenplan>(
     `/api/haushalte/${encodeURIComponent(haushaltId)}/plan/${encodeURIComponent(woche)}`,
+    token,
   );
 }

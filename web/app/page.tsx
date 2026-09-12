@@ -3,6 +3,7 @@ import { ApiStatus } from "@/app/components/api-status";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
+import { serverToken } from "@/lib/auth-token";
 import { aktuelleWoche, istWoche } from "@/lib/woche";
 
 /**
@@ -27,11 +28,15 @@ export default async function Page({
   let plan: Plan | null = null;
   let fehler: { text: string; hinweis?: string } | null = null;
 
+  // Das Token geht an den Go-Dienst mit, wenn eines da ist. Ohne Anmeldung
+  // sieht man die Demo-Haushalte; angemeldet zusätzlich den eigenen.
+  const token = await serverToken();
+
   try {
-    haushalte = await ladeHaushalte();
+    haushalte = await ladeHaushalte(token);
     const gewaehlt =
       haushalte.find((h) => h.id === params.haushalt)?.id ?? haushalte[0]?.id;
-    if (gewaehlt) plan = await ladePlan(gewaehlt, woche);
+    if (gewaehlt) plan = await ladePlan(gewaehlt, woche, token);
   } catch (e) {
     // Der Dienst schläft (Fly fährt bei Ruhe herunter) oder ist kaputt. Beides
     // gehört gesagt, nicht in eine leere Seite verwandelt.

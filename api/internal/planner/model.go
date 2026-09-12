@@ -62,7 +62,17 @@ type Member struct {
 }
 
 // IsAdult entscheidet über Aufgaben, die nur Erwachsene übernehmen dürfen.
-func (m Member) IsAdult() bool { return m.Age >= 18 }
+//
+// Die Rolle zählt mit, nicht nur das Alter: RolePlanner ist per Definition
+// erwachsen (siehe dort — „plant und führt aus: die Erwachsenen"). Das ist
+// nicht Bequemlichkeit, sondern nötig, damit ein frisch registrierter Mensch
+// einen brauchbaren Plan bekommt, bevor er sein Geburtsjahr eingetragen hat.
+// Ohne diese Zeile wäre er mit Alter 0 ein Kind und bekäme keine einzige
+// Aufgabe, die Erwachsene voraussetzt.
+//
+// Für Kinder bleibt das Alter maßgeblich: Wer nicht plant, wird nach Jahren
+// beurteilt.
+func (m Member) IsAdult() bool { return m.Role == RolePlanner || m.Age >= 18 }
 
 // CanPerform sagt, ob diese Person überhaupt Aufgaben ausführt.
 func (m Member) CanPerform() bool {

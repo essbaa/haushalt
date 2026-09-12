@@ -78,7 +78,11 @@ func (c *Catalog) Templates() []planner.TaskTemplate { return c.templates }
 // Der Kontext wird nicht gebraucht und steht trotzdem in der Signatur: Die
 // zweite Quelle ist eine Datenbank, und die HTTP-Schicht soll die beiden nicht
 // unterscheiden können.
-func (c *Catalog) Households(context.Context) ([]planner.Household, error) {
+// Arrive gibt es hier nur, damit der Katalog dieselbe Schnittstelle erfüllt
+// wie die Datenbank. Dateien kennen keine Nutzer.
+func (c *Catalog) Arrive(context.Context, string, string) error { return nil }
+
+func (c *Catalog) Households(context.Context, string) ([]planner.Household, error) {
 	out := make([]planner.Household, 0, len(c.order))
 	for _, id := range c.order {
 		out = append(out, c.households[id].household)
@@ -90,7 +94,9 @@ func (c *Catalog) Households(context.Context) ([]planner.Household, error) {
 //
 // Der Catalog hält die Daten, die Rechnung macht der Planer — dieses Paket
 // entscheidet nichts, es reicht durch.
-func (c *Catalog) Plan(_ context.Context, id string, week planner.Week) (planner.Result, planner.Household, error) {
+// Plan ignoriert das Subject: Ohne Datenbank gibt es nur die
+// Beispielhaushalte, und die sind öffentlich.
+func (c *Catalog) Plan(_ context.Context, _, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	e, ok := c.households[id]
 	if !ok {
 		return planner.Result{}, planner.Household{}, fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, id)

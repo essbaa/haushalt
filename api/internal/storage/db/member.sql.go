@@ -75,6 +75,41 @@ func (q *Queries) GetMemberByAuthUserID(ctx context.Context, authUserID *string)
 	return i, err
 }
 
+const hasMembership = `-- name: HasMembership :one
+SELECT EXISTS(SELECT 1 FROM member WHERE auth_user_id = $1)
+`
+
+// Ist diese angemeldete Person überhaupt irgendwo Mitglied? Die Frage
+// entscheidet, ob beim ersten Zugriff ein Haushalt entsteht.
+func (q *Queries) HasMembership(ctx context.Context, authUserID *string) (bool, error) {
+	row := q.db.QueryRow(ctx, hasMembership, authUserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isMemberOf = `-- name: IsMemberOf :one
+SELECT EXISTS(
+    SELECT 1 FROM member WHERE household_id = $1 AND auth_user_id = $2
+)
+`
+
+type IsMemberOfParams struct {
+	HouseholdID pgtype.UUID
+	AuthUserID  *string
+}
+
+// Darf diese Person diesen Haushalt sehen?
+//
+// Eine Abfrage, kein Abgleich in Go: Die Antwort soll aus derselben Quelle
+// kommen wie die Daten, sonst driften Berechtigung und Inhalt auseinander.
+func (q *Queries) IsMemberOf(ctx context.Context, arg IsMemberOfParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isMemberOf, arg.HouseholdID, arg.AuthUserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listMembers = `-- name: ListMembers :many
 SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member WHERE household_id = $1 ORDER BY created_at, name
 `

@@ -37,3 +37,8 @@ SELECT * FROM household WHERE slug = $1;
 -- Alle Haushalte. Ab der Anmeldung tritt ListHouseholdsForAuthUser an diese
 -- Stelle — bis dahin sind es die Beispielhaushalte aus dem Repo.
 SELECT * FROM household ORDER BY created_at;
+
+-- name: ListDemoHouseholds :many
+-- Haushalte mit Slug sind die aus dem Repo: öffentlich sichtbar, ohne
+-- Anmeldung. Alles ohne Slug gehört jemandem.
+SELECT * FROM household WHERE slug IS NOT NULL ORDER BY created_at;

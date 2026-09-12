@@ -14,8 +14,16 @@ import (
 // wo es gebraucht wird. Heute erfüllt es der Katalog aus dem Repo, ab T5 die
 // Datenbank. Dieses Paket merkt den Unterschied nicht.
 type Plans interface {
-	Households(ctx context.Context) ([]planner.Household, error)
-	Plan(ctx context.Context, id string, week planner.Week) (planner.Result, planner.Household, error)
+	// Arrive verbindet eine angemeldete Person mit einer Person im Haushalt
+	// und legt beim ersten Mal beides an.
+	Arrive(ctx context.Context, subject, name string) error
+	// Households sind die Haushalte, die dieser Aufrufer sehen darf.
+	// Leeres subject heißt: nicht angemeldet.
+	Households(ctx context.Context, subject string) ([]planner.Household, error)
+	// Plan prüft selbst, ob der Aufrufer diesen Haushalt sehen darf. Die
+	// Prüfung gehört zur Quelle und nicht in den Handler — ein Handler kann
+	// sie vergessen.
+	Plan(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error)
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -53,7 +61,22 @@ func (a api) GetIch(ctx context.Context, _ openapi.GetIchRequestObject) (openapi
 }
 
 func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestObject) (openapi.ListHaushalteResponseObject, error) {
-	haushalte, err := a.plans.Households(ctx)
+	var subject string
+	if id, ok := auth.From(ctx); ok {
+		subject = id.Subject
+		// Hier entsteht beim ersten angemeldeten Zugriff der eigene Haushalt.
+		//
+		// Ein GET, der schreibt — das ist die unschöne Seite. Dafür passiert
+		// es genau dort, wo jemand zum ersten Mal nach seinen Haushalten
+		// fragt, es ist idempotent, und die Alternative wäre ein
+		// Einrichtungsschritt, den man vergessen kann. Mit dem richtigen
+		// Onboarding (T6) fällt es weg.
+		if err := a.plans.Arrive(ctx, id.Subject, id.Name); err != nil {
+			return nil, err
+		}
+	}
+
+	haushalte, err := a.plans.Households(ctx, subject)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +93,12 @@ func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestOb
 		return openapi.GetWochenplan400JSONResponse{Fehler: err.Error()}, nil
 	}
 
-	result, household, err := a.plans.Plan(ctx, r.HaushaltId, week)
+	var subject string
+	if id, ok := auth.From(ctx); ok {
+		subject = id.Subject
+	}
+
+	result, household, err := a.plans.Plan(ctx, subject, r.HaushaltId, week)
 	switch {
 	case errors.Is(err, planner.ErrUnknownHousehold):
 		return openapi.GetWochenplan404JSONResponse{

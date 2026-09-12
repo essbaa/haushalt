@@ -25,11 +25,13 @@ func (f fakePinger) Ping(context.Context) error { return f.err }
 // Dateisystem — die HTTP-Schicht wird geprüft, nicht der Planer.
 type fakePlans struct{}
 
-func (fakePlans) Households(context.Context) ([]planner.Household, error) {
+func (fakePlans) Arrive(context.Context, string, string) error { return nil }
+
+func (fakePlans) Households(context.Context, string) ([]planner.Household, error) {
 	return []planner.Household{testHaushalt()}, nil
 }
 
-func (fakePlans) Plan(_ context.Context, id string, week planner.Week) (planner.Result, planner.Household, error) {
+func (fakePlans) Plan(_ context.Context, _, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	if id != "familie-a" {
 		return planner.Result{}, planner.Household{}, planner.ErrUnknownHousehold
 	}

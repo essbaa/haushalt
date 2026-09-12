@@ -104,7 +104,7 @@ func run() error {
 			return err
 		}
 		plans = catalog
-		haushalte, _ := catalog.Households(ctx)
+		haushalte, _ := catalog.Households(ctx, "")
 		log.Info("wochenpläne kommen aus dem repo",
 			"verzeichnis", cfg.LibraryDir,
 			"vorlagen", len(catalog.Templates()),

@@ -28,13 +28,83 @@ type Plans struct{ db *DB }
 // AsPlans gibt die Datenbank als Planquelle aus.
 func (d *DB) AsPlans() *Plans { return &Plans{db: d} }
 
-func (p *Plans) Households(ctx context.Context) ([]planner.Household, error) {
-	zeilen, err := p.db.ListHouseholds(ctx)
+// Arrive verbindet eine angemeldete Person mit einer Person im Haushalt — und
+// legt beim ersten Mal beides an.
+//
+// Das ist das Onboarding in seiner kleinsten ehrlichen Form: Wer sich
+// registriert, hat danach einen Haushalt und ist darin planend. Kapazität und
+// Wohnform sind Vorgaben, die er später korrigiert; das Geburtsjahr bleibt
+// leer, weil wir es nicht erfinden.
+//
+// Idempotent: Wer schon irgendwo Mitglied ist, bekommt nichts Neues.
+func (p *Plans) Arrive(ctx context.Context, subject, name string) error {
+	if subject == "" {
+		return nil
+	}
+	dabei, err := p.db.HasMembership(ctx, &subject)
+	if err != nil {
+		return err
+	}
+	if dabei {
+		return nil
+	}
+
+	if name == "" {
+		name = "Ich"
+	}
+	haushalt, err := p.db.CreateHousehold(ctx, db.CreateHouseholdParams{
+		Name:     "Haushalt von " + name,
+		Home:     "wohnung",
+		Pets:     []string{},
+		Timezone: "Europe/Berlin",
+		// Kein Slug: Der gehört den Beispielhaushalten aus dem Repo. Dieser
+		// hier ist echt und wird über seine Kennung angesprochen.
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = p.db.CreateMember(ctx, db.CreateMemberParams{
+		HouseholdID: haushalt.ID,
+		Name:        name,
+		Role:        string(planner.RolePlanner),
+		// Werktags eine Stunde, am Wochenende zwei. Geraten und deshalb
+		// änderbar — aber ein Plan mit Nullkapazität wäre leer, und eine leere
+		// erste Woche erklärt niemandem, was die App tut.
+		CapacityMinutes: []int32{60, 60, 60, 60, 60, 120, 120},
+		AuthUserID:      &subject,
+	})
+	return err
+}
+
+// Households sind die Haushalte, die dieser Aufrufer sehen darf: die
+// Demo-Haushalte aus dem Repo und die eigenen.
+//
+// subject leer heißt nicht angemeldet — dann bleiben es die Demo-Haushalte.
+// Ohne diese Trennung stünde jeder fremde Haushalt in der Liste, und das wäre
+// kein Schönheitsfehler, sondern ein Datenleck.
+func (p *Plans) Households(ctx context.Context, subject string) ([]planner.Household, error) {
+	zeilen, err := p.db.ListDemoHouseholds(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if subject != "" {
+		eigene, err := p.db.ListHouseholdsForAuthUser(ctx, &subject)
+		if err != nil {
+			return nil, err
+		}
+		zeilen = append(zeilen, eigene...)
+	}
+
 	out := make([]planner.Household, 0, len(zeilen))
+	gesehen := map[string]bool{}
 	for _, z := range zeilen {
+		schluessel := formatUUID(z.ID)
+		if gesehen[schluessel] {
+			continue // ein Demo-Haushalt, in dem der Aufrufer auch Mitglied ist
+		}
+		gesehen[schluessel] = true
+
 		h, err := p.household(ctx, z)
 		if err != nil {
 			return nil, err
@@ -44,9 +114,12 @@ func (p *Plans) Households(ctx context.Context) ([]planner.Household, error) {
 	return out, nil
 }
 
-func (p *Plans) Plan(ctx context.Context, id string, week planner.Week) (planner.Result, planner.Household, error) {
+func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	zeile, err := p.lookup(ctx, id)
 	if err != nil {
+		return planner.Result{}, planner.Household{}, err
+	}
+	if err := p.mayAccess(ctx, subject, zeile); err != nil {
 		return planner.Result{}, planner.Household{}, err
 	}
 	haushalt, err := p.household(ctx, zeile)
@@ -96,6 +169,37 @@ func (p *Plans) lookup(ctx context.Context, id string) (db.Household, error) {
 		return db.Household{}, fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, id)
 	}
 	return zeile, err
+}
+
+// mayAccess entscheidet, ob dieser Aufrufer diesen Haushalt sehen darf.
+//
+// Fremder Haushalt ergibt „unbekannt", nicht „verboten". Das ist Absicht: Ein
+// 403 verrät, dass es diesen Haushalt gibt — ein 404 nicht. Bei einer App, in
+// der Haushalte über sprechende Adressen erreichbar sind, ist das der
+// Unterschied zwischen „du darfst nicht" und „dich betrifft das nicht".
+//
+// Die Prüfung sitzt hier und nicht im Handler. Ein Handler kann sie
+// vergessen; diese Funktion kann man nicht umgehen, ohne Plan zu ändern.
+func (p *Plans) mayAccess(ctx context.Context, subject string, z db.Household) error {
+	// Demo-Haushalte aus dem Repo sind öffentlich — das ist der Zugang ohne
+	// Anmeldung, den der Bauplan für die Demo vorsieht.
+	if z.Slug != nil && *z.Slug != "" {
+		return nil
+	}
+	if subject == "" {
+		return fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, publicID(z))
+	}
+	dabei, err := p.db.IsMemberOf(ctx, db.IsMemberOfParams{
+		HouseholdID: z.ID,
+		AuthUserID:  &subject,
+	})
+	if err != nil {
+		return err
+	}
+	if !dabei {
+		return fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, publicID(z))
+	}
+	return nil
 }
 
 func (p *Plans) household(ctx context.Context, z db.Household) (planner.Household, error) {

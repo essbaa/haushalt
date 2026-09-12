@@ -92,6 +92,42 @@ func (q *Queries) GetHouseholdBySlug(ctx context.Context, slug *string) (Househo
 	return i, err
 }
 
+const listDemoHouseholds = `-- name: ListDemoHouseholds :many
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE slug IS NOT NULL ORDER BY created_at
+`
+
+// Haushalte mit Slug sind die aus dem Repo: öffentlich sichtbar, ohne
+// Anmeldung. Alles ohne Slug gehört jemandem.
+func (q *Queries) ListDemoHouseholds(ctx context.Context) ([]Household, error) {
+	rows, err := q.db.Query(ctx, listDemoHouseholds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Household{}
+	for rows.Next() {
+		var i Household
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Home,
+			&i.HasCar,
+			&i.HasYard,
+			&i.Pets,
+			&i.Timezone,
+			&i.CreatedAt,
+			&i.Slug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listHouseholds = `-- name: ListHouseholds :many
 SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household ORDER BY created_at
 `

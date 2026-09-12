@@ -28,3 +28,17 @@ ON CONFLICT (household_id, name) DO UPDATE
         care             = EXCLUDED.care,
         capacity_minutes = EXCLUDED.capacity_minutes
 RETURNING *;
+
+-- name: HasMembership :one
+-- Ist diese angemeldete Person überhaupt irgendwo Mitglied? Die Frage
+-- entscheidet, ob beim ersten Zugriff ein Haushalt entsteht.
+SELECT EXISTS(SELECT 1 FROM member WHERE auth_user_id = $1);
+
+-- name: IsMemberOf :one
+-- Darf diese Person diesen Haushalt sehen?
+--
+-- Eine Abfrage, kein Abgleich in Go: Die Antwort soll aus derselben Quelle
+-- kommen wie die Daten, sonst driften Berechtigung und Inhalt auseinander.
+SELECT EXISTS(
+    SELECT 1 FROM member WHERE household_id = $1 AND auth_user_id = $2
+);
