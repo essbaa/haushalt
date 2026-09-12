@@ -271,6 +271,18 @@ type Haushalt struct {
 	Name string `json:"name"`
 }
 
+// Ich Absichtlich schmal: Hier steht nur, was der Aussteller signiert hat.
+// Welche Person in welchem Haushalt dahintersteckt, ist eine Frage an die
+// Datenbank und kommt mit dem Onboarding dazu.
+type Ich struct {
+	Angemeldet bool    `json:"angemeldet"`
+	Email      *string `json:"email,omitempty"`
+	Name       *string `json:"name,omitempty"`
+
+	// Subject Nutzerkennung des Anmeldedienstes
+	Subject *string `json:"subject,omitempty"`
+}
+
 // Kategorie defines model for Kategorie.
 type Kategorie string
 
@@ -333,6 +345,9 @@ type ServerInterface interface {
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
+	// GetIch Wer fragt
+	// (GET /api/ich)
+	GetIch(w http.ResponseWriter, r *http.Request)
 	// GetVersion Welcher Stand läuft gerade
 	// (GET /api/version)
 	GetVersion(w http.ResponseWriter, r *http.Request)
@@ -387,6 +402,20 @@ func (siw *ServerInterfaceWrapper) GetWochenplan(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWochenplan(w, r, haushaltId, woche)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIch operation middleware
+func (siw *ServerInterfaceWrapper) GetIch(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIch(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -531,6 +560,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/version", wrapper.GetVersion)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/ich", wrapper.GetIch)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte", wrapper.ListHaushalte)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
 
@@ -609,6 +639,27 @@ func (response GetWochenplan404JSONResponse) VisitGetWochenplanResponse(w http.R
 	return err
 }
 
+type GetIchRequestObject struct {
+}
+
+type GetIchResponseObject interface {
+	VisitGetIchResponse(w http.ResponseWriter) error
+}
+
+type GetIch200JSONResponse Ich
+
+func (response GetIch200JSONResponse) VisitGetIchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetVersionRequestObject struct {
 }
 
@@ -638,6 +689,9 @@ type StrictServerInterface interface {
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(ctx context.Context, request GetWochenplanRequestObject) (GetWochenplanResponseObject, error)
+	// GetIch Wer fragt
+	// (GET /api/ich)
+	GetIch(ctx context.Context, request GetIchRequestObject) (GetIchResponseObject, error)
 	// GetVersion Welcher Stand läuft gerade
 	// (GET /api/version)
 	GetVersion(ctx context.Context, request GetVersionRequestObject) (GetVersionResponseObject, error)
@@ -726,6 +780,30 @@ func (sh *strictHandler) GetWochenplan(w http.ResponseWriter, r *http.Request, h
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetWochenplanResponseObject); ok {
 		if err := validResponse.VisitGetWochenplanResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIch operation middleware
+func (sh *strictHandler) GetIch(w http.ResponseWriter, r *http.Request) {
+	var request GetIchRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIch(ctx, request.(GetIchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIchResponseObject); ok {
+		if err := validResponse.VisitGetIchResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

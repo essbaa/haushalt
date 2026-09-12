@@ -44,6 +44,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/Version"
 
+  /api/ich:
+    get:
+      tags: [meta]
+      summary: Wer fragt
+      description: |
+        Beantwortet, was das mitgeschickte Token beweist — und nicht mehr.
+        Ohne Token ist `angemeldet` false; das ist kein Fehler, sondern die
+        Antwort. Die Demo-Haushalte sind ohne Anmeldung sichtbar.
+      operationId: getIch
+      responses:
+        "200":
+          description: die Identität des Aufrufers, soweit belegt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ich"
+
   /api/haushalte:
     get:
       tags: [plan]
@@ -113,6 +130,27 @@ components:
           type: string
           description: kurze Commit-Kennung oder "dev"
           example: f18a432
+
+    Ich:
+      type: object
+      required: [angemeldet]
+      description: |
+        Absichtlich schmal: Hier steht nur, was der Aussteller signiert hat.
+        Welche Person in welchem Haushalt dahintersteckt, ist eine Frage an die
+        Datenbank und kommt mit dem Onboarding dazu.
+      properties:
+        angemeldet:
+          type: boolean
+        subject:
+          type: string
+          nullable: true
+          description: Nutzerkennung des Anmeldedienstes
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
 
     Fehler:
       type: object

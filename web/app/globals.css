@@ -9,6 +9,9 @@
   --muted: #77857b;
   --line: #dbe3d9;
   --accent: #2e6b58;
+  /* Für Fehler und Warnungen. Nie als einziger Träger einer Aussage — der
+     Text sagt, was los ist, die Farbe unterstützt nur. */
+  --clay: #8e5233;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +22,7 @@
     --muted: #8b998d;
     --line: #2f382f;
     --accent: #6fc2a2;
+    --clay: #d9946c;
   }
 }
 
@@ -29,6 +33,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-clay: var(--clay);
 }
 
 body {

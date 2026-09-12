@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/config"
 	"github.com/zakaria/haushalt/api/internal/httpapi"
 	"github.com/zakaria/haushalt/api/internal/library"
@@ -110,9 +111,22 @@ func run() error {
 			"haushalte", len(haushalte))
 	}
 
+	// Anmeldung. Ohne AUTH_JWKS_URL läuft der Dienst anonym weiter — das ist
+	// der Zustand, in dem die Demo-Haushalte für jeden sichtbar sind.
+	var verifier *auth.Verifier
+	if cfg.AuthJWKSURL != "" {
+		verifier, err = auth.NewVerifier(ctx, cfg.AuthJWKSURL, cfg.AuthIssuer)
+		if err != nil {
+			return err
+		}
+		log.Info("anmeldung aktiv", "jwks", cfg.AuthJWKSURL, "aussteller", cfg.AuthIssuer)
+	} else {
+		log.Warn("AUTH_JWKS_URL ist leer — jede anfrage gilt als anonym")
+	}
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: httpapi.New(cfg, log, db, version, plans).Handler(),
+		Handler: httpapi.New(cfg, log, db, version, plans, verifier).Handler(),
 
 		// Ohne Zeitgrenzen kann ein einziger langsamer Client eine Verbindung
 		// dauerhaft belegen. http.ListenAndServe ohne diese Werte ist der

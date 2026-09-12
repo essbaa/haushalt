@@ -67,7 +67,7 @@ func testServer(db Pinger) *Server {
 	}
 	// Logs im Test ins Nichts schreiben, sonst rauscht die Ausgabe voll.
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(cfg, log, db, "test", fakePlans{})
+	return New(cfg, log, db, "test", fakePlans{}, nil)
 }
 
 func TestHealth(t *testing.T) {

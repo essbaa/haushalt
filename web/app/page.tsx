@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ApiStatus } from "@/app/components/api-status";
+import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
 import { aktuelleWoche, istWoche } from "@/lib/woche";
@@ -43,9 +44,12 @@ export default async function Page({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-6 py-12">
       <header className="space-y-3">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted">
-          Haushalt als Team
-        </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="font-mono text-xs uppercase tracking-widest text-muted">
+            Haushalt als Team
+          </p>
+          <Sitzung />
+        </div>
         <h1 className="text-4xl font-semibold tracking-tight text-balance">
           Der Wochenplan
         </h1>

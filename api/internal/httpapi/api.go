@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
@@ -30,6 +31,25 @@ type api struct {
 
 func (a api) GetVersion(context.Context, openapi.GetVersionRequestObject) (openapi.GetVersionResponseObject, error) {
 	return openapi.GetVersion200JSONResponse{Version: a.version}, nil
+}
+
+// GetIch beantwortet, was das Token beweist.
+//
+// Ohne Token ist das „niemand", und das ist eine gültige Antwort mit Status
+// 200 — kein 401. Die Frage lautet „wer fragt?", nicht „darf ich das?".
+func (a api) GetIch(ctx context.Context, _ openapi.GetIchRequestObject) (openapi.GetIchResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.GetIch200JSONResponse{Angemeldet: false}, nil
+	}
+	antwort := openapi.GetIch200JSONResponse{Angemeldet: true, Subject: &id.Subject}
+	if id.Name != "" {
+		antwort.Name = &id.Name
+	}
+	if id.Email != "" {
+		antwort.Email = &id.Email
+	}
+	return antwort, nil
 }
 
 func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestObject) (openapi.ListHaushalteResponseObject, error) {

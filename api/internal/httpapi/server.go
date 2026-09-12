@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/config"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
 )
@@ -36,10 +37,13 @@ type Server struct {
 	// plans liefert die Wochenpläne. Heute aus dem Repo, ab T5 aus der
 	// Datenbank.
 	plans Plans
+	// verifier darf nil sein: Ohne AUTH_JWKS_URL kennt der Dienst keine
+	// Anmeldung und behandelt jede Anfrage als anonym.
+	verifier *auth.Verifier
 }
 
-func New(cfg config.Config, log *slog.Logger, db Pinger, version string, plans Plans) *Server {
-	return &Server{cfg: cfg, log: log, db: db, version: version, plans: plans}
+func New(cfg config.Config, log *slog.Logger, db Pinger, version string, plans Plans, verifier *auth.Verifier) *Server {
+	return &Server{cfg: cfg, log: log, db: db, version: version, plans: plans, verifier: verifier}
 }
 
 // Handler baut den Router und legt die Middleware darum.
@@ -74,11 +78,16 @@ func (s *Server) Handler() http.Handler {
 	})
 
 	// Die Reihenfolge ist von außen nach innen zu lesen: Eine Anfrage läuft
-	// erst durch recoverPanic, dann durch logging, dann durch cors, dann in
-	// den Mux.
+	// erst durch recoverPanic, dann durch logging, dann durch cors, dann
+	// durch die Anmeldung, dann in den Mux.
+	//
+	// Die Anmeldung sitzt innen: Sie soll erst greifen, wenn CORS die Anfrage
+	// durchgelassen hat, und ihre Arbeit soll im Log auftauchen, nicht davor.
 	return recoverPanic(s.log)(
 		logging(s.log)(
-			cors(s.cfg.AllowedOrigins)(handler),
+			cors(s.cfg.AllowedOrigins)(
+				auth.Middleware(s.verifier)(handler),
+			),
 		),
 	)
 }

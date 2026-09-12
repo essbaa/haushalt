@@ -33,6 +33,14 @@ type Config struct {
 	// LibraryDir ist das Verzeichnis mit vorlagen.json und beispiele/.
 	// Relativ zum Arbeitsverzeichnis: lokal "library", im Container "/library".
 	LibraryDir string
+
+	// AuthJWKSURL ist der Schlüsselsatz der Web-App. Leer heißt: Der Dienst
+	// kennt keine Anmeldung und behandelt jede Anfrage als anonym.
+	AuthJWKSURL string
+
+	// AuthIssuer ist der erwartete Aussteller. Leer heißt: nicht geprüft —
+	// in Produktion gehört er gesetzt.
+	AuthIssuer string
 }
 
 const (
@@ -52,6 +60,8 @@ func Load() (Config, error) {
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
 		AllowedOrigins: splitAndTrim(get("ALLOWED_ORIGINS", "http://localhost:3000")),
 		LibraryDir:     get("LIBRARY_DIR", "library"),
+		AuthJWKSURL:    os.Getenv("AUTH_JWKS_URL"),
+		AuthIssuer:     os.Getenv("AUTH_ISSUER"),
 	}
 
 	var problems []error
