@@ -78,6 +78,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Fly deploy
-        run: flyctl deploy --remote-only --build-arg VERSION="${GITHUB_SHA::7}"
+        # Die Go-Version kommt aus der go.mod, nicht aus dem Gedächtnis.
+        run: |
+          GO_VERSION=$(awk '/^go /{split($2,v,"."); print v[1]"."v[2]; exit}' go.mod)
+          flyctl deploy --remote-only \
+            --build-arg VERSION="${GITHUB_SHA::7}" \
+            --build-arg GO_VERSION="$GO_VERSION"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

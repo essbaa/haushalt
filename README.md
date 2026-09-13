@@ -20,7 +20,7 @@ aktualisiert sie. Inhaltlich beginnt es jetzt: der Planer-Kern.
 ```
 api/     Go 1.25, net/http — der Dienst und der Planer-Kern
 web/     Next.js 16, React 19, Tailwind 4 — die Oberfläche
-docs/    Entscheidungen (ADR)
+docs/    Entscheidungen (ADR) und Stolperstellen
 ```
 
 Ein Repo, zwei Dienste, zwei getrennte Auslieferungswege: Die CI filtert nach
@@ -76,3 +76,6 @@ Bauchgefühl.
 
 Nicht offensichtliche Entscheidungen stehen als [ADR](docs/adr/) im Repo —
 mit Kontext, Nachteilen und den verworfenen Alternativen.
+
+Was unterwegs schiefging, steht mit Ursache und Lösung in
+[docs/stolperstellen.md](docs/stolperstellen.md).

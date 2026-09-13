@@ -16,6 +16,11 @@ export GOPROXY
 
 VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
+# Die Go-Version aus der go.mod, auf Haupt- und Nebennummer gekürzt: aus
+# "go 1.26.0" wird "1.26". Damit gibt es eine Wahrheit statt zweier, die
+# auseinanderlaufen können.
+GO_VERSION := $(shell awk '/^go /{split($$2,v,"."); print v[1]"."v[2]; exit}' go.mod)
+
 .PHONY: run
 run: ## Dienst lokal starten
 	go run -ldflags="-X main.version=$(VERSION)" ./cmd/server
@@ -92,7 +97,7 @@ db-shell: ## psql in der Entwicklungsdatenbank
 
 .PHONY: docker-build
 docker-build:
-	docker build --build-arg VERSION=$(VERSION) -t haushalt-api .
+	docker build --build-arg VERSION=$(VERSION) --build-arg GO_VERSION=$(GO_VERSION) -t haushalt-api .
 
 .PHONY: docker-run
 docker-run: docker-build ## Image bauen und starten, Umgebung aus .env
@@ -104,4 +109,4 @@ health: ## Gegen den laufenden Dienst prüfen
 
 .PHONY: deploy
 deploy: ## Nach Fly deployen, mit Commit-Kennung in der Binärdatei
-	fly deploy --build-arg VERSION=$(VERSION)
+	fly deploy --build-arg VERSION=$(VERSION) --build-arg GO_VERSION=$(GO_VERSION)
