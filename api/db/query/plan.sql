@@ -97,3 +97,29 @@ DELETE FROM assignment WHERE task_instance_id = $1;
 -- Nach einer Abgabe: neue Zuständige, neue Begründung, von Hand markiert.
 INSERT INTO assignment (task_instance_id, member_id, reason_code, reason_previous, manual)
 VALUES ($1, $2, $3, $4, true);
+
+-- name: DeleteUntouchedWeekTasks :exec
+-- Verwirft die Aufgaben einer Woche, an denen nichts hängt.
+--
+-- Der Filter ist keine Vorsicht, sondern eine Konsequenz: event.task_instance_id
+-- ist ON DELETE SET NULL, und der Trigger event_kein_update verbietet jedes
+-- UPDATE auf event. Eine Aufgabe mit Ereignis zu löschen wirft also eine
+-- Ausnahme — die Datenbank lässt gar nicht zu, dass Neurechnen Geschehenes
+-- wegräumt.
+--
+-- Daraus wird eine Produktregel: Was Spuren hinterlassen hat, bleibt. Was nur
+-- ein Vorschlag war, wird neu gerechnet.
+DELETE FROM task_instance t
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND NOT EXISTS (SELECT 1 FROM event e WHERE e.task_instance_id = t.id);
+
+-- name: ListWeekTaskKeys :many
+-- Was von einer Woche übrig ist, nach dem Verwerfen: Vorlage und Tag. Damit
+-- rechnet das Neuschreiben nichts doppelt hin.
+SELECT template_id, day FROM task_instance
+WHERE household_id = $1 AND iso_week = $2;
+
+-- name: UpdateWeekSkipped :exec
+UPDATE week_plan SET skipped = $3
+WHERE household_id = $1 AND iso_week = $2;

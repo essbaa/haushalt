@@ -36,7 +36,7 @@ export default async function Einrichten() {
 
       <p className="mt-8 text-sm text-muted">
         Lieber erst umsehen?{" "}
-        <Link href="/?haushalt=familie-a" className="text-accent underline">
+        <Link href="/?haushalt=familie-a" className="text-primary underline">
           Beispielhaushalt ansehen
         </Link>
       </p>

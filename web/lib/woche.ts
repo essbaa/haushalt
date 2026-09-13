@@ -42,6 +42,11 @@ export function aktuelleWoche(jetzt: Date = new Date()): string {
   return `${jahr}-W${String(woche).padStart(2, "0")}`;
 }
 
+/** Der heutige Kalendertag als „2026-09-19", nach der Uhr in Berlin. */
+export function heute(jetzt: Date = new Date()): string {
+  return heuteInBerlin(jetzt).toISOString().slice(0, 10);
+}
+
 /** Prüft das Format, bevor eine Woche in die URL des Dienstes wandert. */
 export function istWoche(wert: string): boolean {
   return /^\d{4}-W\d{2}$/.test(wert);

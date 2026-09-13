@@ -22,11 +22,20 @@ async function token(): Promise<string> {
 }
 
 /** Ein POST an den Go-Dienst, angemeldet. */
-export async function postMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
+export function postMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
+  return sendeMitToken<T>("POST", pfad, rumpf);
+}
+
+/** Ein PATCH — eine Änderung, bei der alles Weggelassene stehen bleibt. */
+export function patchMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
+  return sendeMitToken<T>("PATCH", pfad, rumpf);
+}
+
+async function sendeMitToken<T>(methode: string, pfad: string, rumpf?: unknown): Promise<T> {
   const t = await token();
 
   const res = await fetch(`${API_BASE}${pfad}`, {
-    method: "POST",
+    method: methode,
     headers: {
       Authorization: `Bearer ${t}`,
       ...(rumpf ? { "Content-Type": "application/json" } : {}),

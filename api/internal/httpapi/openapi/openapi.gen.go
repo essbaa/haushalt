@@ -126,6 +126,42 @@ func (e HaushaltMeineRolle) Valid() bool {
 	}
 }
 
+// Defines values for HaushaltWohnform.
+const (
+	HaushaltWohnformHaus    HaushaltWohnform = "haus"
+	HaushaltWohnformWohnung HaushaltWohnform = "wohnung"
+)
+
+// Valid indicates whether the value is a known member of the HaushaltWohnform enum.
+func (e HaushaltWohnform) Valid() bool {
+	switch e {
+	case HaushaltWohnformHaus:
+		return true
+	case HaushaltWohnformWohnung:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HaushaltAenderungWohnform.
+const (
+	HaushaltAenderungWohnformHaus    HaushaltAenderungWohnform = "haus"
+	HaushaltAenderungWohnformWohnung HaushaltAenderungWohnform = "wohnung"
+)
+
+// Valid indicates whether the value is a known member of the HaushaltAenderungWohnform enum.
+func (e HaushaltAenderungWohnform) Valid() bool {
+	switch e {
+	case HaushaltAenderungWohnformHaus:
+		return true
+	case HaushaltAenderungWohnformWohnung:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Kategorie.
 const (
 	Aussen     Kategorie = "aussen"
@@ -189,18 +225,63 @@ func (e MitgliedRolle) Valid() bool {
 	}
 }
 
+// Defines values for MitgliedAenderungRolle.
+const (
+	MitgliedAenderungRolleAusfuehrend MitgliedAenderungRolle = "ausfuehrend"
+	MitgliedAenderungRolleBetreut     MitgliedAenderungRolle = "betreut"
+	MitgliedAenderungRollePlanend     MitgliedAenderungRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the MitgliedAenderungRolle enum.
+func (e MitgliedAenderungRolle) Valid() bool {
+	switch e {
+	case MitgliedAenderungRolleAusfuehrend:
+		return true
+	case MitgliedAenderungRolleBetreut:
+		return true
+	case MitgliedAenderungRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MitgliedAenderungZeit.
+const (
+	MitgliedAenderungZeitKeine  MitgliedAenderungZeit = "keine"
+	MitgliedAenderungZeitMittel MitgliedAenderungZeit = "mittel"
+	MitgliedAenderungZeitViel   MitgliedAenderungZeit = "viel"
+	MitgliedAenderungZeitWenig  MitgliedAenderungZeit = "wenig"
+)
+
+// Valid indicates whether the value is a known member of the MitgliedAenderungZeit enum.
+func (e MitgliedAenderungZeit) Valid() bool {
+	switch e {
+	case MitgliedAenderungZeitKeine:
+		return true
+	case MitgliedAenderungZeitMittel:
+		return true
+	case MitgliedAenderungZeitViel:
+		return true
+	case MitgliedAenderungZeitWenig:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NeuerHaushaltWohnform.
 const (
-	Haus    NeuerHaushaltWohnform = "haus"
-	Wohnung NeuerHaushaltWohnform = "wohnung"
+	NeuerHaushaltWohnformHaus    NeuerHaushaltWohnform = "haus"
+	NeuerHaushaltWohnformWohnung NeuerHaushaltWohnform = "wohnung"
 )
 
 // Valid indicates whether the value is a known member of the NeuerHaushaltWohnform enum.
 func (e NeuerHaushaltWohnform) Valid() bool {
 	switch e {
-	case Haus:
+	case NeuerHaushaltWohnformHaus:
 		return true
-	case Wohnung:
+	case NeuerHaushaltWohnformWohnung:
 		return true
 	default:
 		return false
@@ -230,22 +311,22 @@ func (e NeuesMitgliedRolle) Valid() bool {
 
 // Defines values for NeuesMitgliedZeit.
 const (
-	Keine  NeuesMitgliedZeit = "keine"
-	Mittel NeuesMitgliedZeit = "mittel"
-	Viel   NeuesMitgliedZeit = "viel"
-	Wenig  NeuesMitgliedZeit = "wenig"
+	NeuesMitgliedZeitKeine  NeuesMitgliedZeit = "keine"
+	NeuesMitgliedZeitMittel NeuesMitgliedZeit = "mittel"
+	NeuesMitgliedZeitViel   NeuesMitgliedZeit = "viel"
+	NeuesMitgliedZeitWenig  NeuesMitgliedZeit = "wenig"
 )
 
 // Valid indicates whether the value is a known member of the NeuesMitgliedZeit enum.
 func (e NeuesMitgliedZeit) Valid() bool {
 	switch e {
-	case Keine:
+	case NeuesMitgliedZeitKeine:
 		return true
-	case Mittel:
+	case NeuesMitgliedZeitMittel:
 		return true
-	case Viel:
+	case NeuesMitgliedZeitViel:
 		return true
-	case Wenig:
+	case NeuesMitgliedZeitWenig:
 		return true
 	default:
 		return false
@@ -447,6 +528,20 @@ type Fehler struct {
 
 // Haushalt defines model for Haushalt.
 type Haushalt struct {
+	Auto   *bool `json:"auto,omitempty"`
+	Garten *bool `json:"garten,omitempty"`
+
+	// Haustiere Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
+	// entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
+	// Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
+	// könnten die Einstellungen nicht zeigen, was angenommen wurde.
+	Haustiere *[]string `json:"haustiere,omitempty"`
+
+	// Ich Kennung des Aufrufers als Person in diesem Haushalt. Damit weiß die
+	// Ansicht, welche Zeile seine eigene ist — etwa in den Einstellungen,
+	// wo jeder seine eigene Zeit setzen darf und sonst nichts.
+	Ich *string `json:"ich,omitempty"`
+
 	// Id Example: familie-a
 	Id string `json:"id"`
 
@@ -457,13 +552,34 @@ type Haushalt struct {
 	Mitglieder []Mitglied          `json:"mitglieder"`
 
 	// Name Example: Familie A
-	Name string `json:"name"`
+	Name     string            `json:"name"`
+	Wohnform *HaushaltWohnform `json:"wohnform,omitempty"`
 }
 
 // HaushaltMeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
 // öffentlichen Beispielhaushalten und überall dort, wo er nicht
 // Mitglied ist.
 type HaushaltMeineRolle string
+
+// HaushaltWohnform defines model for Haushalt.Wohnform.
+type HaushaltWohnform string
+
+// HaushaltAenderung Jedes Feld ist freiwillig. Was fehlt, bleibt stehen — der Unterschied
+// zwischen „nicht mitgeschickt" und „geleert" ist der ganze Sinn einer
+// Einstellungsseite.
+type HaushaltAenderung struct {
+	Auto   *bool `json:"auto,omitempty"`
+	Garten *bool `json:"garten,omitempty"`
+
+	// Haustiere Vollständige Liste. Leer heißt „keine mehr".
+	Haustiere *[]string                  `json:"haustiere,omitempty"`
+	Name      *string                    `json:"name,omitempty"`
+	Wohnform  *HaushaltAenderungWohnform `json:"wohnform,omitempty"`
+	Zeitzone  *string                    `json:"zeitzone,omitempty"`
+}
+
+// HaushaltAenderungWohnform defines model for HaushaltAenderung.Wohnform.
+type HaushaltAenderungWohnform string
 
 // Ich Absichtlich schmal: Hier steht nur, was der Aussteller signiert hat.
 // Welche Person in welchem Haushalt dahintersteckt, ist eine Frage an die
@@ -482,12 +598,21 @@ type Kategorie string
 
 // Mitglied defines model for Mitglied.
 type Mitglied struct {
+	// Geburtsjahr Fehlt bei Erwachsenen — dort ist „nicht gefragt" die richtige
+	// Antwort und nicht „unbekannt alt" (siehe Member.IsAdult im Planer).
+	Geburtsjahr *int `json:"geburtsjahr,omitempty"`
+
 	// HatZugang Ob diese Person sich anmelden kann. Steuert, wen man noch einladen
 	// kann — und macht sichtbar, wer bisher nur im Plan steht.
 	HatZugang *bool `json:"hat_zugang,omitempty"`
 
 	// Id Example: m-anna
 	Id string `json:"id"`
+
+	// Minuten Verfügbare Minuten je Wochentag, Index 0 = Montag. Beim Einrichten
+	// aus einer der drei Stufen geraten und hier korrigierbar. Die Zahlen
+	// tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
+	Minuten *[]int `json:"minuten,omitempty"`
 
 	// Name Example: Anna
 	Name string `json:"name"`
@@ -500,6 +625,33 @@ type Mitglied struct {
 // MitgliedRolle `planend` plant und führt aus, `ausfuehrend` führt nur aus,
 // `betreut` erzeugt Arbeit ohne welche zu übernehmen.
 type MitgliedRolle string
+
+// MitgliedAenderung Jedes Feld ist freiwillig. Was fehlt, bleibt stehen.
+type MitgliedAenderung struct {
+	// Geburtsjahr **0 heißt „kein Geburtsjahr"** und ist bei Erwachsenen die richtige
+	// Antwort — nicht „im Jahr null geboren". Die Betreuungsform wird
+	// daraus neu geraten.
+	Geburtsjahr *int `json:"geburtsjahr,omitempty"`
+
+	// Minuten Minuten je Wochentag, Index 0 = Montag. Für alle, denen die drei
+	// Stufen zu grob sind. Zusammen mit `zeit` gewinnt diese Angabe.
+	Minuten *[]int                  `json:"minuten,omitempty"`
+	Name    *string                 `json:"name,omitempty"`
+	Rolle   *MitgliedAenderungRolle `json:"rolle,omitempty"`
+
+	// Zeit Die grobe Stufe aus dem Onboarding. Der Dienst rechnet sie in
+	// Minuten um; die Minutenwerte stehen nur im Planer, damit es nicht
+	// zwei Vorstellungen davon gibt, was „mittel" bedeutet.
+	Zeit *MitgliedAenderungZeit `json:"zeit,omitempty"`
+}
+
+// MitgliedAenderungRolle defines model for MitgliedAenderung.Rolle.
+type MitgliedAenderungRolle string
+
+// MitgliedAenderungZeit Die grobe Stufe aus dem Onboarding. Der Dienst rechnet sie in
+// Minuten um; die Minutenwerte stehen nur im Planer, damit es nicht
+// zwei Vorstellungen davon gibt, was „mittel" bedeutet.
+type MitgliedAenderungZeit string
 
 // NeuerHaushalt defines model for NeuerHaushalt.
 type NeuerHaushalt struct {
@@ -651,8 +803,14 @@ type SetErledigtJSONRequestBody SetErledigtJSONBody
 // CreateHaushaltJSONRequestBody defines body for CreateHaushalt for application/json ContentType.
 type CreateHaushaltJSONRequestBody = NeuerHaushalt
 
+// UpdateHaushaltJSONRequestBody defines body for UpdateHaushalt for application/json ContentType.
+type UpdateHaushaltJSONRequestBody = HaushaltAenderung
+
 // CreateEinladungJSONRequestBody defines body for CreateEinladung for application/json ContentType.
 type CreateEinladungJSONRequestBody CreateEinladungJSONBody
+
+// UpdateMitgliedJSONRequestBody defines body for UpdateMitglied for application/json ContentType.
+type UpdateMitgliedJSONRequestBody = MitgliedAenderung
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -671,12 +829,21 @@ type ServerInterface interface {
 	// CreateHaushalt Haushalt einrichten
 	// (POST /api/haushalte)
 	CreateHaushalt(w http.ResponseWriter, r *http.Request)
+	// UpdateHaushalt Einstellungen des Haushalts ändern
+	// (PATCH /api/haushalte/{haushaltId})
+	UpdateHaushalt(w http.ResponseWriter, r *http.Request, haushaltId string)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// UpdateMitglied Eine Person ändern
+	// (PATCH /api/haushalte/{haushaltId}/mitglieder/{mitgliedId})
+	UpdateMitglied(w http.ResponseWriter, r *http.Request, haushaltId string, mitgliedId string)
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
+	// WocheNeuRechnen Woche neu rechnen
+	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
+	WocheNeuRechnen(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(w http.ResponseWriter, r *http.Request)
@@ -800,6 +967,32 @@ func (siw *ServerInterfaceWrapper) CreateHaushalt(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateHaushalt operation middleware
+func (siw *ServerInterfaceWrapper) UpdateHaushalt(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateHaushalt(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateEinladung operation middleware
 func (siw *ServerInterfaceWrapper) CreateEinladung(w http.ResponseWriter, r *http.Request) {
 
@@ -817,6 +1010,41 @@ func (siw *ServerInterfaceWrapper) CreateEinladung(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateEinladung(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateMitglied operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMitglied(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "mitgliedId" -------------
+	var mitgliedId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mitgliedId", r.PathValue("mitgliedId"), &mitgliedId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mitgliedId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateMitglied(w, r, haushaltId, mitgliedId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -852,6 +1080,41 @@ func (siw *ServerInterfaceWrapper) GetWochenplan(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWochenplan(w, r, haushaltId, woche)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WocheNeuRechnen operation middleware
+func (siw *ServerInterfaceWrapper) WocheNeuRechnen(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "woche" -------------
+	var woche string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "woche", r.PathValue("woche"), &woche, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "woche", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WocheNeuRechnen(w, r, haushaltId, woche)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1013,7 +1276,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/ich", wrapper.GetIch)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte", wrapper.ListHaushalte)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte", wrapper.CreateHaushalt)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}/mitglieder/{mitgliedId}", wrapper.UpdateMitglied)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}/neu", wrapper.WocheNeuRechnen)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}", wrapper.UpdateHaushalt)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/erledigt", wrapper.SetErledigt)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/abgeben", wrapper.AufgabeAbgeben)
@@ -1239,6 +1505,71 @@ func (response CreateHaushalt401JSONResponse) VisitCreateHaushaltResponse(w http
 	return err
 }
 
+type UpdateHaushaltRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *UpdateHaushaltJSONRequestBody
+}
+
+type UpdateHaushaltResponseObject interface {
+	VisitUpdateHaushaltResponse(w http.ResponseWriter) error
+}
+
+type UpdateHaushalt200JSONResponse Haushalt
+
+func (response UpdateHaushalt200JSONResponse) VisitUpdateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateHaushalt400JSONResponse Fehler
+
+func (response UpdateHaushalt400JSONResponse) VisitUpdateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateHaushalt403JSONResponse Fehler
+
+func (response UpdateHaushalt403JSONResponse) VisitUpdateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateHaushalt404JSONResponse Fehler
+
+func (response UpdateHaushalt404JSONResponse) VisitUpdateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateEinladungRequestObject struct {
 	HaushaltId string `json:"haushaltId"`
 	Body       *CreateEinladungJSONRequestBody
@@ -1290,6 +1621,72 @@ func (response CreateEinladung404JSONResponse) VisitCreateEinladungResponse(w ht
 	return err
 }
 
+type UpdateMitgliedRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	MitgliedId string `json:"mitgliedId"`
+	Body       *UpdateMitgliedJSONRequestBody
+}
+
+type UpdateMitgliedResponseObject interface {
+	VisitUpdateMitgliedResponse(w http.ResponseWriter) error
+}
+
+type UpdateMitglied200JSONResponse Haushalt
+
+func (response UpdateMitglied200JSONResponse) VisitUpdateMitgliedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMitglied400JSONResponse Fehler
+
+func (response UpdateMitglied400JSONResponse) VisitUpdateMitgliedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMitglied403JSONResponse Fehler
+
+func (response UpdateMitglied403JSONResponse) VisitUpdateMitgliedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMitglied404JSONResponse Fehler
+
+func (response UpdateMitglied404JSONResponse) VisitUpdateMitgliedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetWochenplanRequestObject struct {
 	HaushaltId string `json:"haushaltId"`
 	Woche      string `json:"woche"`
@@ -1330,6 +1727,71 @@ func (response GetWochenplan400JSONResponse) VisitGetWochenplanResponse(w http.R
 type GetWochenplan404JSONResponse Fehler
 
 func (response GetWochenplan404JSONResponse) VisitGetWochenplanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WocheNeuRechnenRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Woche      string `json:"woche"`
+}
+
+type WocheNeuRechnenResponseObject interface {
+	VisitWocheNeuRechnenResponse(w http.ResponseWriter) error
+}
+
+type WocheNeuRechnen200JSONResponse Wochenplan
+
+func (response WocheNeuRechnen200JSONResponse) VisitWocheNeuRechnenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WocheNeuRechnen400JSONResponse Fehler
+
+func (response WocheNeuRechnen400JSONResponse) VisitWocheNeuRechnenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WocheNeuRechnen403JSONResponse Fehler
+
+func (response WocheNeuRechnen403JSONResponse) VisitWocheNeuRechnenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WocheNeuRechnen404JSONResponse Fehler
+
+func (response WocheNeuRechnen404JSONResponse) VisitWocheNeuRechnenResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1400,12 +1862,21 @@ type StrictServerInterface interface {
 	// CreateHaushalt Haushalt einrichten
 	// (POST /api/haushalte)
 	CreateHaushalt(ctx context.Context, request CreateHaushaltRequestObject) (CreateHaushaltResponseObject, error)
+	// UpdateHaushalt Einstellungen des Haushalts ändern
+	// (PATCH /api/haushalte/{haushaltId})
+	UpdateHaushalt(ctx context.Context, request UpdateHaushaltRequestObject) (UpdateHaushaltResponseObject, error)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(ctx context.Context, request CreateEinladungRequestObject) (CreateEinladungResponseObject, error)
+	// UpdateMitglied Eine Person ändern
+	// (PATCH /api/haushalte/{haushaltId}/mitglieder/{mitgliedId})
+	UpdateMitglied(ctx context.Context, request UpdateMitgliedRequestObject) (UpdateMitgliedResponseObject, error)
 	// GetWochenplan Wochenplan eines Haushalts
 	// (GET /api/haushalte/{haushaltId}/plan/{woche})
 	GetWochenplan(ctx context.Context, request GetWochenplanRequestObject) (GetWochenplanResponseObject, error)
+	// WocheNeuRechnen Woche neu rechnen
+	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
+	WocheNeuRechnen(ctx context.Context, request WocheNeuRechnenRequestObject) (WocheNeuRechnenResponseObject, error)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(ctx context.Context, request GetIchRequestObject) (GetIchResponseObject, error)
@@ -1606,6 +2077,39 @@ func (sh *strictHandler) CreateHaushalt(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// UpdateHaushalt operation middleware
+func (sh *strictHandler) UpdateHaushalt(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request UpdateHaushaltRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body UpdateHaushaltJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateHaushalt(ctx, request.(UpdateHaushaltRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateHaushalt")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateHaushaltResponseObject); ok {
+		if err := validResponse.VisitUpdateHaushaltResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateEinladung operation middleware
 func (sh *strictHandler) CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string) {
 	var request CreateEinladungRequestObject
@@ -1639,6 +2143,40 @@ func (sh *strictHandler) CreateEinladung(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// UpdateMitglied operation middleware
+func (sh *strictHandler) UpdateMitglied(w http.ResponseWriter, r *http.Request, haushaltId string, mitgliedId string) {
+	var request UpdateMitgliedRequestObject
+
+	request.HaushaltId = haushaltId
+	request.MitgliedId = mitgliedId
+
+	var body UpdateMitgliedJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMitglied(ctx, request.(UpdateMitgliedRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMitglied")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateMitgliedResponseObject); ok {
+		if err := validResponse.VisitUpdateMitgliedResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetWochenplan operation middleware
 func (sh *strictHandler) GetWochenplan(w http.ResponseWriter, r *http.Request, haushaltId string, woche string) {
 	var request GetWochenplanRequestObject
@@ -1659,6 +2197,33 @@ func (sh *strictHandler) GetWochenplan(w http.ResponseWriter, r *http.Request, h
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetWochenplanResponseObject); ok {
 		if err := validResponse.VisitGetWochenplanResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// WocheNeuRechnen operation middleware
+func (sh *strictHandler) WocheNeuRechnen(w http.ResponseWriter, r *http.Request, haushaltId string, woche string) {
+	var request WocheNeuRechnenRequestObject
+
+	request.HaushaltId = haushaltId
+	request.Woche = woche
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.WocheNeuRechnen(ctx, request.(WocheNeuRechnenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "WocheNeuRechnen")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(WocheNeuRechnenResponseObject); ok {
+		if err := validResponse.VisitWocheNeuRechnenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -25,7 +25,7 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
         </p>
         <Link
           href={`/anmelden?weiter=${encodeURIComponent(`/beitreten?code=${code}`)}`}
-          className="text-accent underline"
+          className="text-primary underline"
         >
           Anmelden oder Konto anlegen
         </Link>
@@ -60,7 +60,7 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
           autoCapitalize="characters"
           spellCheck={false}
           placeholder="K7MQ2XPD"
-          className="w-full rounded-md border border-line bg-background px-3 py-2 font-mono text-lg tracking-[0.2em] uppercase outline-none focus-visible:border-accent"
+          className="w-full rounded-md border border-line bg-bg px-3 py-2 font-mono text-lg tracking-[0.2em] uppercase outline-none focus-visible:border-primary"
         />
       </label>
 
@@ -73,7 +73,7 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
       <button
         type="submit"
         disabled={laeuft}
-        className="w-full rounded-md bg-accent px-4 py-2.5 font-medium text-background disabled:opacity-60"
+        className="w-full rounded-md bg-primary px-4 py-2.5 font-medium text-on-primary disabled:opacity-60"
       >
         {laeuft ? "…" : "Beitreten"}
       </button>

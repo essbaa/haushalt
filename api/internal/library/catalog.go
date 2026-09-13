@@ -138,3 +138,17 @@ func (c *Catalog) Plan(_ context.Context, _, id string, week planner.Week) (plan
 	})
 	return res, e.household, err
 }
+
+// Einstellungen gibt es nur für Haushalte aus der Datenbank. Die aus dem Repo
+// ändert man, indem man die Datei ändert.
+func (c *Catalog) UpdateHousehold(context.Context, string, string, planner.HouseholdChange) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (c *Catalog) UpdateMember(context.Context, string, string, string, planner.MemberChange) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (c *Catalog) Recompute(context.Context, string, string, planner.Week) (planner.Result, planner.Household, error) {
+	return planner.Result{}, planner.Household{}, planner.ErrNotAllowed
+}

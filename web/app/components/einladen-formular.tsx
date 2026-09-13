@@ -73,7 +73,7 @@ export function EinladenFormular({
         <button
           type="button"
           onClick={() => setEinladung(null)}
-          className="text-sm text-accent underline"
+          className="text-sm text-primary underline"
         >
           Noch jemanden einladen
         </button>
@@ -134,7 +134,7 @@ export function EinladenFormular({
         type="button"
         onClick={erzeugen}
         disabled={laeuft}
-        className="w-full rounded-md bg-accent px-4 py-2.5 font-medium text-background disabled:opacity-60"
+        className="w-full rounded-md bg-primary px-4 py-2.5 font-medium text-on-primary disabled:opacity-60"
       >
         {laeuft ? "…" : "Code erzeugen"}
       </button>
@@ -158,7 +158,7 @@ function Wahl({
   return (
     <label
       className={`block cursor-pointer rounded-lg border p-4 transition-colors ${
-        gewaehlt ? "border-accent bg-accent/5" : "border-line"
+        gewaehlt ? "border-primary bg-primary-soft" : "border-line"
       }`}
     >
       <span className="flex items-baseline gap-2">
@@ -167,7 +167,7 @@ function Wahl({
           name={name}
           checked={gewaehlt}
           onChange={waehlen}
-          className="accent-accent"
+          className="accent-[var(--primary)]"
         />
         <span className="font-medium">{titel}</span>
       </span>

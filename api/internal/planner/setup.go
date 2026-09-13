@@ -86,12 +86,11 @@ func (s Setup) Normalized() Setup {
 // Validate prüft die Eingabe so, wie ein Mensch sie prüfen würde: Ergibt das
 // einen Haushalt, den man planen kann?
 func (s Setup) Validate() error {
+	if err := ValidName("der Haushalt", s.Name, maxSetupNameLen); err != nil {
+		return err
+	}
 	switch {
-	case s.Name == "":
-		return fmt.Errorf("%w: der Haushalt braucht einen Namen", ErrInvalidSetup)
-	case len([]rune(s.Name)) > maxSetupNameLen:
-		return fmt.Errorf("%w: der Name ist länger als %d Zeichen", ErrInvalidSetup, maxSetupNameLen)
-	case s.Context.Home != HomeFlat && s.Context.Home != HomeHouse:
+	case !ValidHome(s.Context.Home):
 		return fmt.Errorf("%w: %q ist keine Wohnform", ErrInvalidSetup, s.Context.Home)
 	case len(s.Members) == 0:
 		return fmt.Errorf("%w: ohne Personen gibt es nichts zu verteilen", ErrInvalidSetup)
@@ -99,15 +98,14 @@ func (s Setup) Validate() error {
 		return fmt.Errorf("%w: mehr als %d Personen sind kein Haushalt mehr", ErrInvalidSetup, maxSetupMembers)
 	}
 
-	if _, err := time.LoadLocation(s.Timezone); err != nil {
-		return fmt.Errorf("%w: %q ist keine Zeitzone", ErrInvalidSetup, s.Timezone)
+	if err := ValidTimezone(s.Timezone); err != nil {
+		return err
 	}
 
 	if s.Members[0].Role != RolePlanner {
 		return fmt.Errorf("%w: wer den Haushalt einrichtet, muss darin planen", ErrInvalidSetup)
 	}
 
-	jetzt := time.Now().Year()
 	namen := map[string]bool{}
 
 	for _, m := range s.Members {
@@ -120,7 +118,7 @@ func (s Setup) Validate() error {
 			// Zwei gleiche Namen im Plan sind kein Datenfehler, sondern ein
 			// Bedienfehler: Niemand weiß dann, wer den Müll rausbringt.
 			return fmt.Errorf("%w: %q kommt zweimal vor", ErrInvalidSetup, m.Name)
-		case m.Role != RolePlanner && m.Role != RoleDoer && m.Role != RoleDependent:
+		case !ValidRole(m.Role):
 			return fmt.Errorf("%w: %q ist keine Rolle", ErrInvalidSetup, m.Role)
 		case !m.Budget.Known():
 			return fmt.Errorf("%w: %q ist keine Zeitstufe", ErrInvalidSetup, m.Budget)
@@ -134,8 +132,8 @@ func (s Setup) Validate() error {
 		if m.Role == RoleDependent && m.BirthYear == 0 {
 			return fmt.Errorf("%w: bei %q fehlt das Geburtsjahr — daran hängen die Aufgaben", ErrInvalidSetup, m.Name)
 		}
-		if m.BirthYear != 0 && (m.BirthYear < earliestBirthYear || m.BirthYear > jetzt) {
-			return fmt.Errorf("%w: %d ist kein Geburtsjahr", ErrInvalidSetup, m.BirthYear)
+		if err := ValidBirthYear(m.BirthYear); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -159,4 +157,73 @@ func CareForAge(age int) Care {
 	default:
 		return CareNone
 	}
+}
+
+// Die Prüfungen unten stehen einzeln, weil sie zweimal gebraucht werden: beim
+// Einrichten für einen ganzen Haushalt und in den Einstellungen für ein
+// einzelnes Feld. Zwei Kopien derselben Regel laufen auseinander, und die
+// Fassung in den Einstellungen wäre die laxere — dort fällt es später auf.
+
+// ValidName prüft einen Namen, wie ein Mensch ihn prüfen würde.
+//
+// was benennt, wessen Name gemeint ist („der Haushalt", „die Person"). Das
+// ist kein Schmuck: Die Meldung landet unverändert im Formular, und „der Name
+// fehlt" hilft niemandem, der zwei Namensfelder vor sich hat.
+func ValidName(was, s string, max int) error {
+	switch {
+	case strings.TrimSpace(s) == "":
+		return fmt.Errorf("%w: %s braucht einen Namen", ErrInvalidSetup, was)
+	case len([]rune(s)) > max:
+		return fmt.Errorf("%w: der Name ist länger als %d Zeichen", ErrInvalidSetup, max)
+	}
+	return nil
+}
+
+// ValidBirthYear lässt 0 zu — das heißt „nicht gefragt" und bei Erwachsenen
+// ist es die richtige Antwort (siehe Member.IsAdult).
+func ValidBirthYear(y int) error {
+	if y == 0 {
+		return nil
+	}
+	if y < earliestBirthYear || y > time.Now().Year() {
+		return fmt.Errorf("%w: %d ist kein Geburtsjahr", ErrInvalidSetup, y)
+	}
+	return nil
+}
+
+// ValidTimezone prüft, ob es diese Zeitzone auf diesem System gibt. Daran
+// hängt, wann ein Tag beginnt und endet (ADR-0002).
+func ValidTimezone(name string) error {
+	if _, err := time.LoadLocation(name); err != nil {
+		return fmt.Errorf("%w: %q ist keine Zeitzone", ErrInvalidSetup, name)
+	}
+	return nil
+}
+
+// ValidRole sagt, ob es diese Rolle gibt.
+func ValidRole(r Role) bool {
+	return r == RolePlanner || r == RoleDoer || r == RoleDependent
+}
+
+// ValidHome sagt, ob es diese Wohnform gibt.
+func ValidHome(h Home) bool { return h == HomeFlat || h == HomeHouse }
+
+// MaxDailyMinutes ist die Obergrenze je Tag: acht Stunden.
+//
+// Nicht, weil niemand mehr im Haushalt tut — sondern weil ein Tippfehler wie
+// 6000 sonst still die ganze Verteilung kippt. Wer wirklich mehr braucht,
+// stößt an eine Zahl und nicht an einen falschen Plan.
+const MaxDailyMinutes = 480
+
+// ValidMinutes prüft ein selbst gesetztes Zeitbudget.
+//
+// Null an allen Tagen ist erlaubt: Genau das ist eine betreute Person, und
+// genau das ist jemand, der diese Woche nichts übernehmen kann.
+func ValidMinutes(m [7]int) error {
+	for i, v := range m {
+		if v < 0 || v > MaxDailyMinutes {
+			return fmt.Errorf("%w: %d Minuten an Tag %d sind keine Kapazität", ErrInvalidSetup, v, i+1)
+		}
+	}
+	return nil
 }

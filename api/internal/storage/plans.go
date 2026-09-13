@@ -238,7 +238,8 @@ func (p *Plans) household(ctx context.Context, z db.Household) (planner.Househol
 		// Das Modell führt Geburtsjahre, der Planer rechnet mit Alter. Die
 		// Umrechnung passiert hier und nirgends sonst.
 		if m.BirthYear != nil {
-			person.Age = jahr - int(*m.BirthYear)
+			person.BirthYear = int(*m.BirthYear)
+			person.Age = jahr - person.BirthYear
 		}
 		if m.Care != nil {
 			person.Care = planner.Care(*m.Care)

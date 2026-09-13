@@ -1,42 +1,143 @@
 @import "tailwindcss";
 
-/* Ruhige, helle Grundfläche mit leicht grünlichem Grau — die Farbwelt aus dem
-   Konzept: soft, family-friendly, wenig Reiz. */
+/* ============================================================================
+   Farben, Abstände, Radien — an einer Stelle.
+   ============================================================================
+
+   Vorher standen sieben Farbwerte hier und der Rest in den Klassen der
+   Komponenten. Das reicht für eine Seite und bricht bei fünf: Jede Ansicht
+   erfindet ihre eigenen Abstufungen, und am Ende sieht die App aus wie von
+   drei Leuten an drei Tagen.
+
+   Die Farbwelt bleibt warm und grün — eine App gegen Mental Load soll nicht
+   schreien. Neu sind die Zwischenstufen: eine zweite Fläche, eine kräftigere
+   Linie, ein heller Grünton für Ausgewähltes. Genau die fehlten, weshalb alles
+   flach und gleich aussah.
+*/
+
 :root {
-  --background: #f7f8f5;
+  color-scheme: light;
+
+  --bg: #f6f8f4;
   --surface: #ffffff;
-  --foreground: #1b241e;
-  --muted: #77857b;
-  --line: #dbe3d9;
-  --accent: #2e6b58;
-  /* Für Fehler und Warnungen. Nie als einziger Träger einer Aussage — der
-     Text sagt, was los ist, die Farbe unterstützt nur. */
-  --clay: #8e5233;
+  --surface-2: #eef1ea;
+  --surface-3: #e5e9e0;
+
+  --fg: #16201a;
+  --fg-muted: #55655a;
+  --fg-subtle: #7a887e;
+
+  --line: #e0e6da;
+  --line-strong: #c7d1c2;
+
+  --primary: #2c6a55;
+  --primary-hover: #235444;
+  --primary-soft: #e2efe9;
+  --on-primary: #ffffff;
+
+  --clay: #9c5630;
+  --clay-soft: #f6ece5;
+  --danger: #a8281f;
+
+  --ring: #2c6a55;
+
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-full: 999px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #131813;
-    --surface: #1b211b;
-    --foreground: #e8eee7;
-    --muted: #8b998d;
-    --line: #2f382f;
-    --accent: #6fc2a2;
-    --clay: #d9946c;
+    color-scheme: dark;
+
+    --bg: #10150f;
+    --surface: #191f18;
+    --surface-2: #212820;
+    --surface-3: #2a322a;
+
+    --fg: #e9efe6;
+    --fg-muted: #a3b0a4;
+    --fg-subtle: #85927f;
+
+    --line: #2b332a;
+    --line-strong: #3c463b;
+
+    --primary: #74c6a5;
+    --primary-hover: #8ad4b7;
+    --primary-soft: #1d2c26;
+    --on-primary: #0a130f;
+
+    --clay: #e3a77f;
+    --clay-soft: #2b221c;
+    --danger: #f0736a;
+
+    --ring: #74c6a5;
   }
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
   --color-line: var(--line);
-  --color-accent: var(--accent);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
   --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-danger: var(--danger);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  /* Versehentliches Neuladen beim Überscrollen kostet auf dem Handy einen
+     halb ausgefüllten Wochenplan. */
+  overscroll-behavior-y: contain;
+}
+
+/* Ein sichtbarer Fokusring, überall gleich. Ihn zu entfernen ist der
+   häufigste Weg, eine Oberfläche für Tastaturnutzer unbedienbar zu machen —
+   :focus-visible zeigt ihn nur dort, wo er gebraucht wird, und stört die
+   Maus nicht. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+
+/* Wer Bewegung abgeschaltet hat, bekommt keine. Das ist eine
+   Systemeinstellung, kein Geschmack — für manche Menschen lösen Animationen
+   Übelkeit aus. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

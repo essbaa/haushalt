@@ -318,3 +318,15 @@ func TestHaushalteListe(t *testing.T) {
 		t.Errorf("Liste = %+v", liste)
 	}
 }
+
+func (fakePlans) UpdateHousehold(context.Context, string, string, planner.HouseholdChange) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (fakePlans) UpdateMember(context.Context, string, string, string, planner.MemberChange) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (fakePlans) Recompute(context.Context, string, string, planner.Week) (planner.Result, planner.Household, error) {
+	return planner.Result{}, planner.Household{}, planner.ErrNotAllowed
+}

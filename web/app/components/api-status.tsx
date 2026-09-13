@@ -69,7 +69,7 @@ export function ApiStatus() {
           <button
             type="button"
             onClick={erneutPruefen}
-            className="ml-auto rounded border border-line px-2.5 py-1 text-xs text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="ml-auto rounded border border-line px-2.5 py-1 text-xs text-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Erneut prüfen
           </button>

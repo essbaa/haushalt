@@ -123,6 +123,115 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/haushalte/{haushaltId}/mitglieder/{mitgliedId}:
+    patch:
+      tags: [haushalt]
+      summary: Eine Person ändern
+      description: |
+        Den eigenen Namen und die eigene Zeit setzt jeder selbst — wie viel
+        Zeit jemand hat, weiß nur er. Rolle und Geburtsjahr ändern die
+        planenden Personen, denn daran hängt, was jemand im Haushalt darf und
+        welche Aufgaben er überhaupt bekommen kann.
+
+        Was fehlt, bleibt stehen. Zurück kommt der ganze Haushalt, damit die
+        Ansicht nicht raten muss, was sich sonst noch geändert hat.
+      operationId: updateMitglied
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: mitgliedId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MitgliedAenderung"
+      responses:
+        "200":
+          description: der Haushalt, wie er jetzt aussieht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Haushalt"
+        "400":
+          description: die Änderung ergibt keine Person
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/plan/{woche}/neu:
+    post:
+      tags: [plan]
+      summary: Woche neu rechnen
+      description: |
+        Rechnet eine festgeschriebene Woche noch einmal — nach einer Änderung
+        an den Einstellungen, oder wenn jemand dazugekommen ist.
+
+        **Was Spuren hinterlassen hat, bleibt.** Aufgaben mit einem Ereignis —
+        abgehakt, abgegeben, wieder geöffnet — werden nicht angefasst. Alles
+        andere war ein Vorschlag und wird ersetzt.
+
+        Nur planende Personen: Der Plan gehört dem Haushalt, nicht dem, der
+        gerade unzufrieden damit ist.
+      operationId: wocheNeuRechnen
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: woche
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 2026-W38
+      responses:
+        "200":
+          description: die neu gerechnete Woche
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wochenplan"
+        "400":
+          description: das ist keine Kalenderwoche
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/haushalte/{haushaltId}/plan/{woche}:
     get:
       tags: [plan]
@@ -152,6 +261,56 @@ paths:
                 $ref: "#/components/schemas/Wochenplan"
         "400":
           description: die Woche ist nicht lesbar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}:
+    patch:
+      tags: [haushalt]
+      summary: Einstellungen des Haushalts ändern
+      description: |
+        Nur planende Personen. Was hier steht, entscheidet, welche Aufgaben es
+        im Haushalt überhaupt gibt — „kein Garten" nimmt das Rasenmähen für
+        alle aus dem Plan.
+
+        Gilt ab der nächsten Woche. Die laufende steht fest (ADR-0008) und
+        wird nur auf Zuruf neu gerechnet.
+      operationId: updateHaushalt
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HaushaltAenderung"
+      responses:
+        "200":
+          description: der Haushalt, wie er jetzt aussieht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Haushalt"
+        "400":
+          description: die Änderung ergibt keinen Haushalt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
           content:
             application/json:
               schema:
@@ -493,6 +652,71 @@ components:
             dann steht die Aufgabe offen im Plan.
           example: Ben
 
+    HaushaltAenderung:
+      type: object
+      description: |
+        Jedes Feld ist freiwillig. Was fehlt, bleibt stehen — der Unterschied
+        zwischen „nicht mitgeschickt" und „geleert" ist der ganze Sinn einer
+        Einstellungsseite.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        wohnform:
+          type: string
+          enum: [wohnung, haus]
+        garten:
+          type: boolean
+        auto:
+          type: boolean
+        haustiere:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+          description: Vollständige Liste. Leer heißt „keine mehr".
+        zeitzone:
+          type: string
+
+    MitgliedAenderung:
+      type: object
+      description: Jedes Feld ist freiwillig. Was fehlt, bleibt stehen.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        rolle:
+          type: string
+          enum: [planend, ausfuehrend, betreut]
+        geburtsjahr:
+          type: integer
+          minimum: 0
+          maximum: 2100
+          description: |
+            **0 heißt „kein Geburtsjahr"** und ist bei Erwachsenen die richtige
+            Antwort — nicht „im Jahr null geboren". Die Betreuungsform wird
+            daraus neu geraten.
+        zeit:
+          type: string
+          enum: [keine, wenig, mittel, viel]
+          description: |
+            Die grobe Stufe aus dem Onboarding. Der Dienst rechnet sie in
+            Minuten um; die Minutenwerte stehen nur im Planer, damit es nicht
+            zwei Vorstellungen davon gibt, was „mittel" bedeutet.
+        minuten:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items:
+            type: integer
+            minimum: 0
+            maximum: 480
+          description: |
+            Minuten je Wochentag, Index 0 = Montag. Für alle, denen die drei
+            Stufen zu grob sind. Zusammen mit `zeit` gewinnt diese Angabe.
+
     Haushalt:
       type: object
       required: [id, name, mitglieder]
@@ -514,6 +738,28 @@ components:
             Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
             öffentlichen Beispielhaushalten und überall dort, wo er nicht
             Mitglied ist.
+        ich:
+          type: string
+          description: |
+            Kennung des Aufrufers als Person in diesem Haushalt. Damit weiß die
+            Ansicht, welche Zeile seine eigene ist — etwa in den Einstellungen,
+            wo jeder seine eigene Zeit setzen darf und sonst nichts.
+        wohnform:
+          type: string
+          enum: [wohnung, haus]
+        garten:
+          type: boolean
+        auto:
+          type: boolean
+        haustiere:
+          type: array
+          items:
+            type: string
+          description: |
+            Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
+            entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
+            Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
+            könnten die Einstellungen nicht zeigen, was angenommen wurde.
 
     Mitglied:
       type: object
@@ -536,6 +782,21 @@ components:
           description: |
             Ob diese Person sich anmelden kann. Steuert, wen man noch einladen
             kann — und macht sichtbar, wer bisher nur im Plan steht.
+        geburtsjahr:
+          type: integer
+          description: |
+            Fehlt bei Erwachsenen — dort ist „nicht gefragt" die richtige
+            Antwort und nicht „unbekannt alt" (siehe Member.IsAdult im Planer).
+        minuten:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items:
+            type: integer
+          description: |
+            Verfügbare Minuten je Wochentag, Index 0 = Montag. Beim Einrichten
+            aus einer der drei Stufen geraten und hier korrigierbar. Die Zahlen
+            tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
 
     Wochenplan:
       type: object

@@ -42,6 +42,14 @@ type Plans interface {
 	// HandOver gibt eine Aufgabe zurück in den Haushalt und liefert den Namen
 	// der Person, die übernimmt — leer, wenn niemand geeignet ist.
 	HandOver(ctx context.Context, subject, taskID, reason string) (string, error)
+	// UpdateHousehold ändert die Einstellungen. Nur planende Personen.
+	UpdateHousehold(ctx context.Context, subject, id string, c planner.HouseholdChange) (planner.Household, error)
+	// UpdateMember ändert eine Person. Den eigenen Namen und die eigene Zeit
+	// darf jeder, alles Weitere die planenden.
+	UpdateMember(ctx context.Context, subject, id, memberID string, c planner.MemberChange) (planner.Household, error)
+	// Recompute rechnet eine festgeschriebene Woche neu — ohne anzufassen,
+	// was schon Spuren hinterlassen hat.
+	Recompute(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error)
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -98,13 +106,16 @@ func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestOb
 		// Beispiele. Wer das optimiert, bevor jemand fünfzig Haushalte hat,
 		// tauscht Lesbarkeit gegen nichts.
 		if subject != "" {
-			_, rolle, err := a.plans.MemberOf(ctx, subject, h.ID)
+			ich, rolle, err := a.plans.MemberOf(ctx, subject, h.ID)
 			if err != nil {
 				return nil, err
 			}
 			if rolle != "" {
 				r := openapi.HaushaltMeineRolle(rolle)
 				eintrag.MeineRolle = &r
+			}
+			if ich != "" {
+				eintrag.Ich = &ich
 			}
 		}
 		out = append(out, eintrag)
@@ -375,15 +386,40 @@ func planNachAussen(h planner.Household, r planner.Result, ich string, rolle pla
 }
 
 func haushaltNachAussen(h planner.Household) openapi.Haushalt {
-	out := openapi.Haushalt{Id: h.ID, Name: h.Name, Mitglieder: []openapi.Mitglied{}}
+	garten, auto := h.Context.HasYard, h.Context.HasCar
+	haustiere := h.Context.Pets
+	if haustiere == nil {
+		haustiere = []string{}
+	}
+	wohnform := openapi.HaushaltWohnform(h.Context.Home)
+
+	out := openapi.Haushalt{
+		Id:         h.ID,
+		Name:       h.Name,
+		Mitglieder: []openapi.Mitglied{},
+		Wohnform:   &wohnform,
+		Garten:     &garten,
+		Auto:       &auto,
+		Haustiere:  &haustiere,
+	}
 	for _, m := range h.Members {
 		zugang := m.HasAccess
-		out.Mitglieder = append(out.Mitglieder, openapi.Mitglied{
+		minuten := make([]int, 0, len(m.CapacityMinutes))
+		for _, v := range m.CapacityMinutes {
+			minuten = append(minuten, v)
+		}
+		mitglied := openapi.Mitglied{
 			Id:        m.ID,
 			Name:      m.Name,
 			Rolle:     openapi.MitgliedRolle(m.Role),
 			HatZugang: &zugang,
-		})
+			Minuten:   &minuten,
+		}
+		if m.BirthYear != 0 {
+			jahr := m.BirthYear
+			mitglied.Geburtsjahr = &jahr
+		}
+		out.Mitglieder = append(out.Mitglieder, mitglied)
 	}
 	return out
 }
@@ -440,4 +476,122 @@ func (a api) AufgabeAbgeben(ctx context.Context, r openapi.AufgabeAbgebenRequest
 		antwort.Uebernimmt = &name
 	}
 	return antwort, nil
+}
+
+// UpdateHaushalt ändert die Einstellungen eines Haushalts.
+func (a api) UpdateHaushalt(ctx context.Context, r openapi.UpdateHaushaltRequestObject) (openapi.UpdateHaushaltResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.UpdateHaushalt403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.UpdateHaushalt400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	c := planner.HouseholdChange{
+		Name:     r.Body.Name,
+		HasCar:   r.Body.Auto,
+		HasYard:  r.Body.Garten,
+		Pets:     r.Body.Haustiere,
+		Timezone: r.Body.Zeitzone,
+	}
+	if r.Body.Wohnform != nil {
+		wohnform := planner.Home(*r.Body.Wohnform)
+		c.Home = &wohnform
+	}
+
+	haushalt, err := a.plans.UpdateHousehold(ctx, id.Subject, r.HaushaltId, c)
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.UpdateHaushalt400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.UpdateHaushalt404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.UpdateHaushalt403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.UpdateHaushalt200JSONResponse(haushaltNachAussen(haushalt)), nil
+}
+
+// UpdateMitglied ändert eine Person im Haushalt.
+func (a api) UpdateMitglied(ctx context.Context, r openapi.UpdateMitgliedRequestObject) (openapi.UpdateMitgliedResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.UpdateMitglied403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.UpdateMitglied400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	c := planner.MemberChange{Name: r.Body.Name, BirthYear: r.Body.Geburtsjahr}
+	if r.Body.Rolle != nil {
+		rolle := planner.Role(*r.Body.Rolle)
+		c.Role = &rolle
+	}
+	// Die Stufe wird hier in Minuten übersetzt und nicht im Browser: Sonst
+	// gäbe es zwei Vorstellungen davon, was „mittel" heißt, und die zweite
+	// wäre die, die niemand pflegt.
+	if r.Body.Zeit != nil {
+		minuten := planner.TimeBudget(*r.Body.Zeit).Minutes()
+		c.Minutes = &minuten
+	}
+	if r.Body.Minuten != nil {
+		var minuten [7]int
+		for i, v := range *r.Body.Minuten {
+			if i < len(minuten) {
+				minuten[i] = v
+			}
+		}
+		c.Minutes = &minuten
+	}
+
+	haushalt, err := a.plans.UpdateMember(ctx, id.Subject, r.HaushaltId, r.MitgliedId, c)
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.UpdateMitglied400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.UpdateMitglied404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.UpdateMitglied403JSONResponse{Fehler: err.Error()}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.UpdateMitglied200JSONResponse(haushaltNachAussen(haushalt)), nil
+}
+
+// WocheNeuRechnen ersetzt den Vorschlag und lässt stehen, was passiert ist.
+func (a api) WocheNeuRechnen(ctx context.Context, r openapi.WocheNeuRechnenRequestObject) (openapi.WocheNeuRechnenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.WocheNeuRechnen403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	week, err := planner.ParseWeek(r.Woche)
+	if err != nil {
+		return openapi.WocheNeuRechnen400JSONResponse{Fehler: err.Error()}, nil
+	}
+
+	result, haushalt, err := a.plans.Recompute(ctx, id.Subject, r.HaushaltId, week)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.WocheNeuRechnen404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.WocheNeuRechnen403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	ich, rolle, err := a.plans.MemberOf(ctx, id.Subject, r.HaushaltId)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.WocheNeuRechnen200JSONResponse(
+		planNachAussen(haushalt, result, ich, rolle, rolle == planner.RolePlanner),
+	), nil
 }

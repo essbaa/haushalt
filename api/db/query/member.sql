@@ -46,3 +46,20 @@ SELECT EXISTS(SELECT 1 FROM member WHERE auth_user_id = $1);
 SELECT EXISTS(
     SELECT 1 FROM member WHERE household_id = $1 AND auth_user_id = $2
 );
+
+-- name: UpdateMember :one
+-- Eine Person ändern. Wie beim Haushalt: Was nicht mitkommt, bleibt.
+--
+-- birth_year und care sind ausdrücklich löschbar, deshalb stehen sie nicht im
+-- COALESCE-Muster, sondern hinter einem eigenen Schalter: „kein Geburtsjahr"
+-- ist bei Erwachsenen die richtige Antwort und darf sich eintragen lassen.
+UPDATE member SET
+    name             = COALESCE(sqlc.narg('name'), name),
+    role             = COALESCE(sqlc.narg('role'), role),
+    capacity_minutes = COALESCE(sqlc.narg('capacity_minutes'), capacity_minutes),
+    birth_year       = CASE WHEN sqlc.arg('set_birth_year')::boolean
+                            THEN sqlc.narg('birth_year') ELSE birth_year END,
+    care             = CASE WHEN sqlc.arg('set_care')::boolean
+                            THEN sqlc.narg('care') ELSE care END
+WHERE id = sqlc.arg('id') AND household_id = sqlc.arg('household_id')
+RETURNING *;

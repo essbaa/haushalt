@@ -42,3 +42,19 @@ SELECT * FROM household ORDER BY created_at;
 -- Haushalte mit Slug sind die aus dem Repo: öffentlich sichtbar, ohne
 -- Anmeldung. Alles ohne Slug gehört jemandem.
 SELECT * FROM household WHERE slug IS NOT NULL ORDER BY created_at;
+
+-- name: UpdateHousehold :one
+-- Einstellungen ändern. Jedes Feld darf fehlen; was fehlt, bleibt stehen.
+--
+-- COALESCE statt einer gebauten Anweisung: Der Unterschied zwischen „nicht
+-- mitgeschickt" und „auf leer gesetzt" wird hier entschieden und nicht in Go
+-- zusammengestückelt.
+UPDATE household SET
+    name     = COALESCE(sqlc.narg('name'), name),
+    home     = COALESCE(sqlc.narg('home'), home),
+    has_car  = COALESCE(sqlc.narg('has_car'), has_car),
+    has_yard = COALESCE(sqlc.narg('has_yard'), has_yard),
+    pets     = COALESCE(sqlc.narg('pets'), pets),
+    timezone = COALESCE(sqlc.narg('timezone'), timezone)
+WHERE id = sqlc.arg('id')
+RETURNING *;

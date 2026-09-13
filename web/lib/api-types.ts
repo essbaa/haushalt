@@ -78,6 +78,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/haushalte/{haushaltId}/mitglieder/{mitgliedId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Eine Person ändern
+         * @description Den eigenen Namen und die eigene Zeit setzt jeder selbst — wie viel
+         *     Zeit jemand hat, weiß nur er. Rolle und Geburtsjahr ändern die
+         *     planenden Personen, denn daran hängt, was jemand im Haushalt darf und
+         *     welche Aufgaben er überhaupt bekommen kann.
+         *
+         *     Was fehlt, bleibt stehen. Zurück kommt der ganze Haushalt, damit die
+         *     Ansicht nicht raten muss, was sich sonst noch geändert hat.
+         */
+        patch: operations["updateMitglied"];
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/plan/{woche}/neu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Woche neu rechnen
+         * @description Rechnet eine festgeschriebene Woche noch einmal — nach einer Änderung
+         *     an den Einstellungen, oder wenn jemand dazugekommen ist.
+         *
+         *     **Was Spuren hinterlassen hat, bleibt.** Aufgaben mit einem Ereignis —
+         *     abgehakt, abgegeben, wieder geöffnet — werden nicht angefasst. Alles
+         *     andere war ein Vorschlag und wird ersetzt.
+         *
+         *     Nur planende Personen: Der Plan gehört dem Haushalt, nicht dem, der
+         *     gerade unzufrieden damit ist.
+         */
+        post: operations["wocheNeuRechnen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/haushalte/{haushaltId}/plan/{woche}": {
         parameters: {
             query?: never;
@@ -93,6 +147,31 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Einstellungen des Haushalts ändern
+         * @description Nur planende Personen. Was hier steht, entscheidet, welche Aufgaben es
+         *     im Haushalt überhaupt gibt — „kein Garten" nimmt das Rasenmähen für
+         *     alle aus dem Plan.
+         *
+         *     Gilt ab der nächsten Woche. Die laufende steht fest (ADR-0008) und
+         *     wird nur auf Zuruf neu gerechnet.
+         */
+        patch: operations["updateHaushalt"];
         trace?: never;
     };
     "/api/haushalte/{haushaltId}/einladungen": {
@@ -283,6 +362,45 @@ export interface components {
              */
             uebernimmt?: string;
         };
+        /**
+         * @description Jedes Feld ist freiwillig. Was fehlt, bleibt stehen — der Unterschied
+         *     zwischen „nicht mitgeschickt" und „geleert" ist der ganze Sinn einer
+         *     Einstellungsseite.
+         */
+        HaushaltAenderung: {
+            name?: string;
+            /** @enum {string} */
+            wohnform?: "wohnung" | "haus";
+            garten?: boolean;
+            auto?: boolean;
+            /** @description Vollständige Liste. Leer heißt „keine mehr". */
+            haustiere?: string[];
+            zeitzone?: string;
+        };
+        /** @description Jedes Feld ist freiwillig. Was fehlt, bleibt stehen. */
+        MitgliedAenderung: {
+            name?: string;
+            /** @enum {string} */
+            rolle?: "planend" | "ausfuehrend" | "betreut";
+            /**
+             * @description **0 heißt „kein Geburtsjahr"** und ist bei Erwachsenen die richtige
+             *     Antwort — nicht „im Jahr null geboren". Die Betreuungsform wird
+             *     daraus neu geraten.
+             */
+            geburtsjahr?: number;
+            /**
+             * @description Die grobe Stufe aus dem Onboarding. Der Dienst rechnet sie in
+             *     Minuten um; die Minutenwerte stehen nur im Planer, damit es nicht
+             *     zwei Vorstellungen davon gibt, was „mittel" bedeutet.
+             * @enum {string}
+             */
+            zeit?: "keine" | "wenig" | "mittel" | "viel";
+            /**
+             * @description Minuten je Wochentag, Index 0 = Montag. Für alle, denen die drei
+             *     Stufen zu grob sind. Zusammen mit `zeit` gewinnt diese Angabe.
+             */
+            minuten?: number[];
+        };
         Haushalt: {
             /** @example familie-a */
             id: string;
@@ -296,6 +414,23 @@ export interface components {
              * @enum {string}
              */
             meine_rolle?: "planend" | "ausfuehrend" | "betreut";
+            /**
+             * @description Kennung des Aufrufers als Person in diesem Haushalt. Damit weiß die
+             *     Ansicht, welche Zeile seine eigene ist — etwa in den Einstellungen,
+             *     wo jeder seine eigene Zeit setzen darf und sonst nichts.
+             */
+            ich?: string;
+            /** @enum {string} */
+            wohnform?: "wohnung" | "haus";
+            garten?: boolean;
+            auto?: boolean;
+            /**
+             * @description Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
+             *     entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
+             *     Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
+             *     könnten die Einstellungen nicht zeigen, was angenommen wurde.
+             */
+            haustiere?: string[];
         };
         Mitglied: {
             /** @example m-anna */
@@ -313,6 +448,17 @@ export interface components {
              *     kann — und macht sichtbar, wer bisher nur im Plan steht.
              */
             hat_zugang?: boolean;
+            /**
+             * @description Fehlt bei Erwachsenen — dort ist „nicht gefragt" die richtige
+             *     Antwort und nicht „unbekannt alt" (siehe Member.IsAdult im Planer).
+             */
+            geburtsjahr?: number;
+            /**
+             * @description Verfügbare Minuten je Wochentag, Index 0 = Montag. Beim Einrichten
+             *     aus einer der drei Stufen geraten und hier korrigierbar. Die Zahlen
+             *     tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
+             */
+            minuten?: number[];
         };
         Wochenplan: {
             /** @example 2026-W38 */
@@ -537,6 +683,111 @@ export interface operations {
             };
         };
     };
+    updateMitglied: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                mitgliedId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MitgliedAenderung"];
+            };
+        };
+        responses: {
+            /** @description der Haushalt, wie er jetzt aussieht */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Haushalt"];
+                };
+            };
+            /** @description die Änderung ergibt keine Person */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    wocheNeuRechnen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                /** @example 2026-W38 */
+                woche: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description die neu gerechnete Woche */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wochenplan"];
+                };
+            };
+            /** @description das ist keine Kalenderwoche */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
     getWochenplan: {
         parameters: {
             query?: never;
@@ -562,6 +813,59 @@ export interface operations {
             };
             /** @description die Woche ist nicht lesbar */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    updateHaushalt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HaushaltAenderung"];
+            };
+        };
+        responses: {
+            /** @description der Haushalt, wie er jetzt aussieht */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Haushalt"];
+                };
+            };
+            /** @description die Änderung ergibt keinen Haushalt */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

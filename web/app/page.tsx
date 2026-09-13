@@ -1,21 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ApiStatus } from "@/app/components/api-status";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
-import { aktuelleWoche, istWoche } from "@/lib/woche";
+import { aktuelleWoche, istWoche, wochenSpanne } from "@/lib/woche";
 
 /**
- * Startseite: der Wochenplan eines Beispielhaushalts.
+ * Die Startseite: der Wochenplan.
  *
  * Server Component — der Plan wird auf dem Next.js-Server geholt und fertig
  * ausgeliefert. Kein Ladezustand, kein Springen, lesbar auch ohne JavaScript.
- *
- * Die Statuszeile ganz unten bleibt dagegen eine Client Component: Sie fragt
- * den Dienst aus dem Browser und misst damit die CORS-Grenze, die der
- * Server-Abruf gerade nicht berührt.
  */
 export default async function Page({
   searchParams,
@@ -29,109 +24,107 @@ export default async function Page({
   let plan: Plan | null = null;
   let fehler: { text: string; hinweis?: string } | null = null;
 
-  // Das Token geht an den Go-Dienst mit, wenn eines da ist. Ohne Anmeldung
-  // sieht man die Demo-Haushalte; angemeldet zusätzlich den eigenen.
   const token = await serverToken();
 
   try {
     haushalte = await ladeHaushalte(token);
-    const gewaehlt =
-      haushalte.find((h) => h.id === params.haushalt)?.id ?? haushalte[0]?.id;
+    const gewaehlt = haushalte.find((h) => h.id === params.haushalt)?.id ?? haushalte[0]?.id;
     if (gewaehlt) plan = await ladePlan(gewaehlt, woche, token);
   } catch (e) {
-    // Der Dienst schläft (Fly fährt bei Ruhe herunter) oder ist kaputt. Beides
-    // gehört gesagt, nicht in eine leere Seite verwandelt.
     fehler =
       e instanceof ApiError
         ? { text: e.message, hinweis: e.hint }
         : { text: "Der Wochenplan konnte nicht geladen werden." };
   }
 
-  // Angemeldet, aber noch ohne eigenen Haushalt: Das ist der Moment für das
-  // Onboarding. Außerhalb des try, weil redirect() intern eine Ausnahme wirft
-  // — im catch oben würde sie als Ladefehler enden.
-  //
-  // Nur ohne ausdrücklich gewählten Haushalt: Wer sich die Beispiele ansehen
-  // will, kommt über ?haushalt=… hierher und soll nicht im Kreis geschickt
-  // werden.
+  // Angemeldet, aber noch ohne eigenen Haushalt: Zeit fürs Einrichten.
+  // Außerhalb des try, weil redirect() intern eine Ausnahme wirft — im catch
+  // oben würde sie als Ladefehler enden.
   if (token && !params.haushalt && !haushalte.some((h) => h.meine_rolle)) {
     redirect("/einrichten");
   }
 
+  const eigener = plan?.meine_rolle !== undefined;
+
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-6 py-12">
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <p className="font-mono text-xs uppercase tracking-widest text-muted">
-            Haushalt als Team
-          </p>
+    <>
+      <header className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-5 py-3">
+          <Link href="/" className="text-base font-extrabold tracking-tight">
+            Haushalt
+          </Link>
           <Sitzung />
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight text-balance">
-          Der Wochenplan
-        </h1>
-        <p className="text-lg leading-relaxed text-muted text-pretty">
-          Verteilt wird nicht nur Zeit, sondern auch Kopflast — die Arbeit, an
-          die jemand denken muss. Wer weniger Zeit hat, trägt weniger.
-        </p>
       </header>
 
-      {haushalte.length > 1 && (
-        <nav className="flex flex-wrap gap-2" aria-label="Haushalt wählen">
-          {haushalte.map((h) => {
-            const aktiv = h.id === plan?.haushalt.id;
-            return (
-              <Link
-                key={h.id}
-                href={`/?haushalt=${h.id}`}
-                aria-current={aktiv ? "page" : undefined}
-                className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
-                  aktiv
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-line text-muted hover:text-foreground"
-                }`}
-              >
-                {h.name}
-                <span className="ml-2 text-xs text-muted">
-                  {h.mitglieder.length} Personen
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8">
+        {haushalte.length > 1 && (
+          <nav aria-label="Haushalt wählen" className="mb-7 flex flex-wrap gap-2">
+            {haushalte.map((h) => {
+              const aktiv = h.id === plan?.haushalt.id;
+              return (
+                <Link
+                  key={h.id}
+                  href={`/?haushalt=${h.id}`}
+                  aria-current={aktiv ? "page" : undefined}
+                  className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
+                    aktiv
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-line-strong text-muted hover:text-fg"
+                  }`}
+                >
+                  {h.name}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
-      {fehler && (
-        <div className="rounded-lg border border-line bg-surface p-5">
-          <p className="font-medium">{fehler.text}</p>
-          {fehler.hinweis && (
-            <p className="mt-1 text-sm text-muted">{fehler.hinweis}</p>
-          )}
+        <div className="mb-8 space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight text-balance">
+            {plan?.haushalt.name ?? "Der Wochenplan"}
+          </h1>
+          <p className="text-sm text-muted">{wochenSpanne(woche)}</p>
         </div>
-      )}
 
-      {plan && <Wochenplan plan={plan} />}
+        {fehler && (
+          <div className="mb-8 rounded-lg border border-line bg-surface px-4 py-3">
+            <p className="font-semibold">{fehler.text}</p>
+            {fehler.hinweis && <p className="mt-1 text-sm text-muted">{fehler.hinweis}</p>}
+          </div>
+        )}
 
-      {plan?.meine_rolle === "planend" && (
-        <Link
-          href={`/einladen?haushalt=${plan.haushalt.id}`}
-          className="self-start rounded-md border border-line px-4 py-2 text-sm transition-colors hover:border-accent hover:text-accent"
-        >
-          Jemanden einladen
-        </Link>
-      )}
+        {plan && <Wochenplan plan={plan} />}
 
-      <section className="space-y-3 border-t border-line pt-8">
-        <h2 className="font-mono text-xs uppercase tracking-widest text-muted">
-          Verbindung
-        </h2>
-        <ApiStatus />
-        <p className="text-sm leading-relaxed text-muted">
-          Der Plan oben kommt vom Go-Dienst, berechnet in einem reinen,
-          deterministischen Paket. Diese Zeile fragt denselben Dienst noch
-          einmal — aus dem Browser, über die CORS-Grenze hinweg.
-        </p>
-      </section>
-    </main>
+        {eigener && plan && (
+          <nav className="mt-10 flex flex-wrap gap-2 border-t border-line pt-6">
+            <Link
+              href={`/einstellungen?haushalt=${plan.haushalt.id}`}
+              className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
+            >
+              Einstellungen
+            </Link>
+            {plan.meine_rolle === "planend" && (
+              <Link
+                href={`/einladen?haushalt=${plan.haushalt.id}`}
+                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
+              >
+                Jemanden einladen
+              </Link>
+            )}
+          </nav>
+        )}
+
+        {!token && (
+          <p className="mt-10 border-t border-line pt-6 text-sm leading-relaxed text-muted">
+            Das ist ein Beispielhaushalt.{" "}
+            <Link href="/anmelden" className="font-semibold text-primary underline underline-offset-2">
+              Melde dich an
+            </Link>
+            , um einen eigenen anzulegen.
+          </p>
+        )}
+      </main>
+    </>
   );
 }

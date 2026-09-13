@@ -181,6 +181,63 @@ func (q *Queries) SetMemberAuthUser(ctx context.Context, arg SetMemberAuthUserPa
 	return i, err
 }
 
+const updateMember = `-- name: UpdateMember :one
+UPDATE member SET
+    name             = COALESCE($1, name),
+    role             = COALESCE($2, role),
+    capacity_minutes = COALESCE($3, capacity_minutes),
+    birth_year       = CASE WHEN $4::boolean
+                            THEN $5 ELSE birth_year END,
+    care             = CASE WHEN $6::boolean
+                            THEN $7 ELSE care END
+WHERE id = $8 AND household_id = $9
+RETURNING id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at
+`
+
+type UpdateMemberParams struct {
+	Name            *string
+	Role            *string
+	CapacityMinutes []int32
+	SetBirthYear    bool
+	BirthYear       *int32
+	SetCare         bool
+	Care            *string
+	ID              pgtype.UUID
+	HouseholdID     pgtype.UUID
+}
+
+// Eine Person ändern. Wie beim Haushalt: Was nicht mitkommt, bleibt.
+//
+// birth_year und care sind ausdrücklich löschbar, deshalb stehen sie nicht im
+// COALESCE-Muster, sondern hinter einem eigenen Schalter: „kein Geburtsjahr"
+// ist bei Erwachsenen die richtige Antwort und darf sich eintragen lassen.
+func (q *Queries) UpdateMember(ctx context.Context, arg UpdateMemberParams) (Member, error) {
+	row := q.db.QueryRow(ctx, updateMember,
+		arg.Name,
+		arg.Role,
+		arg.CapacityMinutes,
+		arg.SetBirthYear,
+		arg.BirthYear,
+		arg.SetCare,
+		arg.Care,
+		arg.ID,
+		arg.HouseholdID,
+	)
+	var i Member
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.Name,
+		&i.Role,
+		&i.BirthYear,
+		&i.Care,
+		&i.CapacityMinutes,
+		&i.AuthUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const upsertMember = `-- name: UpsertMember :one
 INSERT INTO member (household_id, name, role, birth_year, care, capacity_minutes)
 VALUES ($1, $2, $3, $4, $5, $6)

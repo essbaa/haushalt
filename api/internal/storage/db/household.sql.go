@@ -205,6 +205,58 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 	return items, nil
 }
 
+const updateHousehold = `-- name: UpdateHousehold :one
+UPDATE household SET
+    name     = COALESCE($1, name),
+    home     = COALESCE($2, home),
+    has_car  = COALESCE($3, has_car),
+    has_yard = COALESCE($4, has_yard),
+    pets     = COALESCE($5, pets),
+    timezone = COALESCE($6, timezone)
+WHERE id = $7
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
+`
+
+type UpdateHouseholdParams struct {
+	Name     *string
+	Home     *string
+	HasCar   *bool
+	HasYard  *bool
+	Pets     []string
+	Timezone *string
+	ID       pgtype.UUID
+}
+
+// Einstellungen ändern. Jedes Feld darf fehlen; was fehlt, bleibt stehen.
+//
+// COALESCE statt einer gebauten Anweisung: Der Unterschied zwischen „nicht
+// mitgeschickt" und „auf leer gesetzt" wird hier entschieden und nicht in Go
+// zusammengestückelt.
+func (q *Queries) UpdateHousehold(ctx context.Context, arg UpdateHouseholdParams) (Household, error) {
+	row := q.db.QueryRow(ctx, updateHousehold,
+		arg.Name,
+		arg.Home,
+		arg.HasCar,
+		arg.HasYard,
+		arg.Pets,
+		arg.Timezone,
+		arg.ID,
+	)
+	var i Household
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Home,
+		&i.HasCar,
+		&i.HasYard,
+		&i.Pets,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.Slug,
+	)
+	return i, err
+}
+
 const upsertDemoHousehold = `-- name: UpsertDemoHousehold :one
 INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone)
 VALUES ($1, $2, $3, $4, $5, $6, $7)

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Feld } from "@/app/components/ui";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 
 /**
@@ -70,7 +71,7 @@ export default function Anmelden() {
         <p className="mb-4">
           Angemeldet als <strong>{sitzung.user.email}</strong>.
         </p>
-        <Link href="/" className="text-accent underline">
+        <Link href="/" className="text-primary underline">
           Zum Wochenplan
         </Link>
       </Rahmen>
@@ -79,10 +80,10 @@ export default function Anmelden() {
 
   return (
     <Rahmen>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">
+      <h1 className="mb-2 text-2xl font-extrabold tracking-tight">
         {neu ? "Konto anlegen" : "Anmelden"}
       </h1>
-      <p className="mb-6 text-sm leading-relaxed text-muted">
+      <p className="mb-7 text-sm leading-relaxed text-muted">
         {neu
           ? "Danach gehört dir ein Haushalt, und du kannst weitere Personen einladen."
           : "Mit der E-Mail-Adresse, mit der du dich registriert hast."}
@@ -90,25 +91,35 @@ export default function Anmelden() {
 
       <form onSubmit={absenden} className="space-y-4">
         {neu && (
-          <Feld label="Name" wert={name} setzen={setName} typ="text" autoComplete="name" />
+          <Feld
+            beschriftung="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            required
+          />
         )}
         <Feld
-          label="E-Mail"
-          wert={email}
-          setzen={setEmail}
-          typ="email"
+          beschriftung="E-Mail"
+          type="email"
+          inputMode="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
+          required
         />
         <Feld
-          label="Passwort"
-          wert={passwort}
-          setzen={setPasswort}
-          typ="password"
+          beschriftung="Passwort"
+          type="password"
+          value={passwort}
+          onChange={(e) => setPasswort(e.target.value)}
           autoComplete={neu ? "new-password" : "current-password"}
+          required
+          hinweis={neu ? "Mindestens acht Zeichen." : undefined}
         />
 
         {fehler && (
-          <p role="alert" className="text-sm text-clay">
+          <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
             {fehler}
           </p>
         )}
@@ -116,9 +127,9 @@ export default function Anmelden() {
         <button
           type="submit"
           disabled={laeuft}
-          className="w-full rounded-md bg-accent px-4 py-2.5 font-medium text-background disabled:opacity-60"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
         >
-          {laeuft ? "…" : neu ? "Konto anlegen" : "Anmelden"}
+          {laeuft ? "Einen Moment …" : neu ? "Konto anlegen" : "Anmelden"}
         </button>
       </form>
 
@@ -128,7 +139,7 @@ export default function Anmelden() {
           setNeu(!neu);
           setFehler(null);
         }}
-        className="mt-6 text-sm text-muted underline"
+        className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2"
       >
         {neu ? "Ich habe schon ein Konto" : "Ich brauche ein Konto"}
       </button>
@@ -138,36 +149,8 @@ export default function Anmelden() {
 
 function Rahmen({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-sm px-6 py-20">
-      <div className="rounded-lg border border-line bg-surface p-7">{children}</div>
+    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-5 py-12">
+      <div className="rounded-lg border border-line bg-surface p-6 sm:p-7">{children}</div>
     </main>
-  );
-}
-
-function Feld({
-  label,
-  wert,
-  setzen,
-  typ,
-  autoComplete,
-}: {
-  label: string;
-  wert: string;
-  setzen: (v: string) => void;
-  typ: string;
-  autoComplete: string;
-}) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      <input
-        type={typ}
-        value={wert}
-        onChange={(e) => setzen(e.target.value)}
-        autoComplete={autoComplete}
-        required
-        className="w-full rounded-md border border-line bg-background px-3 py-2 outline-none focus-visible:border-accent"
-      />
-    </label>
   );
 }

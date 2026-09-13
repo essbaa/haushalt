@@ -55,6 +55,13 @@ type Member struct {
 	// Care ist nur bei Kindern gesetzt.
 	Care Care
 
+	// BirthYear ist das, woraus Age gerechnet wurde — 0 heißt „nicht
+	// gefragt". Der Planer liest es nie; er rechnet mit Age. Es steht hier,
+	// damit die Einstellungen zeigen können, was tatsächlich gespeichert ist,
+	// statt aus dem Alter ein Jahr zurückzurechnen und dabei jeden zu
+	// verjüngen, der dieses Jahr noch Geburtstag hat.
+	BirthYear int
+
 	// HasAccess sagt, ob diese Person sich anmelden kann. Der Planer schaut
 	// nie hin — für ihn ist jede Person gleich, ob sie die App je geöffnet
 	// hat oder nicht. Die Oberfläche braucht es: Sie entscheidet, wen man noch

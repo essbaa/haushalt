@@ -30,6 +30,9 @@ export type Uebersprungen = components["schemas"]["Uebersprungen"];
 export type Ich = components["schemas"]["Ich"];
 export type NeuerHaushalt = components["schemas"]["NeuerHaushalt"];
 export type NeuesMitglied = components["schemas"]["NeuesMitglied"];
+export type Mitglied = components["schemas"]["Mitglied"];
+export type HaushaltAenderung = components["schemas"]["HaushaltAenderung"];
+export type MitgliedAenderung = components["schemas"]["MitgliedAenderung"];
 
 /** Antwort von GET /healthz — spiegelt healthResponse im Go-Dienst. */
 export type Health = {

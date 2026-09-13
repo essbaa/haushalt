@@ -22,6 +22,33 @@ func (q *Queries) ClearAssignment(ctx context.Context, taskInstanceID pgtype.UUI
 	return err
 }
 
+const deleteUntouchedWeekTasks = `-- name: DeleteUntouchedWeekTasks :exec
+DELETE FROM task_instance t
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND NOT EXISTS (SELECT 1 FROM event e WHERE e.task_instance_id = t.id)
+`
+
+type DeleteUntouchedWeekTasksParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+}
+
+// Verwirft die Aufgaben einer Woche, an denen nichts hängt.
+//
+// Der Filter ist keine Vorsicht, sondern eine Konsequenz: event.task_instance_id
+// ist ON DELETE SET NULL, und der Trigger event_kein_update verbietet jedes
+// UPDATE auf event. Eine Aufgabe mit Ereignis zu löschen wirft also eine
+// Ausnahme — die Datenbank lässt gar nicht zu, dass Neurechnen Geschehenes
+// wegräumt.
+//
+// Daraus wird eine Produktregel: Was Spuren hinterlassen hat, bleibt. Was nur
+// ein Vorschlag war, wird neu gerechnet.
+func (q *Queries) DeleteUntouchedWeekTasks(ctx context.Context, arg DeleteUntouchedWeekTasksParams) error {
+	_, err := q.db.Exec(ctx, deleteUntouchedWeekTasks, arg.HouseholdID, arg.ISOWeek)
+	return err
+}
+
 const deleteWeek = `-- name: DeleteWeek :exec
 DELETE FROM task_instance WHERE household_id = $1 AND iso_week = $2
 `
@@ -298,6 +325,43 @@ func (q *Queries) ListDoneTasks(ctx context.Context, arg ListDoneTasksParams) ([
 	return items, nil
 }
 
+const listWeekTaskKeys = `-- name: ListWeekTaskKeys :many
+SELECT template_id, day FROM task_instance
+WHERE household_id = $1 AND iso_week = $2
+`
+
+type ListWeekTaskKeysParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+}
+
+type ListWeekTaskKeysRow struct {
+	TemplateID string
+	Day        pgtype.Date
+}
+
+// Was von einer Woche übrig ist, nach dem Verwerfen: Vorlage und Tag. Damit
+// rechnet das Neuschreiben nichts doppelt hin.
+func (q *Queries) ListWeekTaskKeys(ctx context.Context, arg ListWeekTaskKeysParams) ([]ListWeekTaskKeysRow, error) {
+	rows, err := q.db.Query(ctx, listWeekTaskKeys, arg.HouseholdID, arg.ISOWeek)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWeekTaskKeysRow{}
+	for rows.Next() {
+		var i ListWeekTaskKeysRow
+		if err := rows.Scan(&i.TemplateID, &i.Day); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markWeekWritten = `-- name: MarkWeekWritten :one
 INSERT INTO week_plan (household_id, iso_week, skipped)
 VALUES ($1, $2, $3)
@@ -364,5 +428,21 @@ func (q *Queries) SetAssignment(ctx context.Context, arg SetAssignmentParams) er
 		arg.ReasonCode,
 		arg.ReasonPrevious,
 	)
+	return err
+}
+
+const updateWeekSkipped = `-- name: UpdateWeekSkipped :exec
+UPDATE week_plan SET skipped = $3
+WHERE household_id = $1 AND iso_week = $2
+`
+
+type UpdateWeekSkippedParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+	Skipped     []byte
+}
+
+func (q *Queries) UpdateWeekSkipped(ctx context.Context, arg UpdateWeekSkippedParams) error {
+	_, err := q.db.Exec(ctx, updateWeekSkipped, arg.HouseholdID, arg.ISOWeek, arg.Skipped)
 	return err
 }

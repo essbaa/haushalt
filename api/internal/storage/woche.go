@@ -56,45 +56,57 @@ func (p *Plans) festschreiben(ctx context.Context, haushalt pgtype.UUID, woche p
 	}
 
 	for _, t := range r.Tasks {
-		kennung, err := q.InsertTaskInstance(ctx, db.InsertTaskInstanceParams{
-			HouseholdID: haushalt,
-			TemplateID:  t.TemplateID,
-			ISOWeek:     woche.String(),
-			Day:         tag(t.Day),
-			Slot:        string(slotOderEgal(t.Slot)),
-			DurationMin: int32(t.DurationMin),
-			HeadLoad:    int32(t.HeadLoad),
-			Deadline:    tag(t.Deadline),
-		})
-		if err != nil {
-			return fmt.Errorf("aufgabe %q: %w", t.TemplateID, err)
-		}
-
-		if t.AssigneeID == "" {
-			continue // niemand zuständig — ein gültiger Zustand
-		}
-		mitglied, ok := parseUUID(t.AssigneeID)
-		if !ok {
-			return fmt.Errorf("aufgabe %q: %q ist keine person", t.TemplateID, t.AssigneeID)
-		}
-		var vorher pgtype.UUID
-		if t.Reason.Previous != "" {
-			if v, ok := parseUUID(t.Reason.Previous); ok {
-				vorher = v
-			}
-		}
-		if err := q.InsertAssignment(ctx, db.InsertAssignmentParams{
-			TaskInstanceID: kennung,
-			MemberID:       mitglied,
-			ReasonCode:     string(t.Reason.Code),
-			ReasonPrevious: vorher,
-			Manual:         false,
-		}); err != nil {
-			return fmt.Errorf("zuteilung %q: %w", t.TemplateID, err)
+		if err := schreibeAufgabe(ctx, q, haushalt, woche, t); err != nil {
+			return err
 		}
 	}
 
 	return tx.Commit(ctx)
+}
+
+// schreibeAufgabe legt eine gerechnete Aufgabe samt Zuteilung an.
+//
+// Ausgelagert, weil zwei Wege sie brauchen: das erste Festschreiben und das
+// Neurechnen einer Woche. Zwei Kopien dieser zwanzig Zeilen wären zwei
+// Vorstellungen davon, was eine Aufgabe in der Datenbank ist.
+func schreibeAufgabe(ctx context.Context, q *db.Queries, haushalt pgtype.UUID, woche planner.Week, t planner.PlannedTask) error {
+	kennung, err := q.InsertTaskInstance(ctx, db.InsertTaskInstanceParams{
+		HouseholdID: haushalt,
+		TemplateID:  t.TemplateID,
+		ISOWeek:     woche.String(),
+		Day:         tag(t.Day),
+		Slot:        string(slotOderEgal(t.Slot)),
+		DurationMin: int32(t.DurationMin),
+		HeadLoad:    int32(t.HeadLoad),
+		Deadline:    tag(t.Deadline),
+	})
+	if err != nil {
+		return fmt.Errorf("aufgabe %q: %w", t.TemplateID, err)
+	}
+
+	if t.AssigneeID == "" {
+		return nil // niemand zuständig — ein gültiger Zustand
+	}
+	mitglied, ok := parseUUID(t.AssigneeID)
+	if !ok {
+		return fmt.Errorf("aufgabe %q: %q ist keine person", t.TemplateID, t.AssigneeID)
+	}
+	var vorher pgtype.UUID
+	if t.Reason.Previous != "" {
+		if v, ok := parseUUID(t.Reason.Previous); ok {
+			vorher = v
+		}
+	}
+	if err := q.InsertAssignment(ctx, db.InsertAssignmentParams{
+		TaskInstanceID: kennung,
+		MemberID:       mitglied,
+		ReasonCode:     string(t.Reason.Code),
+		ReasonPrevious: vorher,
+		Manual:         false,
+	}); err != nil {
+		return fmt.Errorf("zuteilung %q: %w", t.TemplateID, err)
+	}
+	return nil
 }
 
 // geschriebeneWoche liest eine festgeschriebene Woche zurück.

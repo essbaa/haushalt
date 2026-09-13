@@ -1,79 +1,127 @@
 import { AufgabeAktionen } from "@/app/components/aufgabe-aktionen";
+import { Zeichen } from "@/app/components/ui";
 import type { Aufgabe, Bilanz, Wochenplan as Plan } from "@/lib/api";
-import { tagLesbar, wochenSpanne } from "@/lib/woche";
+import { heute } from "@/lib/woche";
 
 /**
- * Der Wochenplan als Ansicht. Server Component, kein JavaScript im Browser.
+ * Der Wochenplan.
  *
- * Bewusst kein Rot und kein Grün als einziger Träger einer Aussage: Kopflast
- * und Auslastung stehen als Zahl da, die Balken sind Beiwerk.
+ * Die Struktur ist die Woche selbst: links eine schmale Spalte mit dem Tag,
+ * rechts, was an ihm ansteht. Die Zeit läuft nach unten, heute ist markiert.
+ * Kein Kasten je Tag — ein Rahmen um jeden Abschnitt trennt nur optisch und
+ * sagt nichts. Die Linie dagegen sagt: hier geht es weiter.
+ *
+ * Server Component; nur die Knöpfe an jeder Zeile brauchen den Browser.
  */
 export function Wochenplan({ plan }: { plan: Plan }) {
   const namen = new Map(plan.haushalt.mitglieder.map((m) => [m.id, m.name]));
+  const ich = plan.ich ?? "";
+  const planend = plan.meine_rolle === "planend";
+  const heuteISO = heute();
+
   const nachTag = new Map<string, Aufgabe[]>();
   for (const a of plan.aufgaben) {
     nachTag.set(a.tag, [...(nachTag.get(a.tag) ?? []), a]);
   }
   const tage = [...nachTag.keys()].sort();
+  const meineHeute = (nachTag.get(heuteISO) ?? []).filter(
+    (a) => a.zustaendig === ich && !a.erledigt,
+  ).length;
+
+  // Vergangene Tage kommen nach unten und zusammengeklappt.
+  //
+  // Der Reihe nach wäre kalendarisch richtig und im Alltag falsch herum: Am
+  // Sonntag scrollt man an sechs erledigten Tagen vorbei, um zu sehen, was
+  // jetzt dran ist. Die Frage lautet „was ist heute", nicht „wie war die
+  // Woche". Liegt die ganze Woche in der Vergangenheit — jemand sieht sich
+  // eine alte an —, wird nichts eingeklappt; dann ist Rückschau der Zweck.
+  const vergangen = tage.filter((t) => t < heuteISO);
+  const ab_heute = tage.filter((t) => t >= heuteISO);
+  const rueckschau = ab_heute.length === 0 ? [] : vergangen;
+  const vorne = ab_heute.length === 0 ? tage : ab_heute;
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3">
-        <h2 className="text-xl font-semibold">{plan.haushalt.name}</h2>
-        <p className="font-mono text-xs uppercase tracking-widest text-muted">
-          {plan.woche} · {wochenSpanne(plan.woche)}
+      {ich !== "" && (
+        <p className="text-lg leading-snug text-pretty">
+          {meineHeute === 0
+            ? "Heute ist für dich nichts offen."
+            : meineHeute === 1
+              ? "Heute ist eine Sache für dich offen."
+              : `Heute sind ${meineHeute} Sachen für dich offen.`}
         </p>
-      </div>
+      )}
 
       {tage.length === 0 ? (
-        <p className="text-muted">Diese Woche steht nichts an.</p>
+        <div className="rounded-lg border border-line bg-surface px-4 py-8 text-center">
+          <p className="font-semibold">Diese Woche steht nichts an.</p>
+          <p className="mt-1 text-sm text-muted">
+            Kein Fehler: Die erste Woche bleibt bewusst leer, statt zu erschlagen.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-8">
-          {tage.map((tag) => (
-            <section key={tag}>
-              <h3 className="mb-2 text-sm font-medium">{tagLesbar(tag)}</h3>
-              <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
-                {nachTag.get(tag)!.map((a, i) => (
-                  <AufgabeZeile
-                    key={a.id ?? `${a.vorlage_id}-${i}`}
-                    aufgabe={a}
+        <section aria-label={`Woche ${plan.woche}`}>
+          {vorne.map((tag) => (
+            <Tag
+              key={tag}
+              tag={tag}
+              heute={tag === heuteISO}
+              aufgaben={nachTag.get(tag)!}
+              namen={namen}
+              ich={ich}
+              planend={planend}
+            />
+          ))}
+
+          {rueckschau.length > 0 && (
+            <details className="group border-t border-line pt-4">
+              <summary className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-fg">
+                Schon gewesen ({rueckschau.length}{" "}
+                {rueckschau.length === 1 ? "Tag" : "Tage"})
+                <span aria-hidden="true" className="transition-transform group-open:rotate-90">
+                  ›
+                </span>
+              </summary>
+              <div className="mt-4 opacity-70">
+                {rueckschau.map((tag) => (
+                  <Tag
+                    key={tag}
+                    tag={tag}
+                    heute={false}
+                    aufgaben={nachTag.get(tag)!}
                     namen={namen}
-                    ich={plan.ich ?? ""}
-                    planend={plan.meine_rolle === "planend"}
+                    ich={ich}
+                    planend={planend}
                   />
                 ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+              </div>
+            </details>
+          )}
+        </section>
       )}
 
       {plan.bilanz ? (
-        <BilanzTafel bilanz={plan.bilanz} namen={namen} />
+        <Bilanztafel bilanz={plan.bilanz} namen={namen} ich={ich} />
       ) : (
-        <p className="rounded-lg border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
-          Die Bilanz sehen die planenden Personen im Haushalt. Du siehst den
-          ganzen Plan — nur nicht die Auswertung darüber, wer wie viel trägt.
+        <p className="text-sm leading-relaxed text-muted">
+          Die Auswertung, wer wie viel trägt, sehen die planenden Personen. Du
+          siehst den ganzen Plan.
         </p>
       )}
 
       {plan.uebersprungen.length > 0 && (
-        <details className="rounded-lg border border-line bg-surface p-4">
-          <summary className="cursor-pointer text-sm font-medium">
+        <details className="group border-t border-line pt-4">
+          <summary className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-fg">
             Nicht im Plan ({plan.uebersprungen.length})
+            <span aria-hidden="true" className="transition-transform group-open:rotate-90">
+              ›
+            </span>
           </summary>
-          <p className="mt-2 text-sm text-muted">
-            Jede Vorlage, die nicht eingeplant wurde, kommt mit einem Grund
-            zurück. &bdquo;Warum steht das nicht in meinem Plan?&ldquo; ist die
-            erste Frage, die ein Haushalt stellt.
-          </p>
-          <ul className="mt-3 space-y-1 text-sm">
+          <ul className="mt-1 space-y-1">
             {plan.uebersprungen.map((u) => (
-              <li key={u.vorlage_id} className="flex justify-between gap-4">
+              <li key={u.vorlage_id} className="flex flex-wrap justify-between gap-x-4 py-1 text-sm">
                 <span>{u.titel}</span>
-                <span className="shrink-0 font-mono text-xs text-muted">
-                  {grundText[u.grund] ?? u.grund}
-                </span>
+                <span className="text-subtle">{grundText[u.grund] ?? u.grund}</span>
               </li>
             ))}
           </ul>
@@ -83,7 +131,59 @@ export function Wochenplan({ plan }: { plan: Plan }) {
   );
 }
 
-function AufgabeZeile({
+const wochentage = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+function Tag({
+  tag,
+  heute,
+  aufgaben,
+  namen,
+  ich,
+  planend,
+}: {
+  tag: string;
+  heute: boolean;
+  aufgaben: Aufgabe[];
+  namen: Map<string, string>;
+  ich: string;
+  planend: boolean;
+}) {
+  const [, monat, nummer] = tag.split("-").map(Number);
+  const d = new Date(Date.UTC(Number(tag.slice(0, 4)), monat - 1, nummer));
+  const kurz = wochentage[(d.getUTCDay() + 6) % 7];
+
+  return (
+    <div className="flex gap-4 sm:gap-6">
+      {/* Die Spalte trägt den Tag und die Linie, an der die Woche hängt. */}
+      <div className="flex w-12 shrink-0 flex-col items-center sm:w-16">
+        <div
+          className={`flex size-11 flex-col items-center justify-center rounded-full leading-none ${
+            heute ? "bg-primary text-on-primary" : "text-muted"
+          }`}
+        >
+          <span className="text-[0.7rem] font-semibold">{kurz}</span>
+          <span className="text-base font-extrabold tabular-nums">{nummer}</span>
+        </div>
+        <div className="mt-1 w-px flex-1 bg-line" aria-hidden="true" />
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-1 pb-7">
+        {heute && <p className="pb-1 text-sm font-semibold text-primary">Heute</p>}
+        {aufgaben.map((a, i) => (
+          <Zeile
+            key={a.id ?? `${a.vorlage_id}-${i}`}
+            aufgabe={a}
+            namen={namen}
+            ich={ich}
+            planend={planend}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Zeile({
   aufgabe: a,
   namen,
   ich,
@@ -95,92 +195,118 @@ function AufgabeZeile({
   planend: boolean;
 }) {
   const meine = ich !== "" && a.zustaendig === ich;
-  // Abhaken darf die zuständige Person und jede planende — dieselbe Regel wie
-  // im Dienst. Ohne Kennung (Demo-Haushalt) gibt es nichts zum Anfassen.
+  const offen = a.zustaendig === "";
   const darf = a.id !== undefined && (meine || planend);
+  const name = offen ? "Offen" : (namen.get(a.zustaendig) ?? a.zustaendig);
 
+  // Nur die eigenen Aufgaben bekommen Fläche und Rahmen. Wenn jede Zeile
+  // gleich aussieht, trägt die Gestaltung keine Information mehr — und die
+  // eine Frage, die morgens zählt, ist „was ist meins".
   return (
-    <li
-      className={`flex flex-wrap items-baseline gap-x-3 gap-y-2 px-4 py-3 ${
-        a.erledigt ? "opacity-60" : ""
-      }`}
+    <div
+      className={`flex gap-3 rounded-lg px-3 py-2.5 ${
+        meine && !a.erledigt
+          ? "border border-primary/35 bg-primary-soft/60"
+          : "border border-transparent"
+      } ${a.erledigt ? "opacity-50" : ""}`}
     >
-      {a.art === "organisation" && (
-        <span
-          title="Organisationsaufgabe — Kopfarbeit"
-          className="font-mono text-xs text-accent"
-        >
-          ○
-        </span>
-      )}
-      <span className={`min-w-32 font-medium ${meine ? "text-accent" : ""}`}>
-        {a.zustaendig === ""
-          ? "offen"
-          : (namen.get(a.zustaendig) ?? a.zustaendig)}
-      </span>
-      <span className={`flex-1 ${a.erledigt ? "line-through" : ""}`}>{a.titel}</span>
-      <span className="font-mono text-xs text-muted">
-        {a.dauer_min} min
-        {a.kopflast > 0 && ` · Kopflast ${a.kopflast}`}
-      </span>
-      <span className="w-full font-mono text-xs text-muted sm:w-auto sm:min-w-40 sm:text-right">
-        {begruendungText(a, namen)}
-      </span>
-      {darf && (
-        <AufgabeAktionen
-          aufgabeId={a.id!}
-          erledigt={a.erledigt ?? false}
-          abgebbar={meine || planend}
-        />
-      )}
-    </li>
+      <Zeichen name={offen ? "?" : name} eigen={meine} />
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className={`font-semibold ${a.erledigt ? "line-through" : ""}`}>{a.titel}</span>
+          <span className={`text-sm ${meine ? "font-semibold text-primary" : "text-muted"}`}>
+            {meine ? "du" : name}
+          </span>
+        </div>
+
+        {/* Dauer immer, Kopflast nur wenn sie hoch ist. Eine Marke, die an
+            jeder Zeile steht, sagt nichts mehr — die Farbe soll auffallen,
+            wenn etwas Kopfarbeit kostet, nicht als Grundrauschen. */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-subtle">
+          <span className="tabular-nums">{a.dauer_min} min</span>
+          {a.kopflast >= 2 && (
+            <span className="font-semibold text-clay">Kopflast {a.kopflast}</span>
+          )}
+          <span>{begruendungText(a, namen)}</span>
+        </div>
+
+        {darf && (
+          <AufgabeAktionen
+            aufgabeId={a.id!}
+            erledigt={a.erledigt ?? false}
+            abgebbar={meine}
+            eigene={meine}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
-function BilanzTafel({
+/**
+ * Die Bilanz als Gegenüberstellung.
+ *
+ * Kein Fortschrittsbalken je Person: Das Versprechen lautet nicht „schaffe
+ * hundert Prozent", sondern „wer halb so viel Zeit hat, trägt halb so viel".
+ * Also stehen alle auf derselben Skala, und was man vergleicht, ist die Länge
+ * nebeneinander — die Zahl daneben sagt, wovon.
+ */
+function Bilanztafel({
   bilanz,
   namen,
+  ich,
 }: {
   bilanz: Bilanz[];
   namen: Map<string, string>;
+  ich: string;
 }) {
+  const spitze = Math.max(1, ...bilanz.map((b) => b.auslastung_prozent));
+
   return (
-    <section className="space-y-3">
-      <h3 className="font-mono text-xs uppercase tracking-widest text-muted">
-        Bilanz
-      </h3>
-      <ul className="space-y-3">
+    <section className="space-y-4 border-t border-line pt-6">
+      <h2 className="text-lg font-bold tracking-tight">Wer trägt wie viel</h2>
+
+      <ul className="space-y-4">
+        {bilanz.map((b) => {
+          const name = namen.get(b.mitglied_id) ?? b.mitglied_id;
+          const eigen = b.mitglied_id === ich;
+          return (
+            <li key={b.mitglied_id} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
+              <span className={`truncate text-sm ${eigen ? "font-bold text-primary" : "font-medium"}`}>
+                {eigen ? "Du" : name}
+              </span>
+              <span className="h-3 overflow-hidden rounded-full bg-surface-3">
+                <span
+                  className={`block h-full rounded-full ${eigen ? "bg-primary" : "bg-line-strong"}`}
+                  style={{ width: `${Math.max(3, (b.auslastung_prozent / spitze) * 100)}%` }}
+                />
+              </span>
+              <span className="text-right text-sm font-bold tabular-nums">
+                {b.auslastung_prozent}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="text-xs leading-relaxed text-muted">
+        Angezeigt ist der Anteil der eigenen verfügbaren Zeit, nicht die Minuten.
+        Kopflast zählt in der Verteilung mit, kostet aber keine Uhrzeit und steht
+        deshalb nicht in dieser Zahl.
+      </p>
+
+      <ul className="grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
         {bilanz.map((b) => (
-          <li key={b.mitglied_id} className="space-y-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <span className="font-medium">
-                {namen.get(b.mitglied_id) ?? b.mitglied_id}
-              </span>
-              <span className="font-mono text-xs text-muted">
-                {b.minuten} min · Kopflast {b.kopflast} · {b.aufgaben} Aufgaben ·{" "}
-                <strong className="font-medium text-foreground">
-                  {b.auslastung_prozent} %
-                </strong>{" "}
-                der verfügbaren Zeit
-              </span>
-            </div>
-            <div
-              className="h-1.5 overflow-hidden rounded-full bg-line"
-              role="presentation"
-            >
-              <div
-                className="h-full rounded-full bg-accent"
-                style={{ width: `${Math.min(100, b.auslastung_prozent)}%` }}
-              />
-            </div>
+          <li key={b.mitglied_id} className="flex justify-between gap-2">
+            <span>{namen.get(b.mitglied_id) ?? b.mitglied_id}</span>
+            <span className="tabular-nums">
+              {b.minuten} min, Kopflast {b.kopflast}, {b.aufgaben}{" "}
+              {b.aufgaben === 1 ? "Aufgabe" : "Aufgaben"}
+            </span>
           </li>
         ))}
       </ul>
-      <p className="text-sm leading-relaxed text-muted">
-        Verglichen wird die Auslastung, nicht die Minuten: Wer halb so viel Zeit
-        hat, soll halb so viel tragen. Die Kopflast zählt dabei mit, kostet aber
-        keine Uhrzeit — deshalb steht sie hier getrennt.
-      </p>
     </section>
   );
 }

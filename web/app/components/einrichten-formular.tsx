@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Auswahl, Feld, Marke } from "@/app/components/ui";
 import type { Haushalt, NeuerHaushalt, NeuesMitglied } from "@/lib/api";
 import { postMitToken } from "@/lib/browser-token";
 
@@ -18,62 +19,6 @@ type Person = {
 };
 
 const JAHR = new Date().getFullYear();
-
-/** Ein Knopf aus einer Reihe, von denen genau einer gewählt ist. */
-function Wahl<T extends string>({
-  wert,
-  optionen,
-  auf,
-}: {
-  wert: T;
-  optionen: { wert: T; text: string; hinweis?: string }[];
-  auf: (w: T) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {optionen.map((o) => (
-        <button
-          key={o.wert}
-          type="button"
-          onClick={() => auf(o.wert)}
-          aria-pressed={o.wert === wert}
-          className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-            o.wert === wert
-              ? "border-accent bg-accent/10 text-accent"
-              : "border-line text-muted hover:text-foreground"
-          }`}
-        >
-          {o.text}
-          {o.hinweis && <span className="ml-2 text-xs opacity-70">{o.hinweis}</span>}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Ein Schalter für ja/nein. */
-function Schalter({
-  an,
-  text,
-  auf,
-}: {
-  an: boolean;
-  text: string;
-  auf: (an: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => auf(!an)}
-      aria-pressed={an}
-      className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-        an ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:text-foreground"
-      }`}
-    >
-      {text}
-    </button>
-  );
-}
 
 /**
  * Das Onboarding in drei Schritten.
@@ -161,34 +106,36 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
 
   return (
     <div className="space-y-8">
-      <ol className="flex gap-2 font-mono text-xs uppercase tracking-widest text-muted">
-        {["Wohnen", "Wer", "Zeit"].map((t, i) => (
-          <li
-            key={t}
-            aria-current={schritt === i + 1 ? "step" : undefined}
-            className={schritt === i + 1 ? "text-accent" : undefined}
-          >
-            {i > 0 && <span className="mr-2 opacity-40">/</span>}
-            {t}
-          </li>
-        ))}
-      </ol>
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-muted">
+          Schritt {schritt} von 3
+          <span className="ml-2 font-normal text-subtle">
+            {["Wohnen", "Wer gehört dazu", "Zeit"][schritt - 1]}
+          </span>
+        </p>
+        <div className="flex gap-1.5" aria-hidden="true">
+          {[1, 2, 3].map((i) => (
+            <span
+              key={i}
+              className={`h-1 flex-1 rounded-full ${i <= schritt ? "bg-primary" : "bg-surface-3"}`}
+            />
+          ))}
+        </div>
+      </div>
 
       {schritt === 1 && (
         <section className="space-y-6">
-          <label className="block space-y-2">
-            <span className="text-sm text-muted">Wie soll der Haushalt heißen?</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={80}
-              className="w-full rounded-md border border-line bg-surface px-3 py-2"
-            />
-          </label>
+          <Feld
+            beschriftung="Wie soll der Haushalt heißen?"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
 
           <div className="space-y-2">
             <p className="text-sm text-muted">Wohnt ihr in einer Wohnung oder in einem Haus?</p>
-            <Wahl
+            <Auswahl
+              name="Wohnform"
               wert={wohnform}
               auf={setWohnform}
               optionen={[
@@ -201,10 +148,10 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
           <div className="space-y-2">
             <p className="text-sm text-muted">Gibt es …</p>
             <div className="flex flex-wrap gap-2">
-              <Schalter an={garten} text="Garten" auf={setGarten} />
-              <Schalter an={auto} text="Auto" auf={setAuto} />
-              <Schalter an={haustiere.includes("hund")} text="Hund" auf={() => haustier("hund")} />
-              <Schalter an={haustiere.includes("katze")} text="Katze" auf={() => haustier("katze")} />
+              <Marke an={garten} text="Garten" klick={() => setGarten(!garten)} />
+              <Marke an={auto} text="Auto" klick={() => setAuto(!auto)} />
+              <Marke an={haustiere.includes("hund")} text="Hund" klick={() => haustier("hund")} />
+              <Marke an={haustiere.includes("katze")} text="Katze" klick={() => haustier("katze")} />
             </div>
             <p className="text-xs leading-relaxed text-muted">
               Jedes Ja bringt Aufgaben mit, jedes Nein spart sie. Ändern kannst
@@ -253,7 +200,8 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
                   siehst die Bilanz.
                 </p>
               ) : (
-                <Wahl
+                <Auswahl
+                  name={`Art von ${p.name || "dieser Person"}`}
                   wert={p.art}
                   auf={(art) => aendern(p.id, { art, plant: art === "erwachsen" && p.plant })}
                   optionen={[
@@ -309,7 +257,7 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
                   },
                 ])
               }
-              className="rounded-md border border-line px-4 py-2 text-sm transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
             >
               Person hinzufügen
             </button>
@@ -328,7 +276,8 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
           {ausfuehrende.map((p) => (
             <div key={p.id} className="space-y-2 rounded-lg border border-line bg-surface p-4">
               <p className="font-medium">{p.name || "Ohne Namen"}</p>
-              <Wahl
+              <Auswahl
+                name={`Zeit von ${p.name || "dieser Person"}`}
                 wert={p.zeit}
                 auf={(zeit) => aendern(p.id, { zeit })}
                 optionen={[
@@ -359,7 +308,7 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
             type="button"
             onClick={() => setSchritt((s) => s + 1)}
             disabled={weiterGesperrt}
-            className="rounded-md bg-accent px-5 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-40"
+            className="inline-flex min-h-12 items-center rounded-md bg-primary px-6 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
           >
             Weiter
           </button>
@@ -368,7 +317,7 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
             type="button"
             onClick={anlegen}
             disabled={laeuft}
-            className="rounded-md bg-accent px-5 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-40"
+            className="inline-flex min-h-12 items-center rounded-md bg-primary px-6 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
           >
             {laeuft ? "Wird angelegt …" : "Haushalt anlegen"}
           </button>
