@@ -118,6 +118,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/aufgaben/{aufgabeId}/erledigt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aufgabe abhaken oder wieder öffnen
+         * @description Schreibt ein Ereignis ins Protokoll — keine Spalte auf der Aufgabe.
+         *     Eine Spalte kennt nur den letzten Zustand, das Protokoll den Weg
+         *     dahin, und die Rotation der Folgewoche liest diesen Weg.
+         *
+         *     Erlaubt ist es der zuständigen Person und jeder planenden.
+         */
+        post: operations["setErledigt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aufgaben/{aufgabeId}/abgeben": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aufgabe zurückgeben
+         * @description Gibt die Aufgabe zurück in den Haushalt. Die App sucht nach denselben
+         *     Regeln wie beim Zuteilen jemand anderen; findet sie niemanden, steht
+         *     die Aufgabe offen da.
+         *
+         *     Sie verschwindet nicht. Abgeben ist Handlungsmacht, nicht Löschen mit
+         *     besserem Gewissen.
+         */
+        post: operations["aufgabeAbgeben"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/einladungen/{code}/annehmen": {
         parameters: {
             query?: never;
@@ -226,6 +275,14 @@ export interface components {
              */
             zeit?: "keine" | "wenig" | "mittel" | "viel";
         };
+        Abgabe: {
+            /**
+             * @description Name der Person, die übernimmt. Fehlt, wenn niemand geeignet ist —
+             *     dann steht die Aufgabe offen im Plan.
+             * @example Ben
+             */
+            uebernimmt?: string;
+        };
         Haushalt: {
             /** @example familie-a */
             id: string;
@@ -269,6 +326,12 @@ export interface components {
              */
             meine_rolle?: "planend" | "ausfuehrend" | "betreut" | null;
             /**
+             * @description Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
+             *     die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
+             *     abgeben darf. Fehlt bei Demo-Haushalten und ohne Anmeldung.
+             */
+            ich?: string;
+            /**
              * @description Eine Zeile je Person, die Aufgaben übernehmen kann — **nur für
              *     planende Personen**. Wer ausführt, sieht den ganzen Plan, aber
              *     nicht die Auswertung darüber, wer im Haushalt wie viel trägt.
@@ -285,6 +348,15 @@ export interface components {
             uebersprungen: components["schemas"]["Uebersprungen"][];
         };
         Aufgabe: {
+            /**
+             * @description Kennung der festgeschriebenen Aufgabe. Fehlt bei den öffentlichen
+             *     Beispielhaushalten: Deren Wochen werden gerechnet und nicht
+             *     geschrieben, es gibt also nichts, woran ein „erledigt" hängen
+             *     könnte.
+             */
+            id?: string;
+            /** @description Ob jemand sie abgehakt hat. */
+            erledigt?: boolean;
             /** @example t-bad */
             vorlage_id: string;
             /** @example Bad putzen */
@@ -307,7 +379,9 @@ export interface components {
             /** @description Planungs- und Erinnerungsaufwand, unabhängig von der Dauer */
             kopflast: number;
             /**
-             * @description Kennung des Mitglieds
+             * @description Kennung des Mitglieds. Leer, wenn niemand zuständig ist — der
+             *     Zustand einer abgegebenen Aufgabe, die noch niemand übernommen
+             *     hat. Sichtbar offen zu sein ist Absicht.
              * @example m-ben
              */
             zustaendig: string;
@@ -556,6 +630,103 @@ export interface operations {
                 };
             };
             /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    setErledigt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                aufgabeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Fehlt das Feld, gilt „erledigt". */
+                    erledigt?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description eingetragen */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description das ist nicht deine Aufgabe */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diese Aufgabe gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    aufgabeAbgeben: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                aufgabeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Freiwillig. Landet im Protokoll und ist später die
+                     *     ehrlichste Rückmeldung, die das Produkt bekommt: Wer
+                     *     dieselbe Aufgabe dreimal mit derselben Begründung abgibt,
+                     *     hat sie nie gewollt.
+                     */
+                    grund?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description abgegeben */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Abgabe"];
+                };
+            };
+            /** @description das ist nicht deine Aufgabe */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diese Aufgabe gibt es nicht */
             404: {
                 headers: {
                     [name: string]: unknown;

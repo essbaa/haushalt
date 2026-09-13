@@ -32,7 +32,17 @@ func (fakePlans) Create(context.Context, string, planner.Setup) (planner.Househo
 	return planner.Household{}, planner.ErrNotAllowed
 }
 
-func (fakePlans) RoleOf(context.Context, string, string) (planner.Role, error) { return "", nil }
+func (fakePlans) MemberOf(context.Context, string, string) (string, planner.Role, error) {
+	return "", "", nil
+}
+
+func (fakePlans) MarkDone(context.Context, string, string, bool) error {
+	return planner.ErrUnknownTask
+}
+
+func (fakePlans) HandOver(context.Context, string, string, string) (string, error) {
+	return "", planner.ErrUnknownTask
+}
 
 func (fakePlans) Invite(context.Context, string, string, planner.Role, string) (planner.Invitation, error) {
 	return planner.Invitation{}, planner.ErrNotAllowed

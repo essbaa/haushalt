@@ -29,6 +29,11 @@ var ErrNotAllowed = errors.New("planner: dafür fehlt die berechtigung")
 // nicht erfahren, welcher davon zutrifft.
 var ErrUnknownInvitation = errors.New("planner: einladung ungültig")
 
+// ErrUnknownTask deckt beides ab: es gibt die Aufgabe nicht, oder sie gehört
+// zu einem Haushalt, in dem der Aufrufer nichts zu suchen hat. Dieselbe
+// Auskunft für beides — siehe ErrUnknownHousehold.
+var ErrUnknownTask = errors.New("planner: unbekannte aufgabe")
+
 // Invitation ist ein ausgestellter Code.
 //
 // For ist der Name der Person, die dieser Code übernimmt — leer, wenn jemand
@@ -99,6 +104,17 @@ type Result struct {
 
 // PlannedTask ist eine eingeplante Aufgabe an einem konkreten Tag.
 type PlannedTask struct {
+	// ID ist die Kennung der festgeschriebenen Aufgabe. Leer, solange die
+	// Woche nur gerechnet und nicht geschrieben wurde — etwa beim CLI oder in
+	// den Tests. Der Planer selbst vergibt sie nie: Er rechnet, er speichert
+	// nicht.
+	ID string
+
+	// Done ist wahr, wenn jemand die Aufgabe abgehakt hat. Auch das kommt von
+	// außen; für die Rechnung spielt es keine Rolle, ob eine Aufgabe dieser
+	// Woche schon erledigt ist.
+	Done bool
+
 	TemplateID  string
 	Title       string
 	Category    Category
@@ -268,6 +284,16 @@ func (in Input) validate() error {
 		return errors.New("planner: Limits fehlen, nutze DefaultLimits()")
 	}
 	return nil
+}
+
+// BalanceOf ist die Bilanz zu einem beliebigen Satz Aufgaben.
+//
+// Nötig für die festgeschriebene Woche: Die wird aus der Datenbank gelesen,
+// nicht gerechnet, und hat deshalb keinen Input. Die Bilanz selbst wird
+// trotzdem gerechnet und nie gespeichert — eine Summe neben den Posten läuft
+// irgendwann auseinander.
+func BalanceOf(h Household, tasks []PlannedTask, l Limits) []MemberLoad {
+	return balance(Input{Household: h, Limits: l}, tasks)
 }
 
 // balance summiert die Last je Person. Personen ohne Aufgaben erscheinen mit

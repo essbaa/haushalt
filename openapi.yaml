@@ -221,6 +221,102 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/aufgaben/{aufgabeId}/erledigt:
+    post:
+      tags: [plan]
+      summary: Aufgabe abhaken oder wieder öffnen
+      description: |
+        Schreibt ein Ereignis ins Protokoll — keine Spalte auf der Aufgabe.
+        Eine Spalte kennt nur den letzten Zustand, das Protokoll den Weg
+        dahin, und die Rotation der Folgewoche liest diesen Weg.
+
+        Erlaubt ist es der zuständigen Person und jeder planenden.
+      operationId: setErledigt
+      parameters:
+        - name: aufgabeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                erledigt:
+                  type: boolean
+                  description: Fehlt das Feld, gilt „erledigt".
+      responses:
+        "204":
+          description: eingetragen
+        "403":
+          description: das ist nicht deine Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diese Aufgabe gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/aufgaben/{aufgabeId}/abgeben:
+    post:
+      tags: [plan]
+      summary: Aufgabe zurückgeben
+      description: |
+        Gibt die Aufgabe zurück in den Haushalt. Die App sucht nach denselben
+        Regeln wie beim Zuteilen jemand anderen; findet sie niemanden, steht
+        die Aufgabe offen da.
+
+        Sie verschwindet nicht. Abgeben ist Handlungsmacht, nicht Löschen mit
+        besserem Gewissen.
+      operationId: aufgabeAbgeben
+      parameters:
+        - name: aufgabeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grund:
+                  type: string
+                  maxLength: 200
+                  description: |
+                    Freiwillig. Landet im Protokoll und ist später die
+                    ehrlichste Rückmeldung, die das Produkt bekommt: Wer
+                    dieselbe Aufgabe dreimal mit derselben Begründung abgibt,
+                    hat sie nie gewollt.
+      responses:
+        "200":
+          description: abgegeben
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Abgabe"
+        "403":
+          description: das ist nicht deine Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diese Aufgabe gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/einladungen/{code}/annehmen:
     post:
       tags: [haushalt]
@@ -387,6 +483,16 @@ components:
             „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
             keine.
 
+    Abgabe:
+      type: object
+      properties:
+        uebernimmt:
+          type: string
+          description: |
+            Name der Person, die übernimmt. Fehlt, wenn niemand geeignet ist —
+            dann steht die Aufgabe offen im Plan.
+          example: Ben
+
     Haushalt:
       type: object
       required: [id, name, mitglieder]
@@ -451,6 +557,12 @@ components:
           description: |
             Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
             Demo-Haushalten und ohne Anmeldung.
+        ich:
+          type: string
+          description: |
+            Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
+            die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
+            abgeben darf. Fehlt bei Demo-Haushalten und ohne Anmeldung.
         bilanz:
           type: array
           description: |
@@ -476,6 +588,16 @@ components:
       required:
         [vorlage_id, titel, kategorie, art, tag, zeitfenster, dauer_min, kopflast, zustaendig, begruendung]
       properties:
+        id:
+          type: string
+          description: |
+            Kennung der festgeschriebenen Aufgabe. Fehlt bei den öffentlichen
+            Beispielhaushalten: Deren Wochen werden gerechnet und nicht
+            geschrieben, es gibt also nichts, woran ein „erledigt" hängen
+            könnte.
+        erledigt:
+          type: boolean
+          description: Ob jemand sie abgehakt hat.
         vorlage_id:
           type: string
           example: t-bad
@@ -510,7 +632,10 @@ components:
           description: Planungs- und Erinnerungsaufwand, unabhängig von der Dauer
         zustaendig:
           type: string
-          description: Kennung des Mitglieds
+          description: |
+            Kennung des Mitglieds. Leer, wenn niemand zuständig ist — der
+            Zustand einer abgegebenen Aufgabe, die noch niemand übernommen
+            hat. Sichtbar offen zu sein ist Absicht.
           example: m-ben
         frist:
           type: string

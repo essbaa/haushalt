@@ -93,3 +93,10 @@ type TaskTemplate struct {
 	Definition  []byte
 	CreatedAt   pgtype.Timestamptz
 }
+
+type WeekPlan struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+	Skipped     []byte
+	CreatedAt   pgtype.Timestamptz
+}

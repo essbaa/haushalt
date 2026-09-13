@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearAssignment = `-- name: ClearAssignment :exec
+DELETE FROM assignment WHERE task_instance_id = $1
+`
+
+// Abgegeben und noch niemand übernommen. Ein gültiger Zwischenzustand — siehe
+// den LEFT JOIN in GetWeekPlan.
+func (q *Queries) ClearAssignment(ctx context.Context, taskInstanceID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearAssignment, taskInstanceID)
+	return err
+}
+
 const deleteWeek = `-- name: DeleteWeek :exec
 DELETE FROM task_instance WHERE household_id = $1 AND iso_week = $2
 `
@@ -26,6 +37,55 @@ type DeleteWeekParams struct {
 func (q *Queries) DeleteWeek(ctx context.Context, arg DeleteWeekParams) error {
 	_, err := q.db.Exec(ctx, deleteWeek, arg.HouseholdID, arg.ISOWeek)
 	return err
+}
+
+const getTaskForMember = `-- name: GetTaskForMember :one
+SELECT
+    t.id, t.household_id, t.template_id, t.iso_week, t.day,
+    m.id AS member_id, m.role AS member_role,
+    a.member_id AS assignee_id
+FROM task_instance t
+JOIN member m ON m.household_id = t.household_id AND m.auth_user_id = $2
+LEFT JOIN assignment a ON a.task_instance_id = t.id
+WHERE t.id = $1
+`
+
+type GetTaskForMemberParams struct {
+	ID         pgtype.UUID
+	AuthUserID *string
+}
+
+type GetTaskForMemberRow struct {
+	ID          pgtype.UUID
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	ISOWeek     string
+	Day         pgtype.Date
+	MemberID    pgtype.UUID
+	MemberRole  string
+	AssigneeID  pgtype.UUID
+}
+
+// Eine Aufgabe samt ihrem Haushalt — aber nur, wenn der Aufrufer in diesem
+// Haushalt Mitglied ist.
+//
+// Die Berechtigungsprüfung steht im JOIN und nicht davor in Go: Eine Aufgabe
+// aus einem fremden Haushalt gibt es für diesen Aufrufer nicht, und das soll
+// nicht an einem vergessenen if hängen.
+func (q *Queries) GetTaskForMember(ctx context.Context, arg GetTaskForMemberParams) (GetTaskForMemberRow, error) {
+	row := q.db.QueryRow(ctx, getTaskForMember, arg.ID, arg.AuthUserID)
+	var i GetTaskForMemberRow
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.TemplateID,
+		&i.ISOWeek,
+		&i.Day,
+		&i.MemberID,
+		&i.MemberRole,
+		&i.AssigneeID,
+	)
+	return i, err
 }
 
 const getWeekPlan = `-- name: GetWeekPlan :many
@@ -106,6 +166,27 @@ func (q *Queries) GetWeekPlan(ctx context.Context, arg GetWeekPlanParams) ([]Get
 	return items, nil
 }
 
+const getWrittenWeek = `-- name: GetWrittenWeek :one
+SELECT household_id, iso_week, skipped, created_at FROM week_plan WHERE household_id = $1 AND iso_week = $2
+`
+
+type GetWrittenWeekParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+}
+
+func (q *Queries) GetWrittenWeek(ctx context.Context, arg GetWrittenWeekParams) (WeekPlan, error) {
+	row := q.db.QueryRow(ctx, getWrittenWeek, arg.HouseholdID, arg.ISOWeek)
+	var i WeekPlan
+	err := row.Scan(
+		&i.HouseholdID,
+		&i.ISOWeek,
+		&i.Skipped,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertAssignment = `-- name: InsertAssignment :exec
 INSERT INTO assignment (task_instance_id, member_id, reason_code, reason_previous, manual)
 VALUES ($1, $2, $3, $4, $5)
@@ -164,6 +245,87 @@ func (q *Queries) InsertTaskInstance(ctx context.Context, arg InsertTaskInstance
 	return id, err
 }
 
+const listDoneTasks = `-- name: ListDoneTasks :many
+SELECT DISTINCT ON (e.task_instance_id)
+    e.task_instance_id, e.member_id, e.occurred_at, e.kind
+FROM event e
+JOIN task_instance t ON t.id = e.task_instance_id
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND e.kind IN ('erledigt', 'wieder_geoeffnet')
+ORDER BY e.task_instance_id, e.occurred_at DESC, e.id DESC
+`
+
+type ListDoneTasksParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+}
+
+type ListDoneTasksRow struct {
+	TaskInstanceID pgtype.UUID
+	MemberID       pgtype.UUID
+	OccurredAt     pgtype.Timestamptz
+	Kind           string
+}
+
+// Welche Aufgaben dieser Woche erledigt sind.
+//
+// Die Wahrheit steht im Ereignisprotokoll, nicht in einer Spalte auf der
+// Aufgabe. Ein Häkchen wäre eine zweite Wahrheit neben dem Protokoll — und
+// das Protokoll ist die, die auch „wieder geöffnet" erzählen kann.
+func (q *Queries) ListDoneTasks(ctx context.Context, arg ListDoneTasksParams) ([]ListDoneTasksRow, error) {
+	rows, err := q.db.Query(ctx, listDoneTasks, arg.HouseholdID, arg.ISOWeek)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDoneTasksRow{}
+	for rows.Next() {
+		var i ListDoneTasksRow
+		if err := rows.Scan(
+			&i.TaskInstanceID,
+			&i.MemberID,
+			&i.OccurredAt,
+			&i.Kind,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markWeekWritten = `-- name: MarkWeekWritten :one
+INSERT INTO week_plan (household_id, iso_week, skipped)
+VALUES ($1, $2, $3)
+ON CONFLICT (household_id, iso_week) DO NOTHING
+RETURNING household_id, iso_week, skipped, created_at
+`
+
+type MarkWeekWrittenParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+	Skipped     []byte
+}
+
+// Schreibt die Marke „diese Woche steht" — und nur der erste Aufrufer
+// gewinnt. ON CONFLICT DO NOTHING liefert dann keine Zeile zurück, und genau
+// daran erkennt der zweite, dass er lesen statt schreiben soll.
+func (q *Queries) MarkWeekWritten(ctx context.Context, arg MarkWeekWrittenParams) (WeekPlan, error) {
+	row := q.db.QueryRow(ctx, markWeekWritten, arg.HouseholdID, arg.ISOWeek, arg.Skipped)
+	var i WeekPlan
+	err := row.Scan(
+		&i.HouseholdID,
+		&i.ISOWeek,
+		&i.Skipped,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const reassignTask = `-- name: ReassignTask :exec
 UPDATE assignment
 SET member_id = $2, manual = true
@@ -179,5 +341,28 @@ type ReassignTaskParams struct {
 // Korrektur sagt, wo der Planer danebenlag.
 func (q *Queries) ReassignTask(ctx context.Context, arg ReassignTaskParams) error {
 	_, err := q.db.Exec(ctx, reassignTask, arg.TaskInstanceID, arg.MemberID)
+	return err
+}
+
+const setAssignment = `-- name: SetAssignment :exec
+INSERT INTO assignment (task_instance_id, member_id, reason_code, reason_previous, manual)
+VALUES ($1, $2, $3, $4, true)
+`
+
+type SetAssignmentParams struct {
+	TaskInstanceID pgtype.UUID
+	MemberID       pgtype.UUID
+	ReasonCode     string
+	ReasonPrevious pgtype.UUID
+}
+
+// Nach einer Abgabe: neue Zuständige, neue Begründung, von Hand markiert.
+func (q *Queries) SetAssignment(ctx context.Context, arg SetAssignmentParams) error {
+	_, err := q.db.Exec(ctx, setAssignment,
+		arg.TaskInstanceID,
+		arg.MemberID,
+		arg.ReasonCode,
+		arg.ReasonPrevious,
+	)
 	return err
 }

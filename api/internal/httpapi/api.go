@@ -24,15 +24,24 @@ type Plans interface {
 	// Prüfung gehört zur Quelle und nicht in den Handler — ein Handler kann
 	// sie vergessen.
 	Plan(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error)
-	// RoleOf ist die Rolle des Aufrufers in diesem Haushalt. Leer heißt: kein
-	// Mitglied — bei Demo-Haushalten der Normalfall.
-	RoleOf(ctx context.Context, subject, id string) (planner.Role, error)
+	// MemberOf sagt, wer der Aufrufer in diesem Haushalt ist: seine Kennung
+	// als Person und seine Rolle. Beides leer heißt: kein Mitglied — bei
+	// Demo-Haushalten der Normalfall.
+	//
+	// Zusammen und nicht in zwei Methoden, weil es eine Zeile in der Datenbank
+	// ist. Zwei Abfragen für dieselbe Zeile laufen irgendwann auseinander.
+	MemberOf(ctx context.Context, subject, id string) (string, planner.Role, error)
 	// Invite erzeugt einen einmalig gültigen Code. Nur planende Personen.
 	// Leeres memberID heißt: Es kommt jemand dazu, den es noch nicht gibt.
 	Invite(ctx context.Context, subject, id string, role planner.Role, memberID string) (planner.Invitation, error)
 	// Accept verbindet die angemeldete Person mit dem Haushalt aus der
 	// Einladung.
 	Accept(ctx context.Context, subject, name, code string) (planner.Household, error)
+	// MarkDone hakt eine Aufgabe ab oder nimmt das Häkchen zurück.
+	MarkDone(ctx context.Context, subject, taskID string, done bool) error
+	// HandOver gibt eine Aufgabe zurück in den Haushalt und liefert den Namen
+	// der Person, die übernimmt — leer, wenn niemand geeignet ist.
+	HandOver(ctx context.Context, subject, taskID, reason string) (string, error)
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -89,7 +98,7 @@ func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestOb
 		// Beispiele. Wer das optimiert, bevor jemand fünfzig Haushalte hat,
 		// tauscht Lesbarkeit gegen nichts.
 		if subject != "" {
-			rolle, err := a.plans.RoleOf(ctx, subject, h.ID)
+			_, rolle, err := a.plans.MemberOf(ctx, subject, h.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -202,13 +211,13 @@ func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestOb
 	// Bei Demo-Haushalten ist die Rolle leer und die Bilanz sichtbar — sie
 	// haben nichts zu verbergen, und sie sind der Teil, der das Produkt
 	// erklärt.
-	rolle, err := a.plans.RoleOf(ctx, subject, r.HaushaltId)
+	ich, rolle, err := a.plans.MemberOf(ctx, subject, r.HaushaltId)
 	if err != nil {
 		return nil, err
 	}
 	mitBilanz := rolle == planner.RolePlanner || rolle == ""
 
-	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result, rolle, mitBilanz)), nil
+	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result, ich, rolle, mitBilanz)), nil
 }
 
 // CreateEinladung erzeugt einen Code, mit dem jemand in den Haushalt kommt.
@@ -289,7 +298,7 @@ func (a api) AcceptEinladung(ctx context.Context, r openapi.AcceptEinladungReque
 // Kern nichts zu suchen haben. Der Preis ist diese Übersetzung; sie steht an
 // einer Stelle und ist langweilig, und das ist genau richtig.
 
-func planNachAussen(h planner.Household, r planner.Result, rolle planner.Role, mitBilanz bool) openapi.Wochenplan {
+func planNachAussen(h planner.Household, r planner.Result, ich string, rolle planner.Role, mitBilanz bool) openapi.Wochenplan {
 	plan := openapi.Wochenplan{
 		Woche:    r.Week.String(),
 		Haushalt: haushaltNachAussen(h),
@@ -301,6 +310,9 @@ func planNachAussen(h planner.Household, r planner.Result, rolle planner.Role, m
 	if rolle != "" {
 		r := openapi.WochenplanMeineRolle(rolle)
 		plan.MeineRolle = &r
+	}
+	if ich != "" {
+		plan.Ich = &ich
 	}
 	if mitBilanz {
 		plan.Bilanz = &[]openapi.Bilanz{}
@@ -326,6 +338,12 @@ func planNachAussen(h planner.Household, r planner.Result, rolle planner.Role, m
 		if t.Reason.Previous != "" {
 			zuletzt := t.Reason.Previous
 			aufgabe.Begruendung.ZuletztBei = &zuletzt
+		}
+		if t.ID != "" {
+			kennung := t.ID
+			aufgabe.Id = &kennung
+			erledigt := t.Done
+			aufgabe.Erledigt = &erledigt
 		}
 		plan.Aufgaben = append(plan.Aufgaben, aufgabe)
 	}
@@ -368,4 +386,58 @@ func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 		})
 	}
 	return out
+}
+
+// SetErledigt hakt eine Aufgabe ab — oder nimmt das Häkchen zurück.
+func (a api) SetErledigt(ctx context.Context, r openapi.SetErledigtRequestObject) (openapi.SetErledigtResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.SetErledigt403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	// Ohne Rumpf gilt „erledigt". Das ist der Fall, den es hundertmal am Tag
+	// gibt; das Zurücknehmen ist die Ausnahme und darf das Feld kosten.
+	erledigt := true
+	if r.Body != nil && r.Body.Erledigt != nil {
+		erledigt = *r.Body.Erledigt
+	}
+
+	switch err := a.plans.MarkDone(ctx, id.Subject, r.AufgabeId, erledigt); {
+	case errors.Is(err, planner.ErrUnknownTask):
+		return openapi.SetErledigt404JSONResponse{Fehler: "diese Aufgabe gibt es nicht"}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.SetErledigt403JSONResponse{Fehler: "das ist nicht deine Aufgabe"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.SetErledigt204Response{}, nil
+}
+
+// AufgabeAbgeben gibt eine Aufgabe zurück in den Haushalt.
+func (a api) AufgabeAbgeben(ctx context.Context, r openapi.AufgabeAbgebenRequestObject) (openapi.AufgabeAbgebenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.AufgabeAbgeben403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	var grund string
+	if r.Body != nil && r.Body.Grund != nil {
+		grund = *r.Body.Grund
+	}
+
+	name, err := a.plans.HandOver(ctx, id.Subject, r.AufgabeId, grund)
+	switch {
+	case errors.Is(err, planner.ErrUnknownTask):
+		return openapi.AufgabeAbgeben404JSONResponse{Fehler: "diese Aufgabe gibt es nicht"}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.AufgabeAbgeben403JSONResponse{Fehler: "das ist nicht deine Aufgabe"}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	antwort := openapi.AufgabeAbgeben200JSONResponse{}
+	if name != "" {
+		antwort.Uebernimmt = &name
+	}
+	return antwort, nil
 }

@@ -65,6 +65,13 @@ func (p *Plans) Households(ctx context.Context, subject string) ([]planner.House
 	return out, nil
 }
 
+// Plan liefert den Wochenplan — gerechnet, wenn es ihn noch nicht gibt, und
+// gelesen, sobald er steht.
+//
+// Festgeschrieben wird nur für Mitglieder. Die öffentlichen Beispielhaushalte
+// bleiben eine Rechnung: Ein Besucher, der sich die Demo ansieht, soll keine
+// Zeilen erzeugen, und ihre Pläne sollen mit der Bibliothek mitwachsen statt
+// im Januar einzufrieren.
 func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error) {
 	zeile, err := p.lookup(ctx, id)
 	if err != nil {
@@ -77,23 +84,74 @@ func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week)
 	if err != nil {
 		return planner.Result{}, planner.Household{}, err
 	}
-	templates, err := p.templates(ctx, zeile.ID)
-	if err != nil {
-		return planner.Result{}, planner.Household{}, err
-	}
-	hist, err := p.history(ctx, zeile.ID)
+	vorlagen, err := p.templates(ctx, zeile.ID)
 	if err != nil {
 		return planner.Result{}, planner.Household{}, err
 	}
 
+	// Steht die Woche schon, ist sie die Wahrheit — auch wenn eine neue
+	// Rechnung heute etwas anderes ergäbe. Genau das ist der Sinn: Wer am
+	// Montag gelesen hat, dass er den Müll rausbringt, soll das am Mittwoch
+	// noch so vorfinden.
+	_, err = p.db.GetWrittenWeek(ctx, db.GetWrittenWeekParams{
+		HouseholdID: zeile.ID,
+		ISOWeek:     week.String(),
+	})
+	switch {
+	case err == nil:
+		r, err := p.geschriebeneWoche(ctx, haushalt, zeile.ID, week, vorlagen)
+		return r, haushalt, err
+	case !errors.Is(err, pgx.ErrNoRows):
+		return planner.Result{}, planner.Household{}, err
+	}
+
+	hist, err := p.history(ctx, zeile.ID)
+	if err != nil {
+		return planner.Result{}, planner.Household{}, err
+	}
 	result, err := planner.Plan(planner.Input{
 		Household: haushalt,
-		Templates: templates,
+		Templates: vorlagen,
 		Week:      week,
 		History:   hist,
 		Limits:    planner.DefaultLimits(),
 	})
-	return result, haushalt, err
+	if err != nil {
+		return planner.Result{}, haushalt, err
+	}
+
+	dabei, err := p.istMitglied(ctx, subject, zeile.ID)
+	if err != nil {
+		return planner.Result{}, haushalt, err
+	}
+	if !dabei {
+		return result, haushalt, nil
+	}
+
+	if err := p.festschreiben(ctx, zeile.ID, week, result); err != nil {
+		return planner.Result{}, haushalt, err
+	}
+	// Noch einmal lesen statt das Gerechnete zurückzugeben: Erst jetzt haben
+	// die Aufgaben Kennungen, und im Wettlauf zweier erster Aufrufe steht hier
+	// das, was der Schnellere geschrieben hat.
+	r, err := p.geschriebeneWoche(ctx, haushalt, zeile.ID, week, vorlagen)
+	return r, haushalt, err
+}
+
+// istMitglied sagt, ob diese Anmeldung zu einer Person in diesem Haushalt
+// gehört. Leeres subject heißt nein — nicht angemeldet ist kein Mitglied.
+func (p *Plans) istMitglied(ctx context.Context, subject string, haushalt pgtype.UUID) (bool, error) {
+	if subject == "" {
+		return false, nil
+	}
+	_, err := p.db.RoleInHousehold(ctx, db.RoleInHouseholdParams{
+		HouseholdID: haushalt,
+		AuthUserID:  &subject,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // lookup findet einen Haushalt über den Slug und, falls das nichts ergibt,
@@ -260,6 +318,28 @@ func (p *Plans) history(ctx context.Context, haushalt pgtype.UUID) (planner.Hist
 
 func zeitpunkt(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+// tag macht aus einem Kalendertag eine Datumsspalte. Mitternacht UTC, weil
+// date in Postgres keine Uhrzeit hat und jede erfundene die Datumsgrenze
+// verschieben könnte (ADR-0002).
+func tag(d planner.Date) pgtype.Date {
+	if d.IsZero() {
+		return pgtype.Date{}
+	}
+	return pgtype.Date{
+		Time:  time.Date(d.Year, d.Month, d.Day, 0, 0, 0, 0, time.UTC),
+		Valid: true,
+	}
+}
+
+// datum ist die Rückrichtung. Eine leere Spalte ergibt das Nulldatum, und das
+// heißt im Planer „nicht gesetzt" — etwa bei einer Aufgabe ohne Frist.
+func datum(d pgtype.Date) planner.Date {
+	if !d.Valid {
+		return planner.Date{}
+	}
+	return planner.DateOf(d.Time)
 }
 
 // ------------------------------------------------------------------ UUID

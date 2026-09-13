@@ -392,7 +392,28 @@ Bedienelement ist eine Erklärung, keine Absicherung — und wenn es einen
 Zustand spiegelt, der sich woanders ändern kann, ist es eine falsche
 Erklärung.
 
-### 5.3 Offene Weiterleitung in `?weiter=`
+### 5.3 `res.json()` auf eine 204
+
+**Symptom** — Beim Abhaken:
+`Failed to execute 'json' on 'Response': Unexpected end of JSON input`. Das
+Abhaken hatte funktioniert, nur die Antwort war leer.
+
+**Ursache** — `postMitToken` las immer JSON. Der Endpunkt antwortet mit **204 —
+kein Inhalt**, weil es nichts zu sagen gibt. Beides für sich richtig, und
+genau dazwischen fällt es durch: Zwei Generatoren erzeugen Typen aus derselben
+Spezifikation, aber niemand erzeugt die Annahme „hier kommt ein Rumpf".
+
+**Lösung** — Der Status wird geprüft, nicht geraten:
+
+```ts
+if (res.status === 204) return undefined as T;
+```
+
+**Lehre** — Ein Vertrag beschreibt auch die Antworten, die leer sind. Ein
+Client, der jede Antwort gleich behandelt, hat den Vertrag nur zur Hälfte
+gelesen — und der Nutzer sieht einen Fehler, obwohl alles geklappt hat.
+
+### 5.4 Offene Weiterleitung in `?weiter=`
 
 **Symptom** — Kein Fehler, sondern ein Fund beim Durchlesen: Der
 Anmelde-Parameter `?weiter=` hätte auf eine fremde Domain zeigen können.

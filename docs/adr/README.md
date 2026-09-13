@@ -14,6 +14,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0005](0005-aufgaben-die-einer-person-gehoeren.md) | Aufgaben, die einer Person selbst gehören | angenommen |
 | [0006](0006-anmeldung-better-auth.md) | Anmeldung mit Better Auth in der Web-App, Go verifiziert | angenommen |
 | [0007](0007-onboarding-fragt-drei-dinge.md) | Das Onboarding fragt drei Dinge und rät den Rest | angenommen |
+| [0008](0008-woche-festschreiben.md) | Die Woche wird beim ersten Ansehen festgeschrieben | angenommen |
 
 ## Aufbau eines Eintrags
 

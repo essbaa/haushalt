@@ -44,5 +44,13 @@ export async function postMitToken<T>(pfad: string, rumpf?: unknown): Promise<T>
     }
     throw new ApiError(text);
   }
+
+  // 204 heißt „hat geklappt, gibt nichts zu sagen" — etwa beim Abhaken. Ein
+  // res.json() darauf scheitert mit „Unexpected end of JSON input", und der
+  // Nutzer sieht einen Fehler, obwohl alles gut ging. Deshalb wird hier die
+  // leere Antwort geprüft und nicht geraten.
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return (await res.json()) as T;
 }

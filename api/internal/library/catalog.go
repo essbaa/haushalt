@@ -88,8 +88,8 @@ func (c *Catalog) Create(context.Context, string, planner.Setup) (planner.Househ
 	return planner.Household{}, planner.ErrNotAllowed
 }
 
-func (c *Catalog) RoleOf(context.Context, string, string) (planner.Role, error) {
-	return "", nil
+func (c *Catalog) MemberOf(context.Context, string, string) (string, planner.Role, error) {
+	return "", "", nil
 }
 
 func (c *Catalog) Invite(context.Context, string, string, planner.Role, string) (planner.Invitation, error) {
@@ -98,6 +98,16 @@ func (c *Catalog) Invite(context.Context, string, string, planner.Role, string) 
 
 func (c *Catalog) Accept(context.Context, string, string, string) (planner.Household, error) {
 	return planner.Household{}, planner.ErrUnknownInvitation
+}
+
+// Die Wochen aus dem Repo werden gerechnet und nicht geschrieben — es gibt
+// keine Aufgabe, an der ein „erledigt" hängen könnte.
+func (c *Catalog) MarkDone(context.Context, string, string, bool) error {
+	return planner.ErrUnknownTask
+}
+
+func (c *Catalog) HandOver(context.Context, string, string, string) (string, error) {
+	return "", planner.ErrUnknownTask
 }
 
 func (c *Catalog) Households(context.Context, string) ([]planner.Household, error) {

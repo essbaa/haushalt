@@ -1,3 +1,4 @@
+import { AufgabeAktionen } from "@/app/components/aufgabe-aktionen";
 import type { Aufgabe, Bilanz, Wochenplan as Plan } from "@/lib/api";
 import { tagLesbar, wochenSpanne } from "@/lib/woche";
 
@@ -33,7 +34,13 @@ export function Wochenplan({ plan }: { plan: Plan }) {
               <h3 className="mb-2 text-sm font-medium">{tagLesbar(tag)}</h3>
               <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
                 {nachTag.get(tag)!.map((a, i) => (
-                  <AufgabeZeile key={`${a.vorlage_id}-${i}`} aufgabe={a} namen={namen} />
+                  <AufgabeZeile
+                    key={a.id ?? `${a.vorlage_id}-${i}`}
+                    aufgabe={a}
+                    namen={namen}
+                    ich={plan.ich ?? ""}
+                    planend={plan.meine_rolle === "planend"}
+                  />
                 ))}
               </ul>
             </section>
@@ -79,12 +86,25 @@ export function Wochenplan({ plan }: { plan: Plan }) {
 function AufgabeZeile({
   aufgabe: a,
   namen,
+  ich,
+  planend,
 }: {
   aufgabe: Aufgabe;
   namen: Map<string, string>;
+  ich: string;
+  planend: boolean;
 }) {
+  const meine = ich !== "" && a.zustaendig === ich;
+  // Abhaken darf die zuständige Person und jede planende — dieselbe Regel wie
+  // im Dienst. Ohne Kennung (Demo-Haushalt) gibt es nichts zum Anfassen.
+  const darf = a.id !== undefined && (meine || planend);
+
   return (
-    <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3">
+    <li
+      className={`flex flex-wrap items-baseline gap-x-3 gap-y-2 px-4 py-3 ${
+        a.erledigt ? "opacity-60" : ""
+      }`}
+    >
       {a.art === "organisation" && (
         <span
           title="Organisationsaufgabe — Kopfarbeit"
@@ -93,8 +113,12 @@ function AufgabeZeile({
           ○
         </span>
       )}
-      <span className="min-w-32 font-medium">{namen.get(a.zustaendig) ?? a.zustaendig}</span>
-      <span className="flex-1">{a.titel}</span>
+      <span className={`min-w-32 font-medium ${meine ? "text-accent" : ""}`}>
+        {a.zustaendig === ""
+          ? "offen"
+          : (namen.get(a.zustaendig) ?? a.zustaendig)}
+      </span>
+      <span className={`flex-1 ${a.erledigt ? "line-through" : ""}`}>{a.titel}</span>
       <span className="font-mono text-xs text-muted">
         {a.dauer_min} min
         {a.kopflast > 0 && ` · Kopflast ${a.kopflast}`}
@@ -102,6 +126,13 @@ function AufgabeZeile({
       <span className="w-full font-mono text-xs text-muted sm:w-auto sm:min-w-40 sm:text-right">
         {begruendungText(a, namen)}
       </span>
+      {darf && (
+        <AufgabeAktionen
+          aufgabeId={a.id!}
+          erledigt={a.erledigt ?? false}
+          abgebbar={meine || planend}
+        />
+      )}
     </li>
   );
 }

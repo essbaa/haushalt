@@ -19,29 +19,29 @@ import (
 // keinen Haushalt mehr öffnet.
 const Gueltigkeit = 7 * 24 * time.Hour
 
-// RoleOf ist die Rolle des Aufrufers in diesem Haushalt.
+// MemberOf sagt, wer der Aufrufer in diesem Haushalt ist.
 //
-// Leer heißt: kein Mitglied. Das ist bei Demo-Haushalten der Normalfall und
-// kein Fehler — sie sind öffentlich.
-func (p *Plans) RoleOf(ctx context.Context, subject, id string) (planner.Role, error) {
+// Beides leer heißt: kein Mitglied. Das ist kein Fehler — bei den
+// Beispielhaushalten der Normalfall, und dort sieht man den Plan trotzdem.
+func (p *Plans) MemberOf(ctx context.Context, subject, id string) (string, planner.Role, error) {
 	if subject == "" {
-		return "", nil
+		return "", "", nil
 	}
 	zeile, err := p.lookup(ctx, id)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	rolle, err := p.db.RoleInHousehold(ctx, db.RoleInHouseholdParams{
+	mitglied, err := p.db.GetMemberInHousehold(ctx, db.GetMemberInHouseholdParams{
 		HouseholdID: zeile.ID,
 		AuthUserID:  &subject,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return "", "", nil
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return planner.Role(rolle), nil
+	return formatUUID(mitglied.ID), planner.Role(mitglied.Role), nil
 }
 
 // Invite erzeugt einen einmalig gültigen Code.

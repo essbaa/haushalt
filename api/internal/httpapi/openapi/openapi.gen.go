@@ -9,7 +9,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -319,6 +321,16 @@ func (e CreateEinladungJSONBodyRolle) Valid() bool {
 	}
 }
 
+// Abgabe defines model for Abgabe.
+type Abgabe struct {
+	// Uebernimmt Name der Person, die übernimmt. Fehlt, wenn niemand geeignet ist —
+	// dann steht die Aufgabe offen im Plan.
+	//
+	//
+	// Example: Ben
+	Uebernimmt *string `json:"uebernimmt,omitempty"`
+}
+
 // Aufgabe defines model for Aufgabe.
 type Aufgabe struct {
 	Art AufgabeArt `json:"art"`
@@ -330,8 +342,17 @@ type Aufgabe struct {
 	// DauerMin Example: 35
 	DauerMin int `json:"dauer_min"`
 
+	// Erledigt Ob jemand sie abgehakt hat.
+	Erledigt *bool `json:"erledigt,omitempty"`
+
 	// Frist gesetzt, wenn die Aufgabe eine echte Frist hat
-	Frist     *string   `json:"frist,omitempty"`
+	Frist *string `json:"frist,omitempty"`
+
+	// Id Kennung der festgeschriebenen Aufgabe. Fehlt bei den öffentlichen
+	// Beispielhaushalten: Deren Wochen werden gerechnet und nicht
+	// geschrieben, es gibt also nichts, woran ein „erledigt" hängen
+	// könnte.
+	Id        *string   `json:"id,omitempty"`
 	Kategorie Kategorie `json:"kategorie"`
 
 	// Kopflast Planungs- und Erinnerungsaufwand, unabhängig von der Dauer
@@ -352,7 +373,10 @@ type Aufgabe struct {
 	VorlageId   string             `json:"vorlage_id"`
 	Zeitfenster AufgabeZeitfenster `json:"zeitfenster"`
 
-	// Zustaendig Kennung des Mitglieds
+	// Zustaendig Kennung des Mitglieds. Leer, wenn niemand zuständig ist — der
+	// Zustand einer abgegebenen Aufgabe, die noch niemand übernommen
+	// hat. Sichtbar offen zu sein ist Absicht.
+	//
 	//
 	// Example: m-ben
 	Zustaendig string `json:"zustaendig"`
@@ -480,8 +504,10 @@ type MitgliedRolle string
 // NeuerHaushalt defines model for NeuerHaushalt.
 type NeuerHaushalt struct {
 	// Auto Entscheidet über Aufgaben wie Reifenwechsel oder TÜV. Fehlt das
-	// Auto, entstehen sie gar nicht erst.
-	Auto       *bool           `json:"auto,omitempty"`
+	// Feld, gilt „kein Auto", und die Aufgaben entstehen gar nicht erst.
+	Auto *bool `json:"auto,omitempty"`
+
+	// Garten Fehlt das Feld, gilt „kein Garten".
 	Garten     *bool           `json:"garten,omitempty"`
 	Haustiere  *[]string       `json:"haustiere,omitempty"`
 	Mitglieder []NeuesMitglied `json:"mitglieder"`
@@ -490,7 +516,9 @@ type NeuerHaushalt struct {
 	Name     string                `json:"name"`
 	Wohnform NeuerHaushaltWohnform `json:"wohnform"`
 
-	// Zeitzone Bestimmt, wann ein Tag beginnt und endet. Siehe ADR-0002.
+	// Zeitzone Bestimmt, wann ein Tag beginnt und endet. Fehlt sie, wird es
+	// Europe/Berlin — ein Haushalt lebt in einer Zeitzone, nicht in der
+	// Serverzeit. Siehe ADR-0002.
 	Zeitzone *string `json:"zeitzone,omitempty"`
 }
 
@@ -509,6 +537,10 @@ type NeuesMitglied struct {
 	// Zeit Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
 	// Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
 	// präziser aus als eine ehrliche Stufe.
+	//
+	// Fehlt die Angabe, gilt „mittel"; bei betreuten Personen immer
+	// „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
+	// keine.
 	Zeit *NeuesMitgliedZeit `json:"zeit,omitempty"`
 }
 
@@ -518,6 +550,10 @@ type NeuesMitgliedRolle string
 // NeuesMitgliedZeit Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
 // Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
 // präziser aus als eine ehrliche Stufe.
+//
+// Fehlt die Angabe, gilt „mittel"; bei betreuten Personen immer
+// „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
+// keine.
 type NeuesMitgliedZeit string
 
 // Uebersprungen defines model for Uebersprungen.
@@ -552,6 +588,11 @@ type Wochenplan struct {
 	Bilanz   *[]Bilanz `json:"bilanz,omitempty"`
 	Haushalt Haushalt  `json:"haushalt"`
 
+	// Ich Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
+	// die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
+	// abgeben darf. Fehlt bei Demo-Haushalten und ohne Anmeldung.
+	Ich *string `json:"ich,omitempty"`
+
 	// MeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
 	// Demo-Haushalten und ohne Anmeldung.
 	MeineRolle *WochenplanMeineRolle `json:"meine_rolle,omitempty"`
@@ -567,6 +608,21 @@ type Wochenplan struct {
 // WochenplanMeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
 // Demo-Haushalten und ohne Anmeldung.
 type WochenplanMeineRolle string
+
+// AufgabeAbgebenJSONBody defines parameters for AufgabeAbgeben.
+type AufgabeAbgebenJSONBody struct {
+	// Grund Freiwillig. Landet im Protokoll und ist später die
+	// ehrlichste Rückmeldung, die das Produkt bekommt: Wer
+	// dieselbe Aufgabe dreimal mit derselben Begründung abgibt,
+	// hat sie nie gewollt.
+	Grund *string `json:"grund,omitempty"`
+}
+
+// SetErledigtJSONBody defines parameters for SetErledigt.
+type SetErledigtJSONBody struct {
+	// Erledigt Fehlt das Feld, gilt „erledigt".
+	Erledigt *bool `json:"erledigt,omitempty"`
+}
 
 // CreateEinladungJSONBody defines parameters for CreateEinladung.
 type CreateEinladungJSONBody struct {
@@ -586,6 +642,12 @@ type CreateEinladungJSONBody struct {
 // CreateEinladungJSONBodyRolle defines parameters for CreateEinladung.
 type CreateEinladungJSONBodyRolle string
 
+// AufgabeAbgebenJSONRequestBody defines body for AufgabeAbgeben for application/json ContentType.
+type AufgabeAbgebenJSONRequestBody AufgabeAbgebenJSONBody
+
+// SetErledigtJSONRequestBody defines body for SetErledigt for application/json ContentType.
+type SetErledigtJSONRequestBody SetErledigtJSONBody
+
 // CreateHaushaltJSONRequestBody defines body for CreateHaushalt for application/json ContentType.
 type CreateHaushaltJSONRequestBody = NeuerHaushalt
 
@@ -594,6 +656,12 @@ type CreateEinladungJSONRequestBody CreateEinladungJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// AufgabeAbgeben Aufgabe zurückgeben
+	// (POST /api/aufgaben/{aufgabeId}/abgeben)
+	AufgabeAbgeben(w http.ResponseWriter, r *http.Request, aufgabeId string)
+	// SetErledigt Aufgabe abhaken oder wieder öffnen
+	// (POST /api/aufgaben/{aufgabeId}/erledigt)
+	SetErledigt(w http.ResponseWriter, r *http.Request, aufgabeId string)
 	// AcceptEinladung Einer Einladung folgen
 	// (POST /api/einladungen/{code}/annehmen)
 	AcceptEinladung(w http.ResponseWriter, r *http.Request, code string)
@@ -625,6 +693,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// AufgabeAbgeben operation middleware
+func (siw *ServerInterfaceWrapper) AufgabeAbgeben(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "aufgabeId" -------------
+	var aufgabeId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "aufgabeId", r.PathValue("aufgabeId"), &aufgabeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aufgabeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AufgabeAbgeben(w, r, aufgabeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetErledigt operation middleware
+func (siw *ServerInterfaceWrapper) SetErledigt(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "aufgabeId" -------------
+	var aufgabeId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "aufgabeId", r.PathValue("aufgabeId"), &aufgabeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aufgabeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetErledigt(w, r, aufgabeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // AcceptEinladung operation middleware
 func (siw *ServerInterfaceWrapper) AcceptEinladung(w http.ResponseWriter, r *http.Request) {
@@ -895,9 +1015,107 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte", wrapper.CreateHaushalt)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/erledigt", wrapper.SetErledigt)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/abgeben", wrapper.AufgabeAbgeben)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/einladungen/{code}/annehmen", wrapper.AcceptEinladung)
 
 	return m
+}
+
+type AufgabeAbgebenRequestObject struct {
+	AufgabeId string `json:"aufgabeId"`
+	Body      *AufgabeAbgebenJSONRequestBody
+}
+
+type AufgabeAbgebenResponseObject interface {
+	VisitAufgabeAbgebenResponse(w http.ResponseWriter) error
+}
+
+type AufgabeAbgeben200JSONResponse Abgabe
+
+func (response AufgabeAbgeben200JSONResponse) VisitAufgabeAbgebenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeAbgeben403JSONResponse Fehler
+
+func (response AufgabeAbgeben403JSONResponse) VisitAufgabeAbgebenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeAbgeben404JSONResponse Fehler
+
+func (response AufgabeAbgeben404JSONResponse) VisitAufgabeAbgebenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetErledigtRequestObject struct {
+	AufgabeId string `json:"aufgabeId"`
+	Body      *SetErledigtJSONRequestBody
+}
+
+type SetErledigtResponseObject interface {
+	VisitSetErledigtResponse(w http.ResponseWriter) error
+}
+
+type SetErledigt204Response struct {
+}
+
+func (response SetErledigt204Response) VisitSetErledigtResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetErledigt403JSONResponse Fehler
+
+func (response SetErledigt403JSONResponse) VisitSetErledigtResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetErledigt404JSONResponse Fehler
+
+func (response SetErledigt404JSONResponse) VisitSetErledigtResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type AcceptEinladungRequestObject struct {
@@ -1167,6 +1385,12 @@ func (response GetVersion200JSONResponse) VisitGetVersionResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// AufgabeAbgeben Aufgabe zurückgeben
+	// (POST /api/aufgaben/{aufgabeId}/abgeben)
+	AufgabeAbgeben(ctx context.Context, request AufgabeAbgebenRequestObject) (AufgabeAbgebenResponseObject, error)
+	// SetErledigt Aufgabe abhaken oder wieder öffnen
+	// (POST /api/aufgaben/{aufgabeId}/erledigt)
+	SetErledigt(ctx context.Context, request SetErledigtRequestObject) (SetErledigtResponseObject, error)
 	// AcceptEinladung Einer Einladung folgen
 	// (POST /api/einladungen/{code}/annehmen)
 	AcceptEinladung(ctx context.Context, request AcceptEinladungRequestObject) (AcceptEinladungResponseObject, error)
@@ -1227,6 +1451,78 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// AufgabeAbgeben operation middleware
+func (sh *strictHandler) AufgabeAbgeben(w http.ResponseWriter, r *http.Request, aufgabeId string) {
+	var request AufgabeAbgebenRequestObject
+
+	request.AufgabeId = aufgabeId
+
+	var body AufgabeAbgebenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AufgabeAbgeben(ctx, request.(AufgabeAbgebenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AufgabeAbgeben")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AufgabeAbgebenResponseObject); ok {
+		if err := validResponse.VisitAufgabeAbgebenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetErledigt operation middleware
+func (sh *strictHandler) SetErledigt(w http.ResponseWriter, r *http.Request, aufgabeId string) {
+	var request SetErledigtRequestObject
+
+	request.AufgabeId = aufgabeId
+
+	var body SetErledigtJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetErledigt(ctx, request.(SetErledigtRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetErledigt")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetErledigtResponseObject); ok {
+		if err := validResponse.VisitSetErledigtResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // AcceptEinladung operation middleware
