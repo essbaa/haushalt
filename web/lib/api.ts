@@ -27,6 +27,9 @@ export type Haushalt = components["schemas"]["Haushalt"];
 export type Aufgabe = components["schemas"]["Aufgabe"];
 export type Bilanz = components["schemas"]["Bilanz"];
 export type Uebersprungen = components["schemas"]["Uebersprungen"];
+export type Ich = components["schemas"]["Ich"];
+export type NeuerHaushalt = components["schemas"]["NeuerHaushalt"];
+export type NeuesMitglied = components["schemas"]["NeuesMitglied"];
 
 /** Antwort von GET /healthz — spiegelt healthResponse im Go-Dienst. */
 export type Health = {
@@ -130,6 +133,11 @@ async function hole<T>(pfad: string, token?: string | null): Promise<T> {
   }
 
   return (await res.json()) as T;
+}
+
+/** Wer fragt — soweit das Token es belegt. Ohne Token: niemand. */
+export function ladeIch(token?: string | null): Promise<Ich> {
+  return hole<Ich>("/api/ich", token);
 }
 
 export function ladeHaushalte(token?: string | null): Promise<Haushalt[]> {

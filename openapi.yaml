@@ -68,8 +68,10 @@ paths:
       tags: [plan]
       summary: Verfügbare Haushalte
       description: |
-        Bis zum Datenmodell (T5) sind das die Beispielhaushalte aus dem Repo.
-        Die Form der Antwort ändert sich dadurch nicht.
+        Die öffentlichen Beispielhaushalte und, wer angemeldet ist, die
+        eigenen. Nur bei den eigenen ist `meine_rolle` gesetzt — eine Liste
+        ohne einen solchen Eintrag heißt: dieser Mensch hat noch keinen
+        Haushalt und gehört ins Onboarding.
       operationId: listHaushalte
       responses:
         "200":
@@ -80,6 +82,46 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Haushalt"
+
+    post:
+      tags: [haushalt]
+      summary: Haushalt einrichten
+      description: |
+        Legt einen Haushalt samt Mitgliedern an und macht den Aufrufer darin
+        planend. Alles in einem Aufruf und in einer Transaktion: Ein
+        Onboarding, das nach dem zweiten Schritt abbricht, darf keinen halben
+        Haushalt hinterlassen.
+
+        Gefragt wird nur, was der Planer wirklich braucht — Wohnform, Personen
+        mit grobem Alter, Zeitbudget. Alles Weitere ist Vorgabe und später
+        änderbar. Eine App gegen Mental Load darf beim Einrichten keine
+        erzeugen.
+      operationId: createHaushalt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NeuerHaushalt"
+      responses:
+        "201":
+          description: der angelegte Haushalt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Haushalt"
+        "400":
+          description: die Eingabe ergibt keinen Haushalt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "401":
+          description: dafür muss man angemeldet sein
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
 
   /api/haushalte/{haushaltId}/plan/{woche}:
     get:
@@ -143,11 +185,22 @@ paths:
           application/json:
             schema:
               type: object
-              required: [rolle]
               properties:
                 rolle:
                   type: string
                   enum: [planend, ausfuehrend]
+                  description: |
+                    Nötig, wenn jemand dazukommt, den es im Haushalt noch nicht
+                    gibt. Zusammen mit `mitglied` wird sie ignoriert: Diese
+                    Person hat ihre Rolle bereits, und der Plan rechnet damit.
+                mitglied:
+                  type: string
+                  description: |
+                    Kennung einer Person, die schon im Plan steht, aber noch
+                    kein Konto hat. Der Code macht den Eingeladenen dann zu
+                    genau dieser Person — mit ihren Aufgaben, ihrem Verlauf und
+                    ihrer Kapazität, statt eine zweite gleichen Namens
+                    anzulegen.
       responses:
         "201":
           description: der Code
@@ -257,6 +310,82 @@ components:
         gueltig_bis:
           type: string
           format: date-time
+        fuer:
+          type: string
+          description: |
+            Name der Person, die dieser Code übernimmt. Fehlt, wenn jemand
+            Neues dazukommt.
+          example: Asmae
+
+    NeuerHaushalt:
+      type: object
+      required: [name, wohnform, mitglieder]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Familie Bauer
+        wohnform:
+          type: string
+          enum: [wohnung, haus]
+        garten:
+          type: boolean
+          description: Fehlt das Feld, gilt „kein Garten".
+        auto:
+          type: boolean
+          description: |
+            Entscheidet über Aufgaben wie Reifenwechsel oder TÜV. Fehlt das
+            Feld, gilt „kein Auto", und die Aufgaben entstehen gar nicht erst.
+        haustiere:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            example: hund
+        zeitzone:
+          type: string
+          description: |
+            Bestimmt, wann ein Tag beginnt und endet. Fehlt sie, wird es
+            Europe/Berlin — ein Haushalt lebt in einer Zeitzone, nicht in der
+            Serverzeit. Siehe ADR-0002.
+        mitglieder:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/NeuesMitglied"
+
+    NeuesMitglied:
+      type: object
+      required: [name, rolle]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        rolle:
+          type: string
+          enum: [planend, ausfuehrend, betreut]
+        geburtsjahr:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+          description: |
+            Nur bei Kindern nötig; es entscheidet über Altersgrenzen von
+            Aufgaben. Bei Erwachsenen darf es fehlen — dann gelten sie als
+            erwachsen und mehr braucht der Planer nicht zu wissen.
+        zeit:
+          type: string
+          enum: [keine, wenig, mittel, viel]
+          description: |
+            Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
+            Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
+            präziser aus als eine ehrliche Stufe.
+
+            Fehlt die Angabe, gilt „mittel"; bei betreuten Personen immer
+            „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
+            keine.
 
     Haushalt:
       type: object
@@ -272,6 +401,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Mitglied"
+        meine_rolle:
+          type: string
+          enum: [planend, ausfuehrend, betreut]
+          description: |
+            Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
+            öffentlichen Beispielhaushalten und überall dort, wo er nicht
+            Mitglied ist.
 
     Mitglied:
       type: object
@@ -289,6 +425,11 @@ components:
           description: |
             `planend` plant und führt aus, `ausfuehrend` führt nur aus,
             `betreut` erzeugt Arbeit ohne welche zu übernehmen.
+        hat_zugang:
+          type: boolean
+          description: |
+            Ob diese Person sich anmelden kann. Steuert, wen man noch einladen
+            kann — und macht sichtbar, wer bisher nur im Plan steht.
 
     Wochenplan:
       type: object

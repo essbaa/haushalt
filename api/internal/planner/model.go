@@ -55,6 +55,12 @@ type Member struct {
 	// Care ist nur bei Kindern gesetzt.
 	Care Care
 
+	// HasAccess sagt, ob diese Person sich anmelden kann. Der Planer schaut
+	// nie hin — für ihn ist jede Person gleich, ob sie die App je geöffnet
+	// hat oder nicht. Die Oberfläche braucht es: Sie entscheidet, wen man noch
+	// einladen kann, und macht sichtbar, wer bisher nur im Plan steht.
+	HasAccess bool
+
 	// CapacityMinutes sind die für Haushaltsaufgaben verfügbaren Minuten je
 	// Wochentag, Index 0 = Montag. Aus Arbeitszeiten und Betreuungszeiten
 	// abgeleitet, bewusst grob: Der Plan soll machbar wirken, nicht exakt sein.
@@ -70,9 +76,29 @@ type Member struct {
 // Ohne diese Zeile wäre er mit Alter 0 ein Kind und bekäme keine einzige
 // Aufgabe, die Erwachsene voraussetzt.
 //
-// Für Kinder bleibt das Alter maßgeblich: Wer nicht plant, wird nach Jahren
-// beurteilt.
-func (m Member) IsAdult() bool { return m.Role == RolePlanner || m.Age >= 18 }
+// Ein unbekanntes Alter heißt ebenfalls erwachsen, und das ist die
+// unangenehmere Hälfte der Regel. Der Grund steht im Beitrittspfad: Wer einer
+// Einladung als ausführende Person folgt, bekommt kein Geburtsjahr — wir
+// fragen es nicht ab und erfinden es nicht. Mit der alten Regel war dieser
+// Mensch mit Alter 0 ein Kind: Er bekam keine Aufgabe, die Erwachsene
+// voraussetzt, und zählte obendrein als Kind des Haushalts, was darüber
+// entscheidet, welche Vorlagen überhaupt fällig werden. Genau der Fall aus dem
+// Produktkonzept — der planungsunwillige Partner — war damit falsch geplant.
+//
+// Die Gegenrichtung kostet weniger: Kinder bekommen im Onboarding immer ein
+// Geburtsjahr, betreute Personen müssen eines haben. Ein Kind ohne Jahr kann
+// also nur über einen Import ohne Altersangabe entstehen — und dort ist die
+// fehlende Angabe der Fehler, nicht diese Zeile.
+func (m Member) IsAdult() bool {
+	switch {
+	case m.Role == RolePlanner:
+		return true
+	case m.Age <= 0:
+		return true
+	default:
+		return m.Age >= 18
+	}
+}
 
 // CanPerform sagt, ob diese Person überhaupt Aufgaben ausführt.
 func (m Member) CanPerform() bool {

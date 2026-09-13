@@ -3,9 +3,21 @@
 import { useState } from "react";
 import { postMitToken } from "@/lib/browser-token";
 
-type Einladung = { code: string; rolle: string; gueltig_bis: string };
+type Einladung = { code: string; rolle: string; gueltig_bis: string; fuer?: string };
 
-export function EinladenFormular({ haushaltId }: { haushaltId: string }) {
+/** Jemand, der schon im Plan steht, aber noch kein Konto hat. */
+export type Offene = { id: string; name: string; rolle: string };
+
+export function EinladenFormular({
+  haushaltId,
+  offene,
+}: {
+  haushaltId: string;
+  offene: Offene[];
+}) {
+  // Vorbelegt mit der ersten Person, die schon im Plan steht: Das ist der
+  // häufige Fall. Wer jemand Neues holen will, wählt "neu".
+  const [wen, setWen] = useState<string>(offene[0]?.id ?? "neu");
   const [rolle, setRolle] = useState("ausfuehrend");
   const [einladung, setEinladung] = useState<Einladung | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -18,7 +30,10 @@ export function EinladenFormular({ haushaltId }: { haushaltId: string }) {
       setEinladung(
         await postMitToken<Einladung>(
           `/api/haushalte/${encodeURIComponent(haushaltId)}/einladungen`,
-          { rolle },
+          // Zeigt die Einladung auf jemanden, der schon im Plan steht, kommt
+          // die Rolle von dieser Person. Sie mitzuschicken wäre eine zweite
+          // Wahrheit — der Server ignoriert sie ohnehin.
+          wen === "neu" ? { rolle } : { mitglied: wen },
         ),
       );
     } catch (e) {
@@ -44,6 +59,9 @@ export function EinladenFormular({ haushaltId }: { haushaltId: string }) {
           <p className="break-all font-mono text-xs">{link}</p>
         </div>
         <p className="text-sm leading-relaxed text-muted">
+          {einladung.fuer
+            ? `Macht den Empfänger zu ${einladung.fuer}. `
+            : "Holt eine neue Person in den Haushalt. "}
           Gilt einmal, bis{" "}
           {new Date(einladung.gueltig_bis).toLocaleDateString("de-DE", {
             day: "2-digit",
@@ -65,7 +83,32 @@ export function EinladenFormular({ haushaltId }: { haushaltId: string }) {
 
   return (
     <div className="space-y-6">
-      <fieldset className="space-y-3">
+      {offene.length > 0 && (
+        <fieldset className="space-y-3">
+          <legend className="mb-2 text-sm font-medium">Wen lädst du ein?</legend>
+          {offene.map((o) => (
+            <Wahl
+              key={o.id}
+              name="wen"
+              gewaehlt={wen === o.id}
+              waehlen={() => setWen(o.id)}
+              titel={o.name}
+              erklaerung={`Steht schon im Plan und ${
+                o.rolle === "planend" ? "plant mit" : "führt aus"
+              }. Der Code verbindet ${o.name} mit einem Konto — Aufgaben, Verlauf und Kapazität bleiben dieselben.`}
+            />
+          ))}
+          <Wahl
+            name="wen"
+            gewaehlt={wen === "neu"}
+            waehlen={() => setWen("neu")}
+            titel="Jemand Neues"
+            erklaerung="Kommt als zusätzliche Person in den Haushalt und taucht ab dann im Plan auf."
+          />
+        </fieldset>
+      )}
+
+      <fieldset className="space-y-3" hidden={wen !== "neu"}>
         <legend className="mb-2 text-sm font-medium">Welche Rolle?</legend>
         <Wahl
           gewaehlt={rolle === "ausfuehrend"}
@@ -104,11 +147,13 @@ function Wahl({
   waehlen,
   titel,
   erklaerung,
+  name = "rolle",
 }: {
   gewaehlt: boolean;
   waehlen: () => void;
   titel: string;
   erklaerung: string;
+  name?: string;
 }) {
   return (
     <label
@@ -119,7 +164,7 @@ function Wahl({
       <span className="flex items-baseline gap-2">
         <input
           type="radio"
-          name="rolle"
+          name={name}
           checked={gewaehlt}
           onChange={waehlen}
           className="accent-accent"

@@ -11,11 +11,46 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimMember = `-- name: ClaimMember :one
+UPDATE member
+SET auth_user_id = $1
+WHERE id = $2 AND household_id = $3 AND auth_user_id IS NULL
+RETURNING id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at
+`
+
+type ClaimMemberParams struct {
+	AuthUserID  *string
+	ID          pgtype.UUID
+	HouseholdID pgtype.UUID
+}
+
+// Verbindet eine vorhandene Person mit einer Anmeldung.
+//
+// Wieder mit den Bedingungen in der Anweisung statt davor: „auth_user_id IS
+// NULL" sorgt dafür, dass zwei gleichzeitige Beitritte nicht beide dieselbe
+// Person übernehmen. Wer keine Zeile zurückbekommt, war der Zweite.
+func (q *Queries) ClaimMember(ctx context.Context, arg ClaimMemberParams) (Member, error) {
+	row := q.db.QueryRow(ctx, claimMember, arg.AuthUserID, arg.ID, arg.HouseholdID)
+	var i Member
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.Name,
+		&i.Role,
+		&i.BirthYear,
+		&i.Care,
+		&i.CapacityMinutes,
+		&i.AuthUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const consumeInvitation = `-- name: ConsumeInvitation :one
 UPDATE invitation
 SET used_at = now(), used_by = $2
 WHERE code = $1 AND used_at IS NULL AND expires_at > now()
-RETURNING code, household_id, role, created_by, created_at, expires_at, used_at, used_by
+RETURNING code, household_id, role, created_by, created_at, expires_at, used_at, used_by, member_id
 `
 
 type ConsumeInvitationParams struct {
@@ -42,14 +77,15 @@ func (q *Queries) ConsumeInvitation(ctx context.Context, arg ConsumeInvitationPa
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.UsedBy,
+		&i.MemberID,
 	)
 	return i, err
 }
 
 const createInvitation = `-- name: CreateInvitation :one
-INSERT INTO invitation (code, household_id, role, created_by, expires_at)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING code, household_id, role, created_by, created_at, expires_at, used_at, used_by
+INSERT INTO invitation (code, household_id, role, created_by, expires_at, member_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING code, household_id, role, created_by, created_at, expires_at, used_at, used_by, member_id
 `
 
 type CreateInvitationParams struct {
@@ -58,8 +94,11 @@ type CreateInvitationParams struct {
 	Role        string
 	CreatedBy   pgtype.UUID
 	ExpiresAt   pgtype.Timestamptz
+	MemberID    pgtype.UUID
 }
 
+// member_id darf leer sein: Dann kommt jemand dazu, den es im Haushalt noch
+// nicht gibt. Ist er gesetzt, übernimmt der Beitritt genau diese Person.
 func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error) {
 	row := q.db.QueryRow(ctx, createInvitation,
 		arg.Code,
@@ -67,6 +106,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		arg.Role,
 		arg.CreatedBy,
 		arg.ExpiresAt,
+		arg.MemberID,
 	)
 	var i Invitation
 	err := row.Scan(
@@ -78,6 +118,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.UsedBy,
+		&i.MemberID,
 	)
 	return i, err
 }
@@ -121,8 +162,39 @@ func (q *Queries) CreateMemberWithRole(ctx context.Context, arg CreateMemberWith
 	return i, err
 }
 
+const getInvitableMember = `-- name: GetInvitableMember :one
+SELECT id, household_id, name, role, birth_year, care, capacity_minutes, auth_user_id, created_at FROM member
+WHERE id = $1 AND household_id = $2 AND auth_user_id IS NULL AND role <> 'betreut'
+`
+
+type GetInvitableMemberParams struct {
+	ID          pgtype.UUID
+	HouseholdID pgtype.UUID
+}
+
+// Die Person, auf die eine Einladung zeigen soll — nur wenn sie zu diesem
+// Haushalt gehört und noch kein Konto hat. Die Prüfung steht in der Abfrage
+// und nicht in Go: Ein Haushalt darf niemanden aus einem fremden Haushalt
+// einladen, und das soll nicht an einem vergessenen if hängen.
+func (q *Queries) GetInvitableMember(ctx context.Context, arg GetInvitableMemberParams) (Member, error) {
+	row := q.db.QueryRow(ctx, getInvitableMember, arg.ID, arg.HouseholdID)
+	var i Member
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.Name,
+		&i.Role,
+		&i.BirthYear,
+		&i.Care,
+		&i.CapacityMinutes,
+		&i.AuthUserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getInvitation = `-- name: GetInvitation :one
-SELECT code, household_id, role, created_by, created_at, expires_at, used_at, used_by FROM invitation WHERE code = $1
+SELECT code, household_id, role, created_by, created_at, expires_at, used_at, used_by, member_id FROM invitation WHERE code = $1
 `
 
 // Der Code allein genügt; ob er noch gilt, entscheidet der Aufrufer anhand
@@ -141,12 +213,13 @@ func (q *Queries) GetInvitation(ctx context.Context, code string) (Invitation, e
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.UsedBy,
+		&i.MemberID,
 	)
 	return i, err
 }
 
 const listOpenInvitations = `-- name: ListOpenInvitations :many
-SELECT code, household_id, role, created_by, created_at, expires_at, used_at, used_by FROM invitation
+SELECT code, household_id, role, created_by, created_at, expires_at, used_at, used_by, member_id FROM invitation
 WHERE household_id = $1 AND used_at IS NULL AND expires_at > now()
 ORDER BY created_at DESC
 `
@@ -169,6 +242,7 @@ func (q *Queries) ListOpenInvitations(ctx context.Context, householdID pgtype.UU
 			&i.ExpiresAt,
 			&i.UsedAt,
 			&i.UsedBy,
+			&i.MemberID,
 		); err != nil {
 			return nil, err
 		}

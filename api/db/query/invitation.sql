@@ -1,6 +1,8 @@
 -- name: CreateInvitation :one
-INSERT INTO invitation (code, household_id, role, created_by, expires_at)
-VALUES ($1, $2, $3, $4, $5)
+-- member_id darf leer sein: Dann kommt jemand dazu, den es im Haushalt noch
+-- nicht gibt. Ist er gesetzt, übernimmt der Beitritt genau diese Person.
+INSERT INTO invitation (code, household_id, role, created_by, expires_at, member_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetInvitation :one
@@ -38,4 +40,23 @@ SELECT role FROM member WHERE household_id = $1 AND auth_user_id = $2;
 -- steht fest, die Rolle kommt aus der Einladung.
 INSERT INTO member (household_id, name, role, capacity_minutes, auth_user_id)
 VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
+-- name: GetInvitableMember :one
+-- Die Person, auf die eine Einladung zeigen soll — nur wenn sie zu diesem
+-- Haushalt gehört und noch kein Konto hat. Die Prüfung steht in der Abfrage
+-- und nicht in Go: Ein Haushalt darf niemanden aus einem fremden Haushalt
+-- einladen, und das soll nicht an einem vergessenen if hängen.
+SELECT * FROM member
+WHERE id = $1 AND household_id = $2 AND auth_user_id IS NULL AND role <> 'betreut';
+
+-- name: ClaimMember :one
+-- Verbindet eine vorhandene Person mit einer Anmeldung.
+--
+-- Wieder mit den Bedingungen in der Anweisung statt davor: „auth_user_id IS
+-- NULL" sorgt dafür, dass zwei gleichzeitige Beitritte nicht beide dieselbe
+-- Person übernehmen. Wer keine Zeile zurückbekommt, war der Zweite.
+UPDATE member
+SET auth_user_id = $1
+WHERE id = $2 AND household_id = $3 AND auth_user_id IS NULL
 RETURNING *;

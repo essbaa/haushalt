@@ -13,6 +13,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0004](0004-fairness-nach-kapazitaet.md) | Fairness nach Kapazität, Kopflast als eigener Posten | angenommen |
 | [0005](0005-aufgaben-die-einer-person-gehoeren.md) | Aufgaben, die einer Person selbst gehören | angenommen |
 | [0006](0006-anmeldung-better-auth.md) | Anmeldung mit Better Auth in der Web-App, Go verifiziert | angenommen |
+| [0007](0007-onboarding-fragt-drei-dinge.md) | Das Onboarding fragt drei Dinge und rät den Rest | angenommen |
 
 ## Aufbau eines Eintrags
 

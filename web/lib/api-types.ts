@@ -52,12 +52,26 @@ export interface paths {
         };
         /**
          * Verfügbare Haushalte
-         * @description Bis zum Datenmodell (T5) sind das die Beispielhaushalte aus dem Repo.
-         *     Die Form der Antwort ändert sich dadurch nicht.
+         * @description Die öffentlichen Beispielhaushalte und, wer angemeldet ist, die
+         *     eigenen. Nur bei den eigenen ist `meine_rolle` gesetzt — eine Liste
+         *     ohne einen solchen Eintrag heißt: dieser Mensch hat noch keinen
+         *     Haushalt und gehört ins Onboarding.
          */
         get: operations["listHaushalte"];
         put?: never;
-        post?: never;
+        /**
+         * Haushalt einrichten
+         * @description Legt einen Haushalt samt Mitgliedern an und macht den Aufrufer darin
+         *     planend. Alles in einem Aufruf und in einer Transaktion: Ein
+         *     Onboarding, das nach dem zweiten Schritt abbricht, darf keinen halben
+         *     Haushalt hinterlassen.
+         *
+         *     Gefragt wird nur, was der Planer wirklich braucht — Wohnform, Personen
+         *     mit grobem Alter, Zeitbudget. Alles Weitere ist Vorgabe und später
+         *     änderbar. Eine App gegen Mental Load darf beim Einrichten keine
+         *     erzeugen.
+         */
+        post: operations["createHaushalt"];
         delete?: never;
         options?: never;
         head?: never;
@@ -162,6 +176,55 @@ export interface components {
             rolle: "planend" | "ausfuehrend";
             /** Format: date-time */
             gueltig_bis: string;
+            /**
+             * @description Name der Person, die dieser Code übernimmt. Fehlt, wenn jemand
+             *     Neues dazukommt.
+             * @example Asmae
+             */
+            fuer?: string;
+        };
+        NeuerHaushalt: {
+            /** @example Familie Bauer */
+            name: string;
+            /** @enum {string} */
+            wohnform: "wohnung" | "haus";
+            /** @description Fehlt das Feld, gilt „kein Garten". */
+            garten?: boolean;
+            /**
+             * @description Entscheidet über Aufgaben wie Reifenwechsel oder TÜV. Fehlt das
+             *     Feld, gilt „kein Auto", und die Aufgaben entstehen gar nicht erst.
+             */
+            auto?: boolean;
+            haustiere?: string[];
+            /**
+             * @description Bestimmt, wann ein Tag beginnt und endet. Fehlt sie, wird es
+             *     Europe/Berlin — ein Haushalt lebt in einer Zeitzone, nicht in der
+             *     Serverzeit. Siehe ADR-0002.
+             */
+            zeitzone?: string;
+            mitglieder: components["schemas"]["NeuesMitglied"][];
+        };
+        NeuesMitglied: {
+            name: string;
+            /** @enum {string} */
+            rolle: "planend" | "ausfuehrend" | "betreut";
+            /**
+             * @description Nur bei Kindern nötig; es entscheidet über Altersgrenzen von
+             *     Aufgaben. Bei Erwachsenen darf es fehlen — dann gelten sie als
+             *     erwachsen und mehr braucht der Planer nicht zu wissen.
+             */
+            geburtsjahr?: number;
+            /**
+             * @description Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
+             *     Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
+             *     präziser aus als eine ehrliche Stufe.
+             *
+             *     Fehlt die Angabe, gilt „mittel"; bei betreuten Personen immer
+             *     „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
+             *     keine.
+             * @enum {string}
+             */
+            zeit?: "keine" | "wenig" | "mittel" | "viel";
         };
         Haushalt: {
             /** @example familie-a */
@@ -169,6 +232,13 @@ export interface components {
             /** @example Familie A */
             name: string;
             mitglieder: components["schemas"]["Mitglied"][];
+            /**
+             * @description Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
+             *     öffentlichen Beispielhaushalten und überall dort, wo er nicht
+             *     Mitglied ist.
+             * @enum {string}
+             */
+            meine_rolle?: "planend" | "ausfuehrend" | "betreut";
         };
         Mitglied: {
             /** @example m-anna */
@@ -181,6 +251,11 @@ export interface components {
              * @enum {string}
              */
             rolle: "planend" | "ausfuehrend" | "betreut";
+            /**
+             * @description Ob diese Person sich anmelden kann. Steuert, wen man noch einladen
+             *     kann — und macht sichtbar, wer bisher nur im Plan steht.
+             */
+            hat_zugang?: boolean;
         };
         Wochenplan: {
             /** @example 2026-W38 */
@@ -346,6 +421,48 @@ export interface operations {
             };
         };
     };
+    createHaushalt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeuerHaushalt"];
+            };
+        };
+        responses: {
+            /** @description der angelegte Haushalt */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Haushalt"];
+                };
+            };
+            /** @description die Eingabe ergibt keinen Haushalt */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description dafür muss man angemeldet sein */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
     getWochenplan: {
         parameters: {
             query?: never;
@@ -401,8 +518,21 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    rolle: "planend" | "ausfuehrend";
+                    /**
+                     * @description Nötig, wenn jemand dazukommt, den es im Haushalt noch nicht
+                     *     gibt. Zusammen mit `mitglied` wird sie ignoriert: Diese
+                     *     Person hat ihre Rolle bereits, und der Plan rechnet damit.
+                     * @enum {string}
+                     */
+                    rolle?: "planend" | "ausfuehrend";
+                    /**
+                     * @description Kennung einer Person, die schon im Plan steht, aber noch
+                     *     kein Konto hat. Der Code macht den Eingeladenen dann zu
+                     *     genau dieser Person — mit ihren Aufgaben, ihrem Verlauf und
+                     *     ihrer Kapazität, statt eine zweite gleichen Namens
+                     *     anzulegen.
+                     */
+                    mitglied?: string;
                 };
             };
         };

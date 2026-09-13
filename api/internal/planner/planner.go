@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 )
 
 // ErrUnknownHousehold sagt, dass es diesen Haushalt nicht gibt.
@@ -27,6 +28,24 @@ var ErrNotAllowed = errors.New("planner: dafür fehlt die berechtigung")
 // Absichtlich eine Antwort für drei Fälle. Wer einen Code durchprobiert, soll
 // nicht erfahren, welcher davon zutrifft.
 var ErrUnknownInvitation = errors.New("planner: einladung ungültig")
+
+// Invitation ist ein ausgestellter Code.
+//
+// For ist der Name der Person, die dieser Code übernimmt — leer, wenn jemand
+// dazukommt, den es im Haushalt noch nicht gibt. Der Unterschied gehört in die
+// Antwort: „Dieser Link macht Asmae zu Asmae" ist etwas anderes als „dieser
+// Link holt irgendjemanden dazu", und nur der Einladende kann das prüfen.
+type Invitation struct {
+	Code  string
+	Until time.Time
+	For   string
+
+	// Role ist die Rolle, die der Eingeladene bekommt. Bei einer Einladung
+	// für eine vorhandene Person stammt sie von dieser Person und nicht aus
+	// der Anfrage — deshalb steht sie in der Antwort und wird nicht dort
+	// abgeschrieben, wo der Aufruf herkam.
+	Role Role
+}
 
 // Input ist alles, was der Planer braucht. Nichts wird nachgeladen.
 type Input struct {

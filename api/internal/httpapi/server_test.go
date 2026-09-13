@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/zakaria/haushalt/api/internal/config"
 	"github.com/zakaria/haushalt/api/internal/planner"
@@ -29,12 +28,14 @@ func (f fakePinger) Ping(context.Context) error { return f.err }
 // Dateisystem — die HTTP-Schicht wird geprüft, nicht der Planer.
 type fakePlans struct{}
 
-func (fakePlans) Arrive(context.Context, string, string) error { return nil }
+func (fakePlans) Create(context.Context, string, planner.Setup) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
 
 func (fakePlans) RoleOf(context.Context, string, string) (planner.Role, error) { return "", nil }
 
-func (fakePlans) Invite(context.Context, string, string, planner.Role) (string, time.Time, error) {
-	return "", time.Time{}, planner.ErrNotAllowed
+func (fakePlans) Invite(context.Context, string, string, planner.Role, string) (planner.Invitation, error) {
+	return planner.Invitation{}, planner.ErrNotAllowed
 }
 
 func (fakePlans) Accept(context.Context, string, string, string) (planner.Household, error) {

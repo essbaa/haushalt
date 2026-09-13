@@ -49,6 +49,7 @@ type Invitation struct {
 	ExpiresAt   pgtype.Timestamptz
 	UsedAt      pgtype.Timestamptz
 	UsedBy      pgtype.UUID
+	MemberID    pgtype.UUID
 }
 
 type Member struct {

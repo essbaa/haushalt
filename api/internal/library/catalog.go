@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
@@ -82,14 +81,19 @@ func (c *Catalog) Templates() []planner.TaskTemplate { return c.templates }
 // Die vier Methoden unten gibt es nur, damit der Katalog dieselbe
 // Schnittstelle erfüllt wie die Datenbank. Dateien kennen keine Nutzer: Ohne
 // Datenbank gibt es nur die Beispielhaushalte, und die sind öffentlich.
-func (c *Catalog) Arrive(context.Context, string, string) error { return nil }
+func (c *Catalog) Create(context.Context, string, planner.Setup) (planner.Household, error) {
+	// Ein Haushalt aus dem Repo entsteht durch eine Datei, nicht durch ein
+	// Formular. Ohne Datenbank läuft das Onboarding ins Leere — und sagt das,
+	// statt so zu tun, als hätte es etwas angelegt.
+	return planner.Household{}, planner.ErrNotAllowed
+}
 
 func (c *Catalog) RoleOf(context.Context, string, string) (planner.Role, error) {
 	return "", nil
 }
 
-func (c *Catalog) Invite(context.Context, string, string, planner.Role) (string, time.Time, error) {
-	return "", time.Time{}, planner.ErrNotAllowed
+func (c *Catalog) Invite(context.Context, string, string, planner.Role, string) (planner.Invitation, error) {
+	return planner.Invitation{}, planner.ErrNotAllowed
 }
 
 func (c *Catalog) Accept(context.Context, string, string, string) (planner.Household, error) {

@@ -28,55 +28,6 @@ type Plans struct{ db *DB }
 // AsPlans gibt die Datenbank als Planquelle aus.
 func (d *DB) AsPlans() *Plans { return &Plans{db: d} }
 
-// Arrive verbindet eine angemeldete Person mit einer Person im Haushalt — und
-// legt beim ersten Mal beides an.
-//
-// Das ist das Onboarding in seiner kleinsten ehrlichen Form: Wer sich
-// registriert, hat danach einen Haushalt und ist darin planend. Kapazität und
-// Wohnform sind Vorgaben, die er später korrigiert; das Geburtsjahr bleibt
-// leer, weil wir es nicht erfinden.
-//
-// Idempotent: Wer schon irgendwo Mitglied ist, bekommt nichts Neues.
-func (p *Plans) Arrive(ctx context.Context, subject, name string) error {
-	if subject == "" {
-		return nil
-	}
-	dabei, err := p.db.HasMembership(ctx, &subject)
-	if err != nil {
-		return err
-	}
-	if dabei {
-		return nil
-	}
-
-	if name == "" {
-		name = "Ich"
-	}
-	haushalt, err := p.db.CreateHousehold(ctx, db.CreateHouseholdParams{
-		Name:     "Haushalt von " + name,
-		Home:     "wohnung",
-		Pets:     []string{},
-		Timezone: "Europe/Berlin",
-		// Kein Slug: Der gehört den Beispielhaushalten aus dem Repo. Dieser
-		// hier ist echt und wird über seine Kennung angesprochen.
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = p.db.CreateMember(ctx, db.CreateMemberParams{
-		HouseholdID: haushalt.ID,
-		Name:        name,
-		Role:        string(planner.RolePlanner),
-		// Werktags eine Stunde, am Wochenende zwei. Geraten und deshalb
-		// änderbar — aber ein Plan mit Nullkapazität wäre leer, und eine leere
-		// erste Woche erklärt niemandem, was die App tut.
-		CapacityMinutes: []int32{60, 60, 60, 60, 60, 120, 120},
-		AuthUserID:      &subject,
-	})
-	return err
-}
-
 // Households sind die Haushalte, die dieser Aufrufer sehen darf: die
 // Demo-Haushalte aus dem Repo und die eigenen.
 //
@@ -221,9 +172,10 @@ func (p *Plans) household(ctx context.Context, z db.Household) (planner.Househol
 	jahr := time.Now().Year()
 	for _, m := range mitglieder {
 		person := planner.Member{
-			ID:   formatUUID(m.ID),
-			Name: m.Name,
-			Role: planner.Role(m.Role),
+			ID:        formatUUID(m.ID),
+			Name:      m.Name,
+			Role:      planner.Role(m.Role),
+			HasAccess: m.AuthUserID != nil,
 		}
 		// Das Modell führt Geburtsjahre, der Planer rechnet mit Alter. Die
 		// Umrechnung passiert hier und nirgends sonst.

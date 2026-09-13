@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ApiStatus } from "@/app/components/api-status";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
@@ -44,6 +45,17 @@ export default async function Page({
       e instanceof ApiError
         ? { text: e.message, hinweis: e.hint }
         : { text: "Der Wochenplan konnte nicht geladen werden." };
+  }
+
+  // Angemeldet, aber noch ohne eigenen Haushalt: Das ist der Moment für das
+  // Onboarding. Außerhalb des try, weil redirect() intern eine Ausnahme wirft
+  // — im catch oben würde sie als Ladefehler enden.
+  //
+  // Nur ohne ausdrücklich gewählten Haushalt: Wer sich die Beispiele ansehen
+  // will, kommt über ?haushalt=… hierher und soll nicht im Kreis geschickt
+  // werden.
+  if (token && !params.haushalt && !haushalte.some((h) => h.meine_rolle)) {
+    redirect("/einrichten");
   }
 
   return (

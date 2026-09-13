@@ -103,6 +103,27 @@ func (e EinladungRolle) Valid() bool {
 	}
 }
 
+// Defines values for HaushaltMeineRolle.
+const (
+	HaushaltMeineRolleAusfuehrend HaushaltMeineRolle = "ausfuehrend"
+	HaushaltMeineRolleBetreut     HaushaltMeineRolle = "betreut"
+	HaushaltMeineRollePlanend     HaushaltMeineRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the HaushaltMeineRolle enum.
+func (e HaushaltMeineRolle) Valid() bool {
+	switch e {
+	case HaushaltMeineRolleAusfuehrend:
+		return true
+	case HaushaltMeineRolleBetreut:
+		return true
+	case HaushaltMeineRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Kategorie.
 const (
 	Aussen     Kategorie = "aussen"
@@ -160,6 +181,69 @@ func (e MitgliedRolle) Valid() bool {
 	case MitgliedRolleBetreut:
 		return true
 	case MitgliedRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeuerHaushaltWohnform.
+const (
+	Haus    NeuerHaushaltWohnform = "haus"
+	Wohnung NeuerHaushaltWohnform = "wohnung"
+)
+
+// Valid indicates whether the value is a known member of the NeuerHaushaltWohnform enum.
+func (e NeuerHaushaltWohnform) Valid() bool {
+	switch e {
+	case Haus:
+		return true
+	case Wohnung:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeuesMitgliedRolle.
+const (
+	NeuesMitgliedRolleAusfuehrend NeuesMitgliedRolle = "ausfuehrend"
+	NeuesMitgliedRolleBetreut     NeuesMitgliedRolle = "betreut"
+	NeuesMitgliedRollePlanend     NeuesMitgliedRolle = "planend"
+)
+
+// Valid indicates whether the value is a known member of the NeuesMitgliedRolle enum.
+func (e NeuesMitgliedRolle) Valid() bool {
+	switch e {
+	case NeuesMitgliedRolleAusfuehrend:
+		return true
+	case NeuesMitgliedRolleBetreut:
+		return true
+	case NeuesMitgliedRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeuesMitgliedZeit.
+const (
+	Keine  NeuesMitgliedZeit = "keine"
+	Mittel NeuesMitgliedZeit = "mittel"
+	Viel   NeuesMitgliedZeit = "viel"
+	Wenig  NeuesMitgliedZeit = "wenig"
+)
+
+// Valid indicates whether the value is a known member of the NeuesMitgliedZeit enum.
+func (e NeuesMitgliedZeit) Valid() bool {
+	switch e {
+	case Keine:
+		return true
+	case Mittel:
+		return true
+	case Viel:
+		return true
+	case Wenig:
 		return true
 	default:
 		return false
@@ -314,7 +398,14 @@ type Bilanz struct {
 // Einladung defines model for Einladung.
 type Einladung struct {
 	// Code Example: K7MQ2XPD
-	Code       string         `json:"code"`
+	Code string `json:"code"`
+
+	// Fuer Name der Person, die dieser Code übernimmt. Fehlt, wenn jemand
+	// Neues dazukommt.
+	//
+	//
+	// Example: Asmae
+	Fuer       *string        `json:"fuer,omitempty"`
 	GueltigBis time.Time      `json:"gueltig_bis"`
 	Rolle      EinladungRolle `json:"rolle"`
 }
@@ -333,12 +424,22 @@ type Fehler struct {
 // Haushalt defines model for Haushalt.
 type Haushalt struct {
 	// Id Example: familie-a
-	Id         string     `json:"id"`
-	Mitglieder []Mitglied `json:"mitglieder"`
+	Id string `json:"id"`
+
+	// MeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
+	// öffentlichen Beispielhaushalten und überall dort, wo er nicht
+	// Mitglied ist.
+	MeineRolle *HaushaltMeineRolle `json:"meine_rolle,omitempty"`
+	Mitglieder []Mitglied          `json:"mitglieder"`
 
 	// Name Example: Familie A
 	Name string `json:"name"`
 }
+
+// HaushaltMeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
+// öffentlichen Beispielhaushalten und überall dort, wo er nicht
+// Mitglied ist.
+type HaushaltMeineRolle string
 
 // Ich Absichtlich schmal: Hier steht nur, was der Aussteller signiert hat.
 // Welche Person in welchem Haushalt dahintersteckt, ist eine Frage an die
@@ -357,6 +458,10 @@ type Kategorie string
 
 // Mitglied defines model for Mitglied.
 type Mitglied struct {
+	// HatZugang Ob diese Person sich anmelden kann. Steuert, wen man noch einladen
+	// kann — und macht sichtbar, wer bisher nur im Plan steht.
+	HatZugang *bool `json:"hat_zugang,omitempty"`
+
 	// Id Example: m-anna
 	Id string `json:"id"`
 
@@ -371,6 +476,49 @@ type Mitglied struct {
 // MitgliedRolle `planend` plant und führt aus, `ausfuehrend` führt nur aus,
 // `betreut` erzeugt Arbeit ohne welche zu übernehmen.
 type MitgliedRolle string
+
+// NeuerHaushalt defines model for NeuerHaushalt.
+type NeuerHaushalt struct {
+	// Auto Entscheidet über Aufgaben wie Reifenwechsel oder TÜV. Fehlt das
+	// Auto, entstehen sie gar nicht erst.
+	Auto       *bool           `json:"auto,omitempty"`
+	Garten     *bool           `json:"garten,omitempty"`
+	Haustiere  *[]string       `json:"haustiere,omitempty"`
+	Mitglieder []NeuesMitglied `json:"mitglieder"`
+
+	// Name Example: Familie Bauer
+	Name     string                `json:"name"`
+	Wohnform NeuerHaushaltWohnform `json:"wohnform"`
+
+	// Zeitzone Bestimmt, wann ein Tag beginnt und endet. Siehe ADR-0002.
+	Zeitzone *string `json:"zeitzone,omitempty"`
+}
+
+// NeuerHaushaltWohnform defines model for NeuerHaushalt.Wohnform.
+type NeuerHaushaltWohnform string
+
+// NeuesMitglied defines model for NeuesMitglied.
+type NeuesMitglied struct {
+	// Geburtsjahr Nur bei Kindern nötig; es entscheidet über Altersgrenzen von
+	// Aufgaben. Bei Erwachsenen darf es fehlen — dann gelten sie als
+	// erwachsen und mehr braucht der Planer nicht zu wissen.
+	Geburtsjahr *int               `json:"geburtsjahr,omitempty"`
+	Name        string             `json:"name"`
+	Rolle       NeuesMitgliedRolle `json:"rolle"`
+
+	// Zeit Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
+	// Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
+	// präziser aus als eine ehrliche Stufe.
+	Zeit *NeuesMitgliedZeit `json:"zeit,omitempty"`
+}
+
+// NeuesMitgliedRolle defines model for NeuesMitglied.Rolle.
+type NeuesMitgliedRolle string
+
+// NeuesMitgliedZeit Grobes Zeitbudget statt sieben Zahlen. Niemand weiß, wie viele
+// Minuten Haushalt er dienstags hat; eine erfundene Zahl sieht nur
+// präziser aus als eine ehrliche Stufe.
+type NeuesMitgliedZeit string
 
 // Uebersprungen defines model for Uebersprungen.
 type Uebersprungen struct {
@@ -422,11 +570,24 @@ type WochenplanMeineRolle string
 
 // CreateEinladungJSONBody defines parameters for CreateEinladung.
 type CreateEinladungJSONBody struct {
-	Rolle CreateEinladungJSONBodyRolle `json:"rolle"`
+	// Mitglied Kennung einer Person, die schon im Plan steht, aber noch
+	// kein Konto hat. Der Code macht den Eingeladenen dann zu
+	// genau dieser Person — mit ihren Aufgaben, ihrem Verlauf und
+	// ihrer Kapazität, statt eine zweite gleichen Namens
+	// anzulegen.
+	Mitglied *string `json:"mitglied,omitempty"`
+
+	// Rolle Nötig, wenn jemand dazukommt, den es im Haushalt noch nicht
+	// gibt. Zusammen mit `mitglied` wird sie ignoriert: Diese
+	// Person hat ihre Rolle bereits, und der Plan rechnet damit.
+	Rolle *CreateEinladungJSONBodyRolle `json:"rolle,omitempty"`
 }
 
 // CreateEinladungJSONBodyRolle defines parameters for CreateEinladung.
 type CreateEinladungJSONBodyRolle string
+
+// CreateHaushaltJSONRequestBody defines body for CreateHaushalt for application/json ContentType.
+type CreateHaushaltJSONRequestBody = NeuerHaushalt
 
 // CreateEinladungJSONRequestBody defines body for CreateEinladung for application/json ContentType.
 type CreateEinladungJSONRequestBody CreateEinladungJSONBody
@@ -439,6 +600,9 @@ type ServerInterface interface {
 	// ListHaushalte Verfügbare Haushalte
 	// (GET /api/haushalte)
 	ListHaushalte(w http.ResponseWriter, r *http.Request)
+	// CreateHaushalt Haushalt einrichten
+	// (POST /api/haushalte)
+	CreateHaushalt(w http.ResponseWriter, r *http.Request)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string)
@@ -493,6 +657,20 @@ func (siw *ServerInterfaceWrapper) ListHaushalte(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListHaushalte(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateHaushalt operation middleware
+func (siw *ServerInterfaceWrapper) CreateHaushalt(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateHaushalt(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -714,6 +892,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/version", wrapper.GetVersion)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/ich", wrapper.GetIch)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte", wrapper.ListHaushalte)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte", wrapper.CreateHaushalt)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/einladungen/{code}/annehmen", wrapper.AcceptEinladung)
@@ -788,6 +967,56 @@ func (response ListHaushalte200JSONResponse) VisitListHaushalteResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateHaushaltRequestObject struct {
+	Body *CreateHaushaltJSONRequestBody
+}
+
+type CreateHaushaltResponseObject interface {
+	VisitCreateHaushaltResponse(w http.ResponseWriter) error
+}
+
+type CreateHaushalt201JSONResponse Haushalt
+
+func (response CreateHaushalt201JSONResponse) VisitCreateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateHaushalt400JSONResponse Fehler
+
+func (response CreateHaushalt400JSONResponse) VisitCreateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateHaushalt401JSONResponse Fehler
+
+func (response CreateHaushalt401JSONResponse) VisitCreateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -944,6 +1173,9 @@ type StrictServerInterface interface {
 	// ListHaushalte Verfügbare Haushalte
 	// (GET /api/haushalte)
 	ListHaushalte(ctx context.Context, request ListHaushalteRequestObject) (ListHaushalteResponseObject, error)
+	// CreateHaushalt Haushalt einrichten
+	// (POST /api/haushalte)
+	CreateHaushalt(ctx context.Context, request CreateHaushaltRequestObject) (CreateHaushaltResponseObject, error)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(ctx context.Context, request CreateEinladungRequestObject) (CreateEinladungResponseObject, error)
@@ -1040,6 +1272,37 @@ func (sh *strictHandler) ListHaushalte(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListHaushalteResponseObject); ok {
 		if err := validResponse.VisitListHaushalteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateHaushalt operation middleware
+func (sh *strictHandler) CreateHaushalt(w http.ResponseWriter, r *http.Request) {
+	var request CreateHaushaltRequestObject
+
+	var body CreateHaushaltJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateHaushalt(ctx, request.(CreateHaushaltRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateHaushalt")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateHaushaltResponseObject); ok {
+		if err := validResponse.VisitCreateHaushaltResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/zakaria/haushalt/api/internal/planner"
 	"github.com/zakaria/haushalt/api/internal/storage/db"
@@ -48,37 +49,67 @@ func (p *Plans) RoleOf(ctx context.Context, subject, id string) (planner.Role, e
 // Nur planende Personen dürfen einladen, und die Rolle steht in der Einladung
 // — nicht im Beitritt. Wer dazukommt, soll nicht selbst entscheiden, was er im
 // Haushalt darf.
-func (p *Plans) Invite(ctx context.Context, subject, id string, rolle planner.Role) (string, time.Time, error) {
+func (p *Plans) Invite(ctx context.Context, subject, id string, rolle planner.Role, mitgliedID string) (planner.Invitation, error) {
 	if subject == "" {
-		return "", time.Time{}, planner.ErrNotAllowed
-	}
-	if rolle != planner.RolePlanner && rolle != planner.RoleDoer {
-		// Wer betreut wird, meldet sich nicht an.
-		return "", time.Time{}, fmt.Errorf("%w: rolle %q kann nicht eingeladen werden", planner.ErrNotAllowed, rolle)
+		return planner.Invitation{}, planner.ErrNotAllowed
 	}
 
 	zeile, err := p.lookup(ctx, id)
 	if err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
 
 	// Erst Mitgliedschaft, dann Rolle. Ein Fremder bekommt „gibt es nicht",
 	// ein Ausführender „nicht erlaubt" — der Unterschied ist Absicht.
 	if err := p.mayAccess(ctx, subject, zeile); err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
 	eigene, err := p.db.RoleInHousehold(ctx, db.RoleInHouseholdParams{
 		HouseholdID: zeile.ID,
 		AuthUserID:  &subject,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", time.Time{}, fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, id)
+		return planner.Invitation{}, fmt.Errorf("%w: %q", planner.ErrUnknownHousehold, id)
 	}
 	if err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
 	if planner.Role(eigene) != planner.RolePlanner {
-		return "", time.Time{}, fmt.Errorf("%w: nur planende personen dürfen einladen", planner.ErrNotAllowed)
+		return planner.Invitation{}, fmt.Errorf("%w: nur planende personen dürfen einladen", planner.ErrNotAllowed)
+	}
+
+	// Zeigt die Einladung auf jemanden, der schon im Plan steht, kommt die
+	// Rolle von dieser Person — nicht aus der Anfrage. Sie hat ihre Rolle
+	// bereits, der Plan rechnet damit, und eine Einladung ist kein Ort, an dem
+	// man sie nebenbei ändert.
+	var fuer pgtype.UUID
+	var name string
+	if mitgliedID != "" {
+		kennung, ok := parseUUID(mitgliedID)
+		if !ok {
+			return planner.Invitation{}, fmt.Errorf("%w: %q ist keine person", planner.ErrNotAllowed, mitgliedID)
+		}
+		person, err := p.db.GetInvitableMember(ctx, db.GetInvitableMemberParams{
+			ID:          kennung,
+			HouseholdID: zeile.ID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Fremder Haushalt, betreute Person oder längst angemeldet — für
+			// den Aufrufer ist das dieselbe Auskunft. Wer raten will, wer von
+			// den dreien zutrifft, soll es nicht an der Antwort ablesen können.
+			return planner.Invitation{}, fmt.Errorf("%w: diese person kann nicht eingeladen werden", planner.ErrNotAllowed)
+		}
+		if err != nil {
+			return planner.Invitation{}, err
+		}
+		fuer = person.ID
+		name = person.Name
+		rolle = planner.Role(person.Role)
+	}
+
+	if rolle != planner.RolePlanner && rolle != planner.RoleDoer {
+		// Wer betreut wird, meldet sich nicht an.
+		return planner.Invitation{}, fmt.Errorf("%w: rolle %q kann nicht eingeladen werden", planner.ErrNotAllowed, rolle)
 	}
 
 	// Mit Haushalt gefragt, nicht nur mit der Anmeldung: Dieselbe Person kann
@@ -89,12 +120,12 @@ func (p *Plans) Invite(ctx context.Context, subject, id string, rolle planner.Ro
 		AuthUserID:  &subject,
 	})
 	if err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
 
 	code, err := neuerCode()
 	if err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
 	bis := time.Now().Add(Gueltigkeit)
 	if _, err := p.db.CreateInvitation(ctx, db.CreateInvitationParams{
@@ -103,10 +134,11 @@ func (p *Plans) Invite(ctx context.Context, subject, id string, rolle planner.Ro
 		Role:        string(rolle),
 		CreatedBy:   mitglied.ID,
 		ExpiresAt:   zeitpunkt(bis),
+		MemberID:    fuer,
 	}); err != nil {
-		return "", time.Time{}, err
+		return planner.Invitation{}, err
 	}
-	return code, bis, nil
+	return planner.Invitation{Code: code, Until: bis, For: name, Role: rolle}, nil
 }
 
 // Accept verbindet die angemeldete Person mit dem Haushalt aus der Einladung.
@@ -172,15 +204,36 @@ func (p *Plans) Accept(ctx context.Context, subject, name, code string) (planner
 
 	q := p.db.Queries.WithTx(tx)
 
-	mitglied, err := q.CreateMemberWithRole(ctx, db.CreateMemberWithRoleParams{
-		HouseholdID: zeile.ID,
-		Name:        eindeutigerName(ctx, p, zeile, name),
-		Role:        einladung.Role,
-		// Geraten und änderbar — siehe Arrive. Ausführende bekommen weniger,
-		// weil hinter der Rolle meist ein Kind oder Jugendlicher steckt.
-		CapacityMinutes: kapazitaet(planner.Role(einladung.Role)),
-		AuthUserID:      &subject,
-	})
+	// Zwei Wege, und der Unterschied ist der Grund für diese Migration: Zeigt
+	// die Einladung auf eine Person, die schon im Plan steht, wird sie
+	// übernommen. Sonst kommt jemand Neues dazu.
+	//
+	// Ohne den ersten Weg wurde aus „Asmae" beim Beitritt „Asmae (2)" — mit
+	// halber Kapazität, ohne ihren Verlauf, und die Bilanz zeigte zwei
+	// Menschen, wo einer sitzt.
+	var mitglied db.Member
+	if einladung.MemberID.Valid {
+		mitglied, err = q.ClaimMember(ctx, db.ClaimMemberParams{
+			AuthUserID:  &subject,
+			ID:          einladung.MemberID,
+			HouseholdID: zeile.ID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Jemand war schneller, oder die Person hat inzwischen ein Konto.
+			// Für den Aufrufer ist das eine erschöpfte Einladung.
+			return planner.Household{}, planner.ErrUnknownInvitation
+		}
+	} else {
+		mitglied, err = q.CreateMemberWithRole(ctx, db.CreateMemberWithRoleParams{
+			HouseholdID: zeile.ID,
+			Name:        eindeutigerName(ctx, p, zeile, name),
+			Role:        einladung.Role,
+			// Geraten und änderbar. Ausführende bekommen weniger, weil hinter
+			// der Rolle meist ein Kind oder Jugendlicher steckt.
+			CapacityMinutes: kapazitaet(planner.Role(einladung.Role)),
+			AuthUserID:      &subject,
+		})
+	}
 	if err != nil {
 		return planner.Household{}, err
 	}
@@ -204,11 +257,16 @@ func (p *Plans) Accept(ctx context.Context, subject, name, code string) (planner
 	return p.household(ctx, zeile)
 }
 
+// kapazitaet ist die Vorgabe für jemanden, der über eine Einladung dazukommt
+// und nichts über seine Zeit gesagt hat.
+//
+// Die Zahlen stehen nicht hier, sondern in planner.TimeBudget: Sobald es zwei
+// Stellen mit Minutenwerten gäbe, würden sie auseinanderlaufen.
 func kapazitaet(rolle planner.Role) []int32 {
 	if rolle == planner.RoleDoer {
-		return []int32{30, 30, 30, 30, 30, 90, 90}
+		return minutenFelder(planner.BudgetLow)
 	}
-	return []int32{60, 60, 60, 60, 60, 120, 120}
+	return minutenFelder(planner.BudgetMedium)
 }
 
 // eindeutigerName weicht aus, wenn der Name im Haushalt schon vergeben ist —

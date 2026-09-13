@@ -9,8 +9,8 @@ Zwei Sätze fassen die meisten Einträge zusammen:
 
 > **Grüne Tests sagen, dass der Code tut, was er soll. Ob er das Richtige soll,
 > steht in der Ausgabe.**
-> Alle vier Planer-Fehler unten wurden beim Lesen von `make plan` gefunden,
-> keiner von der Testsuite.
+> Kein einziger Planer-Fehler unten wurde von der Testsuite gefunden — drei
+> beim Lesen von `make plan`, einer beim Lesen des Codes selbst.
 
 > **Das Schema trifft Produktentscheidungen, ob man will oder nicht.**
 > Ein `UNIQUE` an der falschen Spalte hat eine Produktregel behauptet, die nie
@@ -217,8 +217,9 @@ Compiler findet es zuverlässig, deshalb ist es billig — aber nur, wenn man
 
 ## 3. Der Planer
 
-Alle vier Fehler hier wurden beim **Lesen von `make plan`** gefunden. Die Tests
-waren grün.
+Keiner dieser Fehler kam aus der Testsuite. Drei wurden beim **Lesen von
+`make plan`** gefunden, einer beim Lesen des Codes. Die Tests waren die ganze
+Zeit grün.
 
 ### 3.1 Fenster-Vorlagen wurden nur einmal fällig
 
@@ -271,7 +272,39 @@ hingehört.
 **Lehre** — Zwei Achsen (Dauer und Kopflast) sind ein Gewinn fürs Produkt und
 eine ständige Einladung, Äpfel durch Birnen zu teilen.
 
-### 3.4 Demo-Pläne verschieben sich nach `db-reset`
+### 3.4 Ein Erwachsener ohne Geburtsjahr galt als Kind
+
+**Symptom** — Keiner. Gefunden beim Lesen von `IsAdult()`, während das
+Onboarding gebaut wurde. Der Fehler stand zu dem Zeitpunkt bereits in
+Produktion.
+
+**Ursache** — `IsAdult()` lautete `m.Role == RolePlanner || m.Age >= 18`. Wer
+über eine Einladung als **ausführende** Person dazukommt, bekommt aber kein
+Geburtsjahr — wir fragen es nicht ab und erfinden es nicht. Alter 0, also Kind.
+
+**Folgen, beide unsichtbar** — Diese Person bekam keine einzige Aufgabe, die
+Erwachsene voraussetzt. Und sie zählte als Kind des Haushalts, was darüber
+entscheidet, welche Vorlagen überhaupt fällig werden — ein Haushalt „mit Kind"
+hat andere Aufgaben als einer ohne. Betroffen war ausgerechnet der Fall, um den
+sich das halbe Produktkonzept dreht: der planungsunwillige Partner.
+
+**Lösung** — Ein unbekanntes Alter heißt jetzt erwachsen:
+
+```go
+case m.Age <= 0:
+    return true
+```
+
+Die Gegenrichtung kostet weniger, weil Kinder im Onboarding immer ein
+Geburtsjahr bekommen und betreute Personen eines haben müssen. Ein Kind ohne
+Jahr kann nur noch über einen Import ohne Altersangabe entstehen — und dort ist
+die fehlende Angabe der Fehler.
+
+**Lehre** — Ein Nullwert, der „nicht gefragt" bedeutet, wird irgendwo als
+„gemessen null" gelesen. Bei Alter, Preis und Menge ist das keine Frage des Ob,
+sondern des Wann.
+
+### 3.5 Demo-Pläne verschieben sich nach `db-reset`
 
 **Symptom** — Nach `make db-reset` sieht der Beispielplan anders aus als vorher,
 obwohl sich am Code nichts geändert hat.
@@ -337,7 +370,29 @@ Seiteneffekten sind.
 **Lösung** — `const router = useRouter()`, dann `router.push(ziel)` und, wenn
 Server-Komponenten die neue Sitzung sehen sollen, `router.refresh()`.
 
-### 5.2 Offene Weiterleitung in `?weiter=`
+### 5.2 Eine Regel, die das Formular nur anzeigte
+
+**Symptom** — Beim Anlegen des ersten Haushalts:
+`eingabe ergibt keinen haushalt: wer den Haushalt einrichtet, muss darin
+planen`. Im Formular war das Häkchen „plant mit" bei der eigenen Person
+gesetzt — ausgegraut, damit niemand es abwählt.
+
+**Ursache** — Ausgegraut heißt nicht unveränderlich. Der Zustand dahinter
+konnte kippen, sobald man oben die Art umschaltete
+(`plant: art === "erwachsen" && p.plant`). Das Häkchen zeigte die Regel an,
+statt sie durchzusetzen; durchgesetzt wurde sie erst im Server, und dort kam
+sie als Fehlermeldung zurück statt als unmögliche Eingabe.
+
+**Lösung** — Bei der einrichtenden Person steht jetzt kein Schalter mehr,
+sondern ein Satz. Die Rolle wird beim Absenden gesetzt, nicht aus dem Formular
+abgeleitet.
+
+**Lehre** — Eine Regel, die man nur anzeigt, ist keine. Ein deaktiviertes
+Bedienelement ist eine Erklärung, keine Absicherung — und wenn es einen
+Zustand spiegelt, der sich woanders ändern kann, ist es eine falsche
+Erklärung.
+
+### 5.3 Offene Weiterleitung in `?weiter=`
 
 **Symptom** — Kein Fehler, sondern ein Fund beim Durchlesen: Der
 Anmelde-Parameter `?weiter=` hätte auf eine fremde Domain zeigen können.

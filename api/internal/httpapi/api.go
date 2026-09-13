@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
@@ -15,9 +14,9 @@ import (
 // wo es gebraucht wird. Heute erfüllt es der Katalog aus dem Repo, ab T5 die
 // Datenbank. Dieses Paket merkt den Unterschied nicht.
 type Plans interface {
-	// Arrive verbindet eine angemeldete Person mit einer Person im Haushalt
-	// und legt beim ersten Mal beides an.
-	Arrive(ctx context.Context, subject, name string) error
+	// Create legt einen Haushalt samt Mitgliedern an und macht den Aufrufer
+	// darin planend.
+	Create(ctx context.Context, subject string, setup planner.Setup) (planner.Household, error)
 	// Households sind die Haushalte, die dieser Aufrufer sehen darf.
 	// Leeres subject heißt: nicht angemeldet.
 	Households(ctx context.Context, subject string) ([]planner.Household, error)
@@ -29,7 +28,8 @@ type Plans interface {
 	// Mitglied — bei Demo-Haushalten der Normalfall.
 	RoleOf(ctx context.Context, subject, id string) (planner.Role, error)
 	// Invite erzeugt einen einmalig gültigen Code. Nur planende Personen.
-	Invite(ctx context.Context, subject, id string, role planner.Role) (string, time.Time, error)
+	// Leeres memberID heißt: Es kommt jemand dazu, den es noch nicht gibt.
+	Invite(ctx context.Context, subject, id string, role planner.Role, memberID string) (planner.Invitation, error)
 	// Accept verbindet die angemeldete Person mit dem Haushalt aus der
 	// Einladung.
 	Accept(ctx context.Context, subject, name, code string) (planner.Household, error)
@@ -73,27 +73,102 @@ func (a api) ListHaushalte(ctx context.Context, _ openapi.ListHaushalteRequestOb
 	var subject string
 	if id, ok := auth.From(ctx); ok {
 		subject = id.Subject
-		// Hier entsteht beim ersten angemeldeten Zugriff der eigene Haushalt.
-		//
-		// Ein GET, der schreibt — das ist die unschöne Seite. Dafür passiert
-		// es genau dort, wo jemand zum ersten Mal nach seinen Haushalten
-		// fragt, es ist idempotent, und die Alternative wäre ein
-		// Einrichtungsschritt, den man vergessen kann. Mit dem richtigen
-		// Onboarding (T6) fällt es weg.
-		if err := a.plans.Arrive(ctx, id.Subject, id.Name); err != nil {
-			return nil, err
-		}
 	}
 
 	haushalte, err := a.plans.Households(ctx, subject)
 	if err != nil {
 		return nil, err
 	}
+
 	out := openapi.ListHaushalte200JSONResponse{}
 	for _, h := range haushalte {
-		out = append(out, haushaltNachAussen(h))
+		eintrag := haushaltNachAussen(h)
+
+		// Eine Abfrage je Haushalt. Das sieht nach N+1 aus und ist es auch —
+		// nur ist N hier die Zahl der Haushalte eines Menschen plus zwei
+		// Beispiele. Wer das optimiert, bevor jemand fünfzig Haushalte hat,
+		// tauscht Lesbarkeit gegen nichts.
+		if subject != "" {
+			rolle, err := a.plans.RoleOf(ctx, subject, h.ID)
+			if err != nil {
+				return nil, err
+			}
+			if rolle != "" {
+				r := openapi.HaushaltMeineRolle(rolle)
+				eintrag.MeineRolle = &r
+			}
+		}
+		out = append(out, eintrag)
 	}
 	return out, nil
+}
+
+// CreateHaushalt ist das Onboarding.
+//
+// Vorher entstand der Haushalt als Nebenwirkung des ersten GET auf
+// /api/haushalte: idempotent, bequem und trotzdem falsch. Ein Lesezugriff, der
+// schreibt, ist für jeden Zwischenspeicher eine Lüge, und er nimmt dem Nutzer
+// die einzige Gelegenheit, zu sagen, wie sein Haushalt aussieht.
+func (a api) CreateHaushalt(ctx context.Context, r openapi.CreateHaushaltRequestObject) (openapi.CreateHaushaltResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.CreateHaushalt401JSONResponse{
+			Fehler: "dafür musst du angemeldet sein",
+		}, nil
+	}
+	if r.Body == nil {
+		return openapi.CreateHaushalt400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	haushalt, err := a.plans.Create(ctx, id.Subject, setupNachInnen(*r.Body))
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		// Die Meldung ist für Menschen geschrieben und landet im Formular.
+		return openapi.CreateHaushalt400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.CreateHaushalt401JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	eintrag := haushaltNachAussen(haushalt)
+	rolle := openapi.HaushaltMeineRolle(planner.RolePlanner)
+	eintrag.MeineRolle = &rolle
+	return openapi.CreateHaushalt201JSONResponse(eintrag), nil
+}
+
+// setupNachInnen übersetzt die Anfrage in die Fachsprache. Geprüft wird hier
+// nichts: Das tut planner.Setup, und zwar an einer Stelle statt an zweien.
+func setupNachInnen(b openapi.NeuerHaushalt) planner.Setup {
+	s := planner.Setup{
+		Name: b.Name,
+		Context: planner.Context{
+			Home: planner.Home(b.Wohnform),
+		},
+	}
+	if b.Zeitzone != nil {
+		s.Timezone = *b.Zeitzone
+	}
+	if b.Garten != nil {
+		s.Context.HasYard = *b.Garten
+	}
+	if b.Auto != nil {
+		s.Context.HasCar = *b.Auto
+	}
+	if b.Haustiere != nil {
+		s.Context.Pets = *b.Haustiere
+	}
+	for _, m := range b.Mitglieder {
+		person := planner.SetupMember{Name: m.Name, Role: planner.Role(m.Rolle)}
+		if m.Geburtsjahr != nil {
+			person.BirthYear = *m.Geburtsjahr
+		}
+		if m.Zeit != nil {
+			person.Budget = planner.TimeBudget(*m.Zeit)
+		}
+		s.Members = append(s.Members, person)
+	}
+	return s
 }
 
 func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestObject) (openapi.GetWochenplanResponseObject, error) {
@@ -146,7 +221,16 @@ func (a api) CreateEinladung(ctx context.Context, r openapi.CreateEinladungReque
 		return openapi.CreateEinladung403JSONResponse{Fehler: "es fehlt die rolle"}, nil
 	}
 
-	code, bis, err := a.plans.Invite(ctx, id.Subject, r.HaushaltId, planner.Role(r.Body.Rolle))
+	var rolle planner.Role
+	if r.Body.Rolle != nil {
+		rolle = planner.Role(*r.Body.Rolle)
+	}
+	var mitglied string
+	if r.Body.Mitglied != nil {
+		mitglied = *r.Body.Mitglied
+	}
+
+	einladung, err := a.plans.Invite(ctx, id.Subject, r.HaushaltId, rolle, mitglied)
 	switch {
 	case errors.Is(err, planner.ErrUnknownHousehold):
 		return openapi.CreateEinladung404JSONResponse{
@@ -154,17 +238,21 @@ func (a api) CreateEinladung(ctx context.Context, r openapi.CreateEinladungReque
 		}, nil
 	case errors.Is(err, planner.ErrNotAllowed):
 		return openapi.CreateEinladung403JSONResponse{
-			Fehler: "nur planende Personen dürfen einladen",
+			Fehler: "diese Einladung darfst du nicht ausstellen",
 		}, nil
 	case err != nil:
 		return nil, err
 	}
 
-	return openapi.CreateEinladung201JSONResponse{
-		Code:       code,
-		Rolle:      openapi.EinladungRolle(r.Body.Rolle),
-		GueltigBis: bis,
-	}, nil
+	antwort := openapi.CreateEinladung201JSONResponse{
+		Code:       einladung.Code,
+		Rolle:      openapi.EinladungRolle(einladung.Role),
+		GueltigBis: einladung.Until,
+	}
+	if einladung.For != "" {
+		antwort.Fuer = &einladung.For
+	}
+	return antwort, nil
 }
 
 // AcceptEinladung verbindet die angemeldete Person mit dem Haushalt.
@@ -271,10 +359,12 @@ func planNachAussen(h planner.Household, r planner.Result, rolle planner.Role, m
 func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 	out := openapi.Haushalt{Id: h.ID, Name: h.Name, Mitglieder: []openapi.Mitglied{}}
 	for _, m := range h.Members {
+		zugang := m.HasAccess
 		out.Mitglieder = append(out.Mitglieder, openapi.Mitglied{
-			Id:    m.ID,
-			Name:  m.Name,
-			Rolle: openapi.MitgliedRolle(m.Role),
+			Id:        m.ID,
+			Name:      m.Name,
+			Rolle:     openapi.MitgliedRolle(m.Role),
+			HatZugang: &zugang,
 		})
 	}
 	return out
