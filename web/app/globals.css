@@ -158,6 +158,19 @@ input[type="date"] {
   appearance: none;
   -webkit-appearance: none;
   min-width: 0;
+
+  /*
+   * Und der Wert sitzt oben statt mittig: Ein Textfeld zentriert seinen
+   * Inhalt senkrecht von selbst, ein Datumsfeld auf iOS nicht. Bei 44 Pixel
+   * Höhe fällt das auf.
+   *
+   * `display: flex` wäre der übliche Trick und verliert hier gegen die
+   * `block`-Utility — eine Klasse sticht einen Elementselektor. Der
+   * senkrechte Innenabstand gewinnt dagegen kampflos, weil daneben nur
+   * `px-3` steht: 10 Pixel oben und unten plus 24 Pixel Zeilenhöhe ergeben
+   * genau die 44, die überall sonst gelten.
+   */
+  padding-block: 0.625rem;
 }
 
 input[type="date"]::-webkit-date-and-time-value {
