@@ -103,6 +103,49 @@ uns mehrmals Zeit gekostet.
 
 ## 2. Go, Build und Erzeugung
 
+### 2.0 Der laufende Dienst war dreimal der Fehler
+
+**Symptom** — `405 Method Not Allowed` auf einen neuen Endpunkt, `404` auf eine
+neue Route, eine 500 auf eine neue Tabelle.
+
+**Ursache** — Jedes Mal lief der Go-Dienst noch mit dem Stand von vor
+`make generate` beziehungsweise `make migrate-up`.
+
+**Lehre** — Ein 405 heißt „den Pfad gibt es, die Methode nicht" und ist damit
+fast immer ein alter Prozess. Beim dritten Mal war es Zeit für eine Regel:
+**Nach jedem Erzeugen neu starten.**
+
+### 2.1 `make generate` erzeugte nur die Hälfte
+
+**Symptom** — `p.db.DeleteSignal undefined` — eine Abfrage, die in der
+SQL-Datei stand und im Go-Code fehlte.
+
+**Ursache** — `make generate` erzeugte nur die Vertragstypen; die
+Datenbankabfragen waren ein zweites Ziel (`make sqlc`), an das man denken
+musste.
+
+**Lösung** — `generate: sqlc` als Abhängigkeit, und `verify-generate` prüft
+jetzt auch `internal/storage/db` auf Drift. Vorher wäre ein vergessener
+sqlc-Lauf unbemerkt durch die CI gegangen.
+
+**Lehre** — Wieder dieselbe: Eine Regel, an die man sich erinnern muss, ist
+keine Regel.
+
+### 2.2 gofmt richtet Feldblöcke aus — dreimal gestolpert
+
+**Symptom** — `make check` rot, ohne Compilerfehler, dreimal an einem Tag an
+derselben Art Stelle.
+
+**Ursache** — gofmt richtet zusammenhängende Feldblöcke aneinander aus, in
+Struktur-Definitionen wie in Literalen. Ein neues Feld, dessen Name länger ist
+als alle bisherigen, verschiebt den ganzen Block. Ein Kommentar mittendrin
+beginnt einen neuen Block, eine Leerzeile ebenfalls.
+
+**Lösung** — Neue Felder ans Ende, durch eine Leerzeile abgetrennt. Dann bilden
+sie ihre eigene Gruppe und stören die bestehende nicht.
+
+
+
 ### 2.1 Go-Version im Docker-Build
 
 **Symptom** —
@@ -304,7 +347,129 @@ die fehlende Angabe der Fehler.
 „gemessen null" gelesen. Bei Alter, Preis und Menge ist das keine Frage des Ob,
 sondern des Wann.
 
-### 3.5 Demo-Pläne verschieben sich nach `db-reset`
+### 3.5 Der Montag trug die halbe Woche
+
+**Symptom** — Vier Organisationsaufgaben, alle am selben Tag: Vorsorgetermin,
+Inspektion, Elternbeitrag, Post. Kopflast 3+2+2+3 an einem Montag, der Rest der
+Woche zusammen etwa genauso viel.
+
+**Ursache** — Die Startdichte begrenzt Organisationsaufgaben **je Woche** und
+sagt nichts darüber, wie sie liegen. Organisationsaufgaben haben die höchste
+Dringlichkeit, bekommen also den frühesten Tag — und der früheste Tag ist für
+alle derselbe.
+
+**Lösung** — `MaxHeadLoadPerDay` (Vorgabe 4). Erst der Versuch mit Grenze, dann
+derselbe Durchgang ohne: Die Grenze ist eine Vorliebe, keine Bedingung, sonst
+fällt eine Aufgabe ganz weg, statt einen vollen Tag zu bekommen.
+
+**Nebeneffekt, der nicht geplant war** — `keine_kapazitaet` schrumpfte von drei
+Aufgaben auf eine. Wer die Kopfarbeit verteilt, macht auch Platz für die
+kleinen Sachen.
+
+### 3.6 Die harte Frist als Freifahrtschein
+
+**Symptom** — Nach der Kopflastgrenze blieb der Montag trotzdem voll.
+
+**Ursache** — Ich hatte Aufgaben mit harter Frist von der Grenze *ausgenommen*.
+Und genau diese Gruppe ist in der Bibliothek als „hart" markiert: Vorsorge,
+Elternbeitrag, Post. Die Regel griff also überall außer dort, wofür es sie gab.
+
+**Lösung** — Die Ausnahme wurde zum **Rückfall**: Erst suchen alle einen ruhigen
+Tag, und nur wer keinen findet, nimmt einen vollen. Der Sonderfall „hart"
+verschwand ersatzlos.
+
+**Lehre** — Eine Ausnahme für die Wichtigsten ist fast immer falsch herum. Was
+wichtig ist, braucht die Regel am dringendsten.
+
+### 3.7 Eine Tagesgrenze im Durchgang, der keine Tage kennt
+
+**Symptom** — Ein Test wurde rot: Der Ausgleich fand die faire Verteilung nicht
+mehr (165 zu 55 statt 110 zu 110).
+
+**Ursache** — Ich hatte die Kopflastgrenze auch in `feasible` geprüft, also im
+Ausgleich. Der Ausgleich tauscht aber nur Zuständige und lässt den Tag stehen.
+Eine Tagesgrenze in einem Durchgang zu prüfen, der den Tag nicht ändern kann,
+nimmt Möglichkeiten weg, ohne je eine bessere zu finden.
+
+**Lösung** — Die Grenze bleibt in der Zuteilung, die den Tag wählen kann, und
+fällt im Ausgleich weg. Zwischen „eine Person trägt das Dreifache" und „ein
+voller Montag" ist die Antwort nicht offen: Fairness ist das Versprechen, der
+ruhige Montag ist die Kür.
+
+**Lehre** — Dieselbe Familie wie 3.2, nur andersherum: Der Ausgleich ist die
+Stelle, an der Regeln auseinanderfallen, weil er weniger weiß als die
+Zuteilung.
+
+### 3.8 Zwei Bäder als doppelte Dauer
+
+**Symptom** — `Mia  Bad putzen  70 min`. Die Dreizehnjährige bekam die größte
+Einzelaufgabe der Woche.
+
+**Ursache** — Ich hatte die Bäderzahl als Faktor auf die Dauer gelegt. Das sah
+aus wie Mathematik und war eine Behauptung darüber, wie Menschen putzen.
+
+**Lösung** — Bäder sind eine **Anzahl**, kein Ausmaß: Zwei Bäder ergeben zwei
+Aufgaben zu 35 Minuten, verteilbar auf zwei Tage und zwei Personen. Zimmer und
+Personen bleiben ein Ausmaß — fünf Zimmer staubsaugen ist *eine* längere
+Aufgabe.
+
+**Dazu** — `MaxMinutesForChild` (45 Minuten): Das Alter in den Vorlagen sagt, ob
+ein Kind eine Aufgabe *kann*, nicht wie groß ein einzelner Block sein darf.
+
+**Lehre** — Wenn eine Zahl in der Ausgabe unangenehm aussieht, ist meistens
+nicht die Rechnung falsch, sondern das Modell dahinter.
+
+### 3.9 Ein Kinderzimmer wurde größer, wenn die Wohnung mehr Zimmer hat
+
+**Symptom** — `Eigenes Zimmer aufräumen 42 min` in einer Fünfzimmerwohnung.
+
+**Ursache** — Ich hatte `t-zimmer` in die Zimmer-Skalierung genommen. Es ist
+die eine Vorlage, die sich auf *ein* Zimmer bezieht.
+
+**Lehre** — Beim Kuratieren nach dem Titel zu greifen ist der kürzeste Weg zum
+Fehler. „Zimmer" im Namen heißt nicht „skaliert mit Zimmern".
+
+### 3.10 Eine Frage, die nichts bewirkte
+
+**Symptom** — Keins. Gefunden durch die Frage: *Was bringt der Schalter
+„Wohnung oder Haus" dem Nutzer?*
+
+**Ursache** — Nichts. Keine einzige Vorlage wertete die Wohnform aus — die
+letzte Bedingung daran hatte ich eine Stunde zuvor entfernt, weil sie falsch
+herum war. Die Frage stand trotzdem als Pflichtschritt im Onboarding, als
+Schalter in den Einstellungen und als Spalte in der Datenbank.
+
+**Erschwerend** — Die Regel dagegen war längst aufgeschrieben und sogar
+mechanisch durchgesetzt: Der Fakten-Loader weist eine Frage zurück, die nicht
+sagt, was die Antwort bringt. Sie galt nur für die Fakten, nicht für das
+Onboarding.
+
+**Lösung** — Frage gestrichen. An ihre Stelle traten Zimmer und Bäder, die
+Zahlen verändern statt Aufgaben ein- und auszublenden. Und ein Test hält die
+Bibliothek jetzt gegen sich selbst: jedes Faktum wird gebraucht, jede
+Voraussetzung ist fragbar, jede Anlassart eintragbar.
+
+**Lehre** — Eine Regel, die nur für einen Teil des Systems mechanisch gilt,
+wird im Rest verletzt. Der Test dafür war der erste im Projekt, der eine
+Produktregel prüft statt Code.
+
+### 3.11 Krippe vergessen
+
+**Symptom** — Eine Zweijährige, die in die Kita geht, galt der App als
+unbetreut. Damit fielen Kita-Tasche, Wechselkleidung und Elternbeitrag weg.
+
+**Ursache** — Meine Faustregel lautete „Kindergarten ab drei". In Deutschland
+gilt der Rechtsanspruch auf Betreuung ab dem vollendeten ersten Lebensjahr,
+und Krippe ab eins ist der Normalfall.
+
+**Lösung** — Kita ab 1, Schule ab 6. Und, wichtiger: Die Betreuungsform steht
+jetzt in den Einstellungen. Eine bessere Faustregel liegt beim nächsten Kind
+wieder daneben.
+
+**Lehre** — **Ein Rateschluss, den man nicht korrigieren kann, ist eine
+Behauptung.** Raten ist in Ordnung, solange man widersprechen kann.
+
+### 3.12 Demo-Pläne verschieben sich nach `db-reset`
 
 **Symptom** — Nach `make db-reset` sieht der Beispielplan anders aus als vorher,
 obwohl sich am Code nichts geändert hat.

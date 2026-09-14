@@ -1,6 +1,6 @@
 # 0007 — Das Onboarding fragt drei Dinge und rät den Rest
 
-**Status:** angenommen · 13. September 2026
+**Status:** angenommen · 13. September 2026 · Nachtrag 14. September
 
 ## Kontext
 
@@ -95,3 +95,28 @@ reduziert.
 
 Und wenn die Betreuungsform sich als der häufigste Korrekturgrund erweist, ist
 sie doch eine Frage wert — dann aber in Schritt 2, nicht als vierter Schritt.
+
+
+## Nachtrag, 14. September 2026
+
+Zwei Dinge sind eingetreten, die oben unter „Negativ" standen.
+
+**Die geratene Betreuungsform lag daneben** — und zwar bei einer Zweijährigen,
+die längst in die Kita geht. Die Regel lautete „Kindergarten ab drei" und
+übersah damit die Krippe: In Deutschland gilt der Rechtsanspruch auf Betreuung
+ab dem vollendeten ersten Lebensjahr. Jetzt Kita ab 1, Schule ab 6.
+
+**Wichtiger als die bessere Faustregel ist, dass sie korrigierbar wurde.** Eine
+neue Regel liegt beim nächsten Kind wieder daneben — bei dem, das mit fünf noch
+zu Hause ist, oder dem, das mit sechs noch nicht eingeschult wurde. Raten ist
+in Ordnung, solange man widersprechen kann. **Ein Rateschluss, den man nicht
+korrigieren kann, ist eine Behauptung** — dieselbe Regel wie in ADR-0010, nur
+eine Ebene tiefer. Die Betreuungsform steht jetzt in den Einstellungen, und ein
+ausdrücklich gesetzter Wert gewinnt gegen den geratenen, auch wenn in derselben
+Anfrage ein neues Geburtsjahr steht.
+
+**Und die Wohnform ist aus dem Onboarding verschwunden.** Sie wurde abgefragt
+und von keiner einzigen Vorlage ausgewertet. An ihre Stelle treten Zimmer und
+Bäder — Fragen, die Zahlen verändern statt Aufgaben ein- und auszublenden
+(ADR-0011). Damit besteht das Onboarding weiter aus drei Schritten, und der
+erste fragt jetzt etwas, das wirkt.

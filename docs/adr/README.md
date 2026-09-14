@@ -17,6 +17,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0008](0008-woche-festschreiben.md) | Die Woche wird beim ersten Ansehen festgeschrieben | angenommen |
 | [0009](0009-gestaltung-muss-unterscheiden.md) | Ein Token-System, und Gestaltung, die unterscheidet | angenommen |
 | [0010](0010-unbekannt-ist-nicht-nein.md) | Unbekannt ist nicht nein | angenommen |
+| [0011](0011-massstab-statt-filter.md) | Maßstab statt Filter | angenommen |
 
 ## Aufbau eines Eintrags
 

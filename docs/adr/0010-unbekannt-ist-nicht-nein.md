@@ -1,6 +1,6 @@
 # 0010 — Unbekannt ist nicht nein
 
-**Status:** angenommen · 13. September 2026
+**Status:** angenommen · 13. September 2026 · Nachtrag 14. September
 
 ## Kontext
 
@@ -106,3 +106,27 @@ sie sichtbar abwesend, und das ist besser als sichtbar falsch.
 Wenn sich zeigt, dass die Fragen liegen bleiben, ist nicht die Zahl zu klein,
 sondern der Nutzen zu schwach formuliert — dann gehört an den Texten gearbeitet
 und nicht am Mechanismus.
+
+
+## Nachtrag, 14. September 2026
+
+**Die Anlässe gibt es jetzt.** Unter „Wann wir das revidieren" stand, dass die
+Vorlagen mit `benoetigt_termin` zurückkehren, sobald es Termine gibt — das ist
+am selben Tag passiert. `occasion` hält Geburtstage, Elternabende und Termine;
+Geburtstage wiederholen sich jährlich, und die Wiederholung hängt an der Art
+statt an einem eigenen Schalter, weil die App die Antwort schon kennt.
+
+„Geschenk für Kindergeburtstag besorgen" entsteht damit sieben Tage vor einem
+eingetragenen Geburtstag, mit dem Geburtstag als Frist — ein Geschenk nach dem
+Geburtstag ist kein Geschenk. Ohne eingetragenen Anlass entsteht nichts, und
+genau das war der Punkt.
+
+**Dazu eine zweite Lehre aus derselben Ecke:** Eine Frage, die nichts bewirkt,
+ist derselbe Fehler wie eine Behauptung ohne Grundlage — nur andersherum. Der
+Fakten-Loader wies von Anfang an eine Frage ohne erkennbaren Nutzen zurück, für
+das Onboarding galt die Regel nicht, und die Wohnform war der Beweis. Sie wird
+jetzt **mechanisch geprüft**: Ein Test in `internal/library` hält die Bibliothek
+gegen sich selbst — jedes Faktum wird von mindestens einer Vorlage gebraucht,
+jede Voraussetzung hat eine Frage, jede Anlassart lässt sich eintragen. Es ist
+der erste Test im Projekt, der eine Produktregel prüft statt Code, und damit die
+einzige Sorte, die die Fehler dieses Tages gefangen hätte.
