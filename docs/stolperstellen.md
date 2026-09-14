@@ -803,6 +803,43 @@ leuchtet.
 „Das gehört woanders hin" ist ein Argument gegen den Ort einer Rechnung, nie
 eines dafür, das Ergebnis wegzulassen.
 
+### 5.10 Drei Befunde, die erst auf dem Telefon sichtbar wurden
+
+**Symptom** — Auf dem iPhone: Die Wochenpfeile waren schwer zu treffen, beim
+Wechsel zwischen den Bereichen passierte ein bis zwei Sekunden lang nichts,
+und das Datumsfeld lief aus der Karte und saß oben statt mittig.
+
+**Ursachen**, drei verschiedene:
+
+*Die Pfeile* hatte ich mit `size-9` gebaut — 36 Pixel. Die Regel im Projekt
+sind 44, und ich habe sie gebrochen, weil es am Rechner kompakter aussah. Am
+Rechner trifft eine Maus auch 20 Pixel.
+
+*Die Ladeanzeige* fehlte ganz. Die Seiten sind Server Components: Beim
+Antippen holt der Next.js-Server den Inhalt, und über Mobilfunk dauert das.
+Dazu kam ein zweiter, feinerer Fehler — `router.refresh()` wurde nirgends
+abgewartet, also stand der Knopf nach einer Aktion wieder bereit, während die
+neuen Daten noch unterwegs waren.
+
+*Das Datumsfeld* bekommt von Safari eine eigene, vom Inhalt abgeleitete Breite
+(`w-full` wird ignoriert) und setzt seinen Wert nach oben statt mittig, weil
+ein Datumsfeld anders als ein Textfeld nicht senkrecht zentriert.
+
+**Lösung** — 44 Pixel; `useLinkStatus` für einen Kreisel *im angetippten
+Chip* statt eines Balkens am Seitenrand, dazu `useTransition` um jedes
+`router.refresh()`; `appearance: none` und `padding-block` für das
+Datumsfeld.
+
+**Lehre** — **Eine App für das Telefon wird auf dem Telefon geprüft, nicht im
+schmalen Browserfenster.** Zielgrößen, Wartezeiten und die Eigenheiten
+nativer Eingabefelder sind genau die drei Dinge, die am Schreibtisch
+unsichtbar bleiben — und alle drei entscheiden darüber, ob jemand die App ein
+zweites Mal öffnet.
+
+Und als Fortsetzung von 5.6: Erst spiegelte die Oberfläche Serverwissen, dann
+behauptete sie, fertig zu sein, bevor der Server es war. **Beide Male log der
+Bildschirm über den Zustand.**
+
 ## 6. Betrieb
 
 ### 6.1 Fly verlangt eine Kreditkarte
