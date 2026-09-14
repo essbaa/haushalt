@@ -29,6 +29,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.version=${VERSION}" \
     -o /out/server ./cmd/server
 
+# Die Migrationen laufen als eigener Befehl, den Fly vor dem Umschalten
+# aufruft (siehe fly.toml, [deploy].release_command). Eigene Binärdatei, weil
+# das Zielimage keine Shell hat.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /out/migrate ./cmd/migrate
+
 # distroless: kein Paketmanager, keine Shell, kein root.
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /
@@ -38,6 +46,11 @@ COPY --from=build /out/server /server
 # müssen mit ins Image. WORKDIR ist /, deshalb findet der Dienst sie unter dem
 # Vorgabepfad "library" ohne weitere Konfiguration.
 COPY --from=build /src/library /library
+
+# Die Migrationen sind ebenfalls Daten. Sie gehören in dasselbe Image wie der
+# Dienst, der sie braucht — sonst können Schema und Code auseinanderlaufen.
+COPY --from=build /out/migrate /migrate
+COPY --from=build /src/db/migrations /migrations
 
 # Nur Dokumentation — Fly nutzt die PORT-Variable, nicht diese Zeile.
 EXPOSE 8080

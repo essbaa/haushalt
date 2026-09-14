@@ -8,6 +8,12 @@ primary_region = 'fra'
 
 [build]
 
+# Läuft vor jedem Umschalten auf eine neue Version, in einer eigenen Maschine
+# mit denselben Secrets. Scheitert die Migration, geht die neue Version nicht
+# live — statt eines neuen Dienstes vor einem alten Schema.
+[deploy]
+  release_command = "/migrate"
+
 [env]
   PORT = '8080'
   APP_ENV = 'production'

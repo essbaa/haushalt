@@ -19,6 +19,10 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "Haushalt",
+  // Das Symbol für iOS liegt in public/. Android und der Browser holen sich
+  // ihres aus dem Manifest (app/manifest.ts) beziehungsweise aus app/icon.svg.
+  appleWebApp: { title: "Haushalt", capable: true, statusBarStyle: "default" },
+  icons: { apple: "/apple-icon.png" },
   description:
     "Wochenplanung für berufstätige Eltern — die App verteilt nicht nur Zeit, sondern auch Kopflast.",
 };
