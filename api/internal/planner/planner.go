@@ -98,6 +98,23 @@ type Limits struct {
 	// wenig. Harte Fristen sind ausgenommen.
 	MaxHeadLoadPerDay int
 
+	// MaxOvershootPermille sagt, ab wann der Ausgleich die Rotation brechen
+	// darf: wenn jemand um mehr als diesen Anteil seiner eigenen Kapazität
+	// über seinem gerechten Anteil liegt.
+	//
+	// Die Rotation über die Wochen war im Ausgleich ein Veto, im assign nur
+	// eine Vorliebe — und das Veto stand in dem Durchgang, der ausgleichen
+	// soll. Bezahlt hat es die Person mit der kleinsten Kapazität: In Familie
+	// B lag Mia (13) bei 79 Prozent ihrer Zeit und ihr Vater bei 67, weil ein
+	// Tausch daran scheiterte, dass er dieselbe Aufgabe letzte Woche hatte.
+	//
+	// 25 Promille heißt: etwa eine kleine Aufgabe zu viel. Darunter lohnt die
+	// Wiederholung nicht; darüber ist die Woche spürbar schief.
+	//
+	// Null schaltet den zweiten Durchgang ab — dann bleibt die Rotation
+	// unantastbar, wie vorher.
+	MaxOvershootPermille int
+
 	// HeadLoadMinutes ist der Preis eines Kopflast-Punktes in Minuten für die
 	// Lastrechnung. Der Kern der Zwei-Achsen-Idee: Wer Termine koordiniert,
 	// verbringt wenig Zeit und trägt viel. Ein Planer, der nur Minuten zählt,
@@ -113,6 +130,7 @@ func DefaultLimits() Limits {
 		MaxTasksPerMemberDay: 4,
 		MaxHeadLoadPerDay:    4,
 		MaxMinutesForChild:   45,
+		MaxOvershootPermille: 25,
 		HeadLoadMinutes:      15,
 	}
 }

@@ -497,6 +497,11 @@ func TestZweiterDurchgangGleichtAus(t *testing.T) {
 // die wichtigere Regel nicht überfährt. Anna hatte das Bad zuletzt; auch wenn
 // ein Tausch die Last gleichmäßiger machen würde, darf es nicht zu ihr
 // zurückwandern.
+// TestAusgleichRespektiertRotation hält die Regel fest, solange die Woche
+// nicht aus dem Ruder läuft: Eine Aufgabe geht nicht an die Person zurück, die
+// sie zuletzt hatte — jedenfalls nicht, solange niemand deutlich mehr trägt,
+// als ihm zusteht. Wo das nicht mehr gilt, steht in
+// TestAusgleichBrichtRotationWennDieWocheSonstSchiefBleibt.
 func TestAusgleichRespektiertRotation(t *testing.T) {
 	klein := TaskTemplate{
 		ID: "t-klein", Title: "Küche wischen",
@@ -869,4 +874,90 @@ func TestValidateMeldetDoppelteIDs(t *testing.T) {
 	if _, err := Plan(in); err == nil {
 		t.Fatal("doppelte Vorlagen-ID sollte einen Fehler ergeben")
 	}
+}
+
+// TestAusgleichBrichtRotationWennDieWocheSonstSchiefBleibt ist die
+// Regressionsprüfung zu einem Befund, der nicht aus der Testsuite kam, sondern
+// aus `make plan`: In Familie B lag die dreizehnjährige Mia bei 79 Prozent
+// ihrer verfügbaren Zeit und ihr Vater bei 67. Der Tausch, der das behoben
+// hätte, war erlaubt, sinnvoll und um ein Viertel besser — er scheiterte
+// daran, dass der Vater dieselbe Aufgabe in der Vorwoche hatte.
+//
+// Der Aufbau bildet das nach: Die große Aufgabe landet beim Teenager, weil die
+// Rotation beide Erwachsenen aus dem Weg räumt, und der einzige Tausch, der
+// sie wieder heraussortiert, ist genau der verbotene.
+//
+// Geprüft wird beides — dass der zweite Durchgang die Rotation bricht, und
+// dass er ohne MaxOvershootPermille schweigt.
+func TestAusgleichBrichtRotationWennDieWocheSonstSchiefBleibt(t *testing.T) {
+	erwachsenensache := TaskTemplate{
+		ID: "t-a-erw", Title: "Keller aufräumen",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 70, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		Distribution: DistAdultsOnly,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+	klein := TaskTemplate{
+		ID: "t-b-klein", Title: "Müll rausbringen",
+		Category: CatKitchen, Kind: KindDo,
+		DurationMin: 20, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+	gross := TaskTemplate{
+		ID: "t-z-gross", Title: "Böden wischen",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 45, HeadLoad: HeadLoadNone,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		MinAge:       12,
+		Distribution: DistRotate,
+		Failure:      FailureSoft,
+		Source:       SourceCurated,
+	}
+
+	eingabe := func() Input {
+		in := basisEingabe(haushaltMitTeenager(), erwachsenensache, klein, gross)
+		in.History = History{LastAssignee: map[string]string{"t-z-gross": "m-eltern-2"}}
+		return in
+	}
+
+	streng := eingabe()
+	streng.Limits.MaxOvershootPermille = 0
+	ohneZweitenDurchgang, err := Plan(streng)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wer := zustaendigFuer(ohneZweitenDurchgang.Tasks, "t-z-gross"); wer != "m-teen" {
+		t.Fatalf("der Aufbau stimmt nicht mehr: die große Aufgabe liegt bei %q statt beim Teenager", wer)
+	}
+
+	got, err := Plan(eingabe())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wer := zustaendigFuer(got.Tasks, "t-z-gross"); wer == "m-teen" {
+		t.Errorf("der Teenager wischt die Böden, weil ein Erwachsener sie letzte Woche gewischt hat — die Rotation darf das nicht erzwingen")
+	}
+	for _, l := range got.Balance {
+		if l.MemberID != "m-teen" {
+			continue
+		}
+		if l.Weighted > 30 {
+			t.Errorf("der Teenager trägt %d gewichtete Minuten bei %d Minuten Kapazität", l.Weighted, l.Capacity)
+		}
+	}
+}
+
+func zustaendigFuer(tasks []PlannedTask, templateID string) string {
+	for _, t := range tasks {
+		if t.TemplateID == templateID {
+			return t.AssigneeID
+		}
+	}
+	return ""
 }

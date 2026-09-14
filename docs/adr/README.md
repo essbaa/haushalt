@@ -9,7 +9,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 |---|---|---|
 | [0001](0001-go-neben-nextjs.md) | Go-Dienst neben Next.js statt Next.js allein | angenommen |
 | [0002](0002-zeitzonen-und-datumsgrenzen.md) | UTC im Kern, `Europe/Berlin` an der Grenze | angenommen |
-| [0003](0003-ausgleich-als-zweiter-durchgang.md) | Ausgleich als zweiter Durchgang, Abstand vor Kopflast | Kriterium abgelöst durch 0004 |
+| [0003](0003-ausgleich-als-zweiter-durchgang.md) | Ausgleich als zweiter Durchgang, Abstand vor Kopflast | Kriterium abgelöst durch 0004, Rotationsregel durch 0012 |
 | [0004](0004-fairness-nach-kapazitaet.md) | Fairness nach Kapazität, Kopflast als eigener Posten | angenommen |
 | [0005](0005-aufgaben-die-einer-person-gehoeren.md) | Aufgaben, die einer Person selbst gehören | angenommen |
 | [0006](0006-anmeldung-better-auth.md) | Anmeldung mit Better Auth in der Web-App, Go verifiziert | angenommen |
@@ -18,6 +18,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0009](0009-gestaltung-muss-unterscheiden.md) | Ein Token-System, und Gestaltung, die unterscheidet | angenommen |
 | [0010](0010-unbekannt-ist-nicht-nein.md) | Unbekannt ist nicht nein | angenommen |
 | [0011](0011-massstab-statt-filter.md) | Maßstab statt Filter | angenommen |
+| [0012](0012-rotation-ist-eine-vorliebe.md) | Rotation ist eine Vorliebe, keine Bedingung | angenommen |
 
 ## Aufbau eines Eintrags
 

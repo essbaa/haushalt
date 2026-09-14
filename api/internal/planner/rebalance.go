@@ -20,12 +20,43 @@ package planner
 // Die Tage bleiben, wie der erste Durchgang sie gesetzt hat. Getauscht werden
 // nur die Personen.
 //
+// Zwei Durchgänge, und der Unterschied ist die Rotation über die Wochen.
+//
+// Sie war hier lange ein Veto: Eine Aufgabe durfte nie zu der Person zurück,
+// die sie zuletzt hatte, egal wie schief die Woche dadurch blieb. Im assign
+// ist dieselbe Regel nur eine Vorliebe — rankMembers sortiert die Person von
+// letzter Woche nach hinten und nimmt sie trotzdem, wenn sonst niemand kann.
+// Dieselbe Regel in zwei Stärken, und die härtere stand ausgerechnet in dem
+// Durchgang, der ausgleichen soll.
+//
+// Bezahlt hat das die Person mit der kleinsten Kapazität. Gemessen an Familie
+// B: Die dreizehnjährige Mia lag bei 79 Prozent ihrer verfügbaren Zeit, ihr
+// Vater bei 67 — weil der Tausch "Böden wischen gegen Wäsche zusammenlegen"
+// die Kennzahl um ein Viertel verbessert hätte und daran scheiterte, dass
+// Tarek die Böden letzte Woche gewischt hatte. Mia wischte die Böden, weil
+// ihr Vater sie zuletzt gewischt hatte.
+//
+// Also wie überall sonst im Planer: erst alle Tausche mit Rotation, dann,
+// wenn immer noch jemand deutlich über seinem Anteil liegt, auch die ohne.
+// Eine Vorliebe, keine Bedingung — dasselbe Muster wie earliestFreeDay und
+// nichtZuLangFuerKinder.
+//
 // Siehe docs/adr/0003-ausgleich-als-zweiter-durchgang.md und
 // docs/adr/0004-fairness-nach-kapazitaet.md.
 func rebalance(in Input, tasks []PlannedTask) []PlannedTask {
 	if len(tasks) < 2 {
 		return tasks
 	}
+	tasks = ausgleichen(in, tasks, true)
+	if in.Limits.MaxOvershootPermille > 0 {
+		tasks = ausgleichen(in, tasks, false)
+	}
+	return tasks
+}
+
+// ausgleichen ist ein Durchgang über den Plan. strengeRotation sagt, ob die
+// Rotation über die Wochen dabei unantastbar ist.
+func ausgleichen(in Input, tasks []PlannedTask, strengeRotation bool) []PlannedTask {
 
 	templates := make(map[string]TaskTemplate, len(in.Templates))
 	for _, t := range in.Templates {
@@ -41,10 +72,18 @@ func rebalance(in Input, tasks []PlannedTask) []PlannedTask {
 	const maxPasses = 8
 
 	for pass := 0; pass < maxPasses; pass++ {
+		// Der zweite Durchgang bricht die Rotation nur, solange es etwas
+		// bringt: Sobald niemand mehr deutlich über seinem Anteil liegt,
+		// hört er auf. Ohne diese Schranke würde er eine Wiederholung auch
+		// für eine Verbesserung im Promillebereich in Kauf nehmen — und aus
+		// "Rotation vor Ausgleich" wäre unbemerkt das Gegenteil geworden.
+		if !strengeRotation && ueberschussPromille(in, tasks) <= in.Limits.MaxOvershootPermille {
+			break
+		}
 		improved := false
 		for i := range tasks {
 			for j := i + 1; j < len(tasks); j++ {
-				if !swapAllowed(in, templates, tasks, i, j) {
+				if !swapAllowed(in, templates, tasks, i, j, strengeRotation) {
 					continue
 				}
 				trial := swapAssignees(tasks, i, j)
@@ -82,7 +121,7 @@ func swapAssignees(tasks []PlannedTask, i, j int) []PlannedTask {
 }
 
 // swapAllowed prüft die Regeln, die der Ausgleich nicht verletzen darf.
-func swapAllowed(in Input, templates map[string]TaskTemplate, tasks []PlannedTask, i, j int) bool {
+func swapAllowed(in Input, templates map[string]TaskTemplate, tasks []PlannedTask, i, j int, strengeRotation bool) bool {
 	a, b := tasks[i], tasks[j]
 
 	if a.AssigneeID == b.AssigneeID {
@@ -111,12 +150,15 @@ func swapAllowed(in Input, templates map[string]TaskTemplate, tasks []PlannedTas
 		return false
 	}
 
-	// Rotation über die Wochen: nie zurück an die Person, die zuletzt dran war.
-	if in.History.lastAssignee(ta.ID) == b.AssigneeID {
-		return false
-	}
-	if in.History.lastAssignee(tb.ID) == a.AssigneeID {
-		return false
+	// Rotation über die Wochen: nicht zurück an die Person, die zuletzt dran
+	// war — außer im zweiten Durchgang, wenn die Woche sonst schief bleibt.
+	if strengeRotation {
+		if in.History.lastAssignee(ta.ID) == b.AssigneeID {
+			return false
+		}
+		if in.History.lastAssignee(tb.ID) == a.AssigneeID {
+			return false
+		}
 	}
 
 	// Rotation innerhalb der Woche: Niemand bekommt durch den Ausgleich einen
@@ -251,4 +293,44 @@ func imbalanceOf(in Input, tasks []PlannedTask) int64 {
 		score += dw*dw + dh*dh
 	}
 	return score
+}
+
+// ueberschussPromille sagt, wie weit die am stärksten belastete Person über
+// ihrem gerechten Anteil liegt — in Promille ihrer eigenen Kapazität.
+//
+// Gerechnet wird auf der gewichteten Last, weil danach verteilt wird. Der
+// Maßstab ist die eigene Kapazität und nicht der Haushalt: 20 gewichtete
+// Minuten zu viel sind für eine Dreizehnjährige etwas anderes als für ihren
+// Vater, und genau dieser Unterschied ist der Grund für den zweiten
+// Durchgang.
+//
+// Null, wenn niemand über seinem Anteil liegt — was bei ganzen Aufgaben nur
+// vorkommt, wenn alle exakt darauf sitzen.
+func ueberschussPromille(in Input, tasks []PlannedTask) int {
+	loads := balance(in, tasks)
+	if len(loads) < 2 {
+		return 0
+	}
+
+	var totalCapacity, totalWeighted int64
+	for _, l := range loads {
+		totalCapacity += int64(l.Capacity)
+		totalWeighted += int64(l.Weighted)
+	}
+	if totalCapacity == 0 {
+		return 0
+	}
+	ziel := totalWeighted * 1000 / totalCapacity
+
+	groesster := 0
+	for _, l := range loads {
+		if l.Capacity <= 0 {
+			continue
+		}
+		anteil := int64(l.Weighted) * 1000 / int64(l.Capacity)
+		if d := int(anteil - ziel); d > groesster {
+			groesster = d
+		}
+	}
+	return groesster
 }

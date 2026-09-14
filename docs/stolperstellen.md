@@ -483,6 +483,38 @@ Demos stabil sein müssen.
 
 ---
 
+### 3.13 Eine Diagnose, die ich nicht nachgerechnet hatte
+
+**Symptom** — Keins im Betrieb. In ADR-0011 stand unter „Offen geblieben", die
+Dreizehnjährige sei am höchsten ausgelastet, weil der Ausgleich Aufgaben nur
+ganz verschieben kann. Das klang plausibel, war sauber formuliert und
+stand damit als Ursache fest.
+
+**Ursache** — Ich hatte es nie gemessen. Vier Versuche später: Dreierzyklen
+statt Paartausche ändern nichts, eine zusätzliche Strafe auf die
+Minutenabweichung ändert nichts, ohne Kapazitätsprüfung wird es schlechter.
+Schalte ich dagegen die Wochen-Rotation im Ausgleich ab, fällt das Kind von
+79 auf 74 % und der Vater steigt von 67 auf 70.
+
+**Der eigentliche Fehler** — Dieselbe Regel hatte zwei Stärken: Im `assign`
+ist die Rotation eine Vorliebe (`rankMembers` sortiert die Person von letzter
+Woche nur nach hinten), im `rebalance` war sie ein Veto. Die härtere Fassung
+stand in dem Durchgang, der ausgleichen soll — und blockierte den Tausch
+„Böden wischen gegen Wäsche zusammenlegen", der die Kennzahl um ein Viertel
+verbessert hätte. Mia wischte die Böden, weil ihr Vater sie letzte Woche
+gewischt hatte.
+
+**Lösung** — Zweiter Durchgang im Ausgleich, der die Wochen-Rotation brechen
+darf, solange jemand um mehr als `MaxOvershootPermille` seiner eigenen
+Kapazität über seinem Anteil liegt (ADR-0012). Preis: 7 statt 5
+Wiederholungen bei 52 Aufgaben.
+
+**Lehre** — **Eine Vermutung, die man nicht nachrechnet, ist eine Behauptung
+— auch in einem Architekturentscheid.** Ein ADR sieht aus wie ein Befund,
+sobald es geschrieben ist. Der Abschnitt „Dagegen" in ADR-0003 nannte die
+richtige Ursache übrigens schon am 7. September; es fehlte nur die Zahl
+daneben und die Frage, wer die Rechnung bezahlt.
+
 ## 4. Datenbank und Schema
 
 ### 4.1 Das Schema hatte eine Produktentscheidung getroffen

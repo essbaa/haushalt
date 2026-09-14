@@ -73,14 +73,25 @@ und trotzdem eine Stelle, an der man sich wundert. Und die Schätzungen bleiben
 Schätzungen: Ein Faktor auf eine geratene Zahl ergibt eine genauer aussehende
 geratene Zahl.
 
-**Offen geblieben ist ein strukturelles Problem**, das dabei sichtbar wurde:
-Der Ausgleich kann Aufgaben nur ganz verschieben, nicht teilen. Bei kleiner
-Kapazität überschießt er deshalb systematisch — eine Aufgabe von 42 Minuten ist
-für eine Dreizehnjährige 14 % ihrer Woche und für ihren Vater 5 %. In Familie B
-ist damit ausgerechnet das jüngste Kind am höchsten ausgelastet. Das trifft
-immer die Schwächsten im Haushalt: Kinder, Teilzeit, wer krank ist. Eine
-Obergrenze je Einzelaufgabe für Minderjährige (45 Minuten) mildert das
-Auffälligste, löst es aber nicht.
+**Offen geblieben ist ein strukturelles Problem**, das dabei sichtbar wurde: In
+Familie B ist ausgerechnet das jüngste Kind am höchsten ausgelastet — 79 %
+ihrer Zeit, ihr Vater 67 %. Das trifft immer die Schwächsten im Haushalt:
+Kinder, Teilzeit, wer krank ist.
+
+> **Nachtrag, 14. September 2026 — die Erklärung hier war falsch.** An dieser
+> Stelle stand, der Ausgleich könne Aufgaben nur ganz verschieben und
+> überschieße deshalb bei kleiner Kapazität systematisch. Das war geraten. Vier
+> Messungen später: Dreierzyklen finden nichts, eine zusätzliche Strafe auf die
+> Minutenabweichung ändert nichts, ohne Kapazitätsprüfung wird es schlechter.
+> Was blockiert, ist die Rotation — Mia wischt die Böden, weil ihr Vater sie
+> letzte Woche gewischt hat. Behoben in
+> [0012](0012-rotation-ist-eine-vorliebe.md). Die Obergrenze für
+> Einzelaufgaben von Minderjährigen (45 Minuten) bleibt, sie war nie die
+> Lösung dieses Problems.
+>
+> Die Lehre ist älter als dieser Eintrag und steht seit heute Morgen zwei
+> Absätze weiter oben in einer anderen Datei: Eine Vermutung, die man nicht
+> nachrechnet, ist eine Behauptung — auch in einem Architekturentscheid.
 
 ## Verworfene Alternativen
 

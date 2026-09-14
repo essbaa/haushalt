@@ -1,8 +1,9 @@
 # 0003 — Ausgleich als zweiter Durchgang, Abstand vor Kopflast
 
 **Status:** angenommen · 7. September 2026 · das Vergleichskriterium ist
-abgelöst durch [0004](0004-fairness-nach-kapazitaet.md) — der Durchgang
-selbst, seine Regeln und seine Grenzen gelten unverändert weiter
+abgelöst durch [0004](0004-fairness-nach-kapazitaet.md), die Rotation über die
+Wochen durch [0012](0012-rotation-ist-eine-vorliebe.md) — der Durchgang
+selbst und seine übrigen Regeln gelten unverändert weiter
 
 ## Kontext
 
@@ -47,7 +48,12 @@ Vier Dinge sind dabei unantastbar:
 - **Kapazität.** Minuten je Tag und die Höchstzahl Aufgaben je Person und Tag.
 - **Rotation über die Wochen.** Ein Tausch darf eine Aufgabe nie an die Person
   zurückgeben, die sie zuletzt hatte. Rotation geht vor Ausgleich — auch vor
-  diesem Durchgang.
+  diesem Durchgang. *Aufgehoben am 14. September durch
+  [0012](0012-rotation-ist-eine-vorliebe.md): Der Punkt „Dagegen“ weiter unten
+  — die Rotationsregel begrenze, was reparabel sei — stimmte, und die
+  Rechnung bezahlte die Person mit der kleinsten Kapazität. Ein zweiter
+  Durchgang darf die Regel brechen, solange jemand deutlich über seinem
+  Anteil liegt.*
 - **Rotation innerhalb der Woche.** Niemand sammelt durch einen Tausch einen
   zweiten Termin derselben Vorlage ein. Nachgetragen am 7. September, nachdem
   die erste Fassung genau das tat: Der Ausgleich holte das Kochen vom Mittwoch
