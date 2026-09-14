@@ -20,6 +20,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0011](0011-massstab-statt-filter.md) | Maßstab statt Filter | angenommen |
 | [0012](0012-rotation-ist-eine-vorliebe.md) | Rotation ist eine Vorliebe, keine Bedingung | angenommen |
 | [0013](0013-von-hand-sticht.md) | Von Hand sticht: Umverteilen prüft Bedingungen, nicht Vorlieben | angenommen |
+| [0014](0014-anmeldung-bleibt-bei-mail.md) | Anmeldung bleibt bei E-Mail und Passwort | angenommen |
 
 ## Aufbau eines Eintrags
 

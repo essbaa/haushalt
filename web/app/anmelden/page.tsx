@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Passwortfeld } from "@/app/components/passwortfeld";
+import { Passwortstaerke } from "@/app/components/passwortstaerke";
 import { Feld } from "@/app/components/ui";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 
@@ -20,12 +22,23 @@ export default function Anmelden() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [passwort, setPasswort] = useState("");
+  const [wiederholung, setWiederholung] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
+  const [bestaetigen, setBestaetigen] = useState(false);
 
   async function absenden(e: React.FormEvent) {
     e.preventDefault();
     setFehler(null);
+
+    // Vor dem Netz prüfen, was ohne Netz zu prüfen ist. Ein Rundgang zum
+    // Server, um zu erfahren, dass zwei Felder nicht gleich sind, ist eine
+    // Wartezeit ohne Erkenntnis.
+    if (neu && passwort !== wiederholung) {
+      setFehler("Die beiden Passwörter sind nicht gleich.");
+      return;
+    }
+
     setLaeuft(true);
     const antwort = neu
       ? await signUp.email({ name, email, password: passwort })
@@ -41,6 +54,14 @@ export default function Anmelden() {
     // push statt window.location: Next kennt die Route und muss die Seite
     // nicht neu laden. refresh danach, weil die Startseite auf dem Server
     // gerendert wird und die frische Sitzung noch nicht kennt.
+    // Nach der Registrierung ist eine Bestätigungsmail unterwegs. Das gehört
+    // gesagt — eine Mail, die unangekündigt eintrifft, wirkt wie ein
+    // Versehen, und wer sie nicht erwartet, bestätigt sie auch nicht.
+    if (neu) {
+      setBestaetigen(true);
+      return;
+    }
+
     router.push(weiter());
     router.refresh();
   }
@@ -63,6 +84,29 @@ export default function Anmelden() {
 
   if (isPending) {
     return <Rahmen>Einen Moment …</Rahmen>;
+  }
+
+  if (bestaetigen) {
+    return (
+      <Rahmen>
+        <h1 className="mb-2 text-2xl font-extrabold tracking-tight">Konto angelegt</h1>
+        <p className="mb-6 text-sm leading-relaxed text-muted text-pretty">
+          Wir haben eine Mail an <strong className="text-fg">{email}</strong>{" "}
+          geschickt. Bestätige die Adresse, sobald du magst — danach können wir
+          dir ein neues Passwort schicken, falls du es vergisst.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            router.push(weiter());
+            router.refresh();
+          }}
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover"
+        >
+          Weiter zum Wochenplan
+        </button>
+      </Rahmen>
+    );
   }
 
   if (sitzung) {
@@ -108,15 +152,42 @@ export default function Anmelden() {
           autoComplete="email"
           required
         />
-        <Feld
+        <Passwortfeld
           beschriftung="Passwort"
-          type="password"
           value={passwort}
           onChange={(e) => setPasswort(e.target.value)}
           autoComplete={neu ? "new-password" : "current-password"}
+          minLength={neu ? 8 : undefined}
           required
           hinweis={neu ? "Mindestens acht Zeichen." : undefined}
         />
+
+        {neu && (
+          <>
+            <Passwortstaerke passwort={passwort} umfeld={[name, email.split("@")[0] ?? ""]} />
+            <Passwortfeld
+              beschriftung="Passwort wiederholen"
+              value={wiederholung}
+              onChange={(e) => setWiederholung(e.target.value)}
+              autoComplete="new-password"
+              required
+              hinweis={
+                wiederholung.length > 0 && passwort !== wiederholung
+                  ? "Noch nicht gleich."
+                  : undefined
+              }
+            />
+          </>
+        )}
+
+        {!neu && (
+          <Link
+            href="/passwort-vergessen"
+            className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2 hover:text-fg"
+          >
+            Passwort vergessen?
+          </Link>
+        )}
 
         {fehler && (
           <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">

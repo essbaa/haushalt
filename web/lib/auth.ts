@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { Pool } from "pg";
 
+import { appAdresse, schicke } from "@/lib/mail";
+
 /**
  * Die Anmeldung läuft in der Next.js-App, nicht im Go-Dienst.
  *
@@ -30,7 +32,72 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+
+    // Acht Zeichen, keine erzwungenen Sonderzeichen. Regeln wie „mindestens
+    // eine Ziffer und ein Satzzeichen" erzeugen `Passwort1!` und sonst nichts;
+    // Länge ist die einzige Anforderung, die wirklich etwas bringt.
+    minPasswordLength: 8,
+
+    // Ohne das heißt ein vergessenes Passwort: verlorener Haushalt. Kein
+    // Komfortmangel — Datenverlust.
+    sendResetPassword: async ({ user, url }) => {
+      await schicke({
+        an: user.email,
+        betreff: "Passwort zurücksetzen",
+        text: [
+          `Hallo${user.name ? " " + user.name : ""},`,
+          "",
+          "du hast ein neues Passwort angefordert. Über diesen Link setzt du es:",
+          "",
+          url,
+          "",
+          "Der Link gilt eine Stunde. Warst du das nicht, kannst du diese Mail",
+          "ignorieren — dein Passwort bleibt, wie es ist.",
+        ].join("\n"),
+      });
+    },
   },
+
+  // Die Bestätigung der Adresse.
+  //
+  // Sie hängt am Zurücksetzen: Ohne bestätigte Adresse ginge die Rücksetzmail
+  // an einen Tippfehler, und der Mensch wartet auf etwas, das nie kommt.
+  //
+  // `requireEmailVerification` steht bewusst NICHT auf true. Solange keine
+  // Domain verifiziert ist, verschickt diese App gar nichts — eine Anmeldung,
+  // die eine Bestätigung verlangt, die niemand bekommen kann, sperrt alle aus.
+  // Der Auslöser zum Umlegen ist benannt: sobald Resend mit eigener Domain
+  // läuft und eine Testmail ankommt.
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await schicke({
+        an: user.email,
+        betreff: "E-Mail-Adresse bestätigen",
+        text: [
+          `Hallo${user.name ? " " + user.name : ""},`,
+          "",
+          "willkommen. Bestätige kurz deine Adresse:",
+          "",
+          url,
+          "",
+          "Danach können wir dir ein neues Passwort schicken, falls du es",
+          "vergisst. Ohne bestätigte Adresse geht das nicht.",
+        ].join("\n"),
+      });
+    },
+  },
+
+  // Better Auth bringt eine Begrenzung mit; sie ist nur standardmäßig aus.
+  // Ein Anmeldeformular ohne Begrenzung lädt zum Durchprobieren ein, und das
+  // kostet uns nichts außer dieser Zeile.
+  rateLimit: {
+    enabled: true,
+  },
+
+  // Die Basisadresse für die Links in den Mails oben.
+  baseURL: appAdresse(),
 
   plugins: [
     /**
