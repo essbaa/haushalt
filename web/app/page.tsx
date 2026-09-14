@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Uhr } from "@/app/components/icons";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
-import { aktuelleWoche, istWoche, wochenSpanne } from "@/lib/woche";
+import { aktuelleWoche, istWoche, wocheVersetzt, wochenSpanne } from "@/lib/woche";
 
 /**
  * Die Startseite: der Wochenplan.
@@ -46,6 +47,8 @@ export default async function Page({
   }
 
   const eigener = plan?.meine_rolle !== undefined;
+  const jetzt = aktuelleWoche();
+  const gewaehlterHaushalt = plan?.haushalt.id ?? params.haushalt;
 
   return (
     <>
@@ -81,12 +84,65 @@ export default async function Page({
           </nav>
         )}
 
-        <div className="mb-5 space-y-1">
+        <div className="mb-5 space-y-2">
           <h1 className="text-3xl font-extrabold tracking-tight text-balance">
             {plan?.haushalt.name ?? "Der Wochenplan"}
           </h1>
-          <p className="text-sm text-muted">{wochenSpanne(woche)}</p>
+
+          {/* Bis hierher gab es keinen Weg zur nächsten Woche: `?woche=` wurde
+              gelesen, aber von keinem Link gesetzt. Ein Wochenplan, der nur
+              diese eine Woche zeigt, ist nach sieben Tagen zu Ende. */}
+          <div className="-ml-2 flex flex-wrap items-center gap-1">
+            <Link
+              href={adresse(gewaehlterHaushalt, wocheVersetzt(woche, -1))}
+              aria-label="Woche davor"
+              className="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            >
+              <span aria-hidden="true">‹</span>
+            </Link>
+            <span className="text-sm tabular-nums text-muted">{wochenSpanne(woche)}</span>
+            <Link
+              href={adresse(gewaehlterHaushalt, wocheVersetzt(woche, 1))}
+              aria-label="Woche danach"
+              className="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            >
+              <span aria-hidden="true">›</span>
+            </Link>
+            {woche !== jetzt && (
+              <Link
+                href={adresse(gewaehlterHaushalt, jetzt)}
+                className="ml-1 inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
+              >
+                Diese Woche
+              </Link>
+            )}
+          </div>
+
         </div>
+
+        {/* Eine künftige Woche wird nicht festgeschrieben (ADR-0008,
+            storage.Plan). Das stand zuerst als graue Kleinschrift unter den
+            Pfeilen — und wurde übersehen. Eine Fußnote ist keine Ansage: Der
+            Unterschied zwischen „Plan" und „Vermutung" ist das Wichtigste auf
+            dieser Seite, solange er gilt.
+            Er erklärt gleich mit, warum hier nichts abzuhaken ist — ohne
+            festgeschriebene Woche gibt es keine Aufgabenkennungen. Eine
+            Oberfläche, die etwas weglässt, muss sagen warum. */}
+        {woche > jetzt && (
+          <div className="mb-8 flex gap-3 rounded-lg border border-clay/40 bg-clay-soft px-4 py-3.5">
+            <Uhr className="mt-0.5 size-5 shrink-0 text-clay" />
+            <div className="space-y-1">
+              <p className="font-bold text-clay text-pretty">
+                Vorschau — diese Woche steht noch nicht fest.
+              </p>
+              <p className="text-sm leading-relaxed text-muted text-pretty">
+                Festgeschrieben wird sie am Montag. Bis dahin ändert jede
+                Einstellung sie noch, und abhaken oder umverteilen geht erst
+                dann.
+              </p>
+            </div>
+          </div>
+        )}
 
         {eigener && plan && (
           <div className="mb-8">
@@ -119,4 +175,12 @@ export default async function Page({
       </main>
     </>
   );
+}
+
+/** Die Adresse des Wochenplans — mit Haushalt, wenn einer gewählt ist. */
+function adresse(haushalt: string | undefined, woche: string): string {
+  const teile = new URLSearchParams();
+  if (haushalt) teile.set("haushalt", haushalt);
+  teile.set("woche", woche);
+  return `/?${teile.toString()}`;
 }

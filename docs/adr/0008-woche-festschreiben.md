@@ -1,6 +1,7 @@
 # 0008 — Die Woche wird beim ersten Ansehen festgeschrieben
 
-**Status:** angenommen · 13. September 2026
+**Status:** angenommen · 13. September 2026 · präzisiert am 14. September
+(siehe Nachtrag am Ende)
 
 ## Kontext
 
@@ -93,3 +94,33 @@ Und sobald jemand mitten in der Woche einzieht oder eine Vorlage ändert,
 brauchen wir „neu rechnen, aber Erledigtes behalten". Das ist kein neues
 Konzept, sondern eine Abfrage: `DeleteWeek`, neu schreiben, die Ereignisse
 stehen lassen.
+
+## Nachtrag, 14. September 2026 — nur die laufende Woche
+
+Der Titel sagt „beim ersten Ansehen". Solange es keinen Weg zu einer anderen
+Woche gab, war das dasselbe wie „die laufende Woche" — und der Unterschied
+fiel niemandem auf.
+
+Mit Blätterpfeilen im Wochenplan fällt er auf, und zwar in beide Richtungen:
+
+**Nach vorn.** Der erste Klick auf „nächste Woche" hätte sie festgeschrieben.
+Ein danach eingetragener Anlass, eine abgeschaltete Vorlage, eine geänderte
+Kapazität — nichts davon wäre dort je angekommen. Das Versprechen dieses
+Eintrags lautet: Der Plan ändert sich nicht unter dir. Es gilt der Woche, in
+der jemand lebt. Ein Blick nach vorn verspricht nichts, und ihn zu einer
+Zusage zu machen ist kein Dienst, sondern ein Nebeneffekt des Hinsehens.
+
+**Nach hinten.** Eine vergangene Woche, die nie geschrieben wurde, hat niemand
+gesehen. Sie beim Zurückblättern zu schreiben hätte Vergangenheit erfunden:
+Zuteilungen, die nie jemand hatte, und eine Rotation, die daraus weiterrechnet.
+
+Festgeschrieben wird deshalb nur die **laufende** Woche, in der Zeitzone des
+Haushalts. Bereits geschriebene Wochen bleiben, wie sie sind — auch wenn sie
+vorbei sind. Die Oberfläche sagt es dazu: Eine künftige Woche trägt ein
+Banner „Vorschau — diese Woche steht noch nicht fest", samt der Folge, dass
+dort nichts abzuhaken ist.
+
+Das ist keine Kursumkehr, sondern eine Präzisierung. Bemerkenswert ist, wie
+sie zustande kam: **Eine neue Funktion hat eine alte Zweideutigkeit sichtbar
+gemacht.** Die Regel war nie eindeutig; es gab nur keinen Weg, den Unterschied
+zu bemerken.

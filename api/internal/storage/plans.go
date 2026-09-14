@@ -36,16 +36,29 @@ func (d *DB) AsPlans() *Plans { return &Plans{db: d} }
 // Ohne diese Trennung stünde jeder fremde Haushalt in der Liste, und das wäre
 // kein Schönheitsfehler, sondern ein Datenleck.
 func (p *Plans) Households(ctx context.Context, subject string) ([]planner.Household, error) {
-	zeilen, err := p.db.ListDemoHouseholds(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// Wer einen eigenen Haushalt hat, sieht die Beispiele nicht mehr.
+	//
+	// Sie sind da, damit jemand ohne Konto sehen kann, was die App tut. Wer
+	// eingerichtet hat, ist an diesem Punkt vorbei — und zwei fremde Familien
+	// neben dem eigenen Haushalt im Umschalter sind keine Einladung, sondern
+	// eine Frage, die sich niemand stellen wollte.
+	//
+	// Über die Adresse bleiben sie erreichbar: Plan prüft den Zugriff selbst,
+	// diese Liste füllt nur den Umschalter.
+	var zeilen []db.Household
 	if subject != "" {
 		eigene, err := p.db.ListHouseholdsForAuthUser(ctx, &subject)
 		if err != nil {
 			return nil, err
 		}
-		zeilen = append(zeilen, eigene...)
+		zeilen = eigene
+	}
+	if len(zeilen) == 0 {
+		demos, err := p.db.ListDemoHouseholds(ctx)
+		if err != nil {
+			return nil, err
+		}
+		zeilen = demos
 	}
 
 	out := make([]planner.Household, 0, len(zeilen))
@@ -126,6 +139,31 @@ func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week)
 		return planner.Result{}, haushalt, err
 	}
 	if !dabei {
+		return result, haushalt, nil
+	}
+
+	// Festgeschrieben wird nur die laufende Woche.
+	//
+	// ADR-0008 begründet das Festschreiben damit, dass der Plan sich unter
+	// einem nicht ändern soll: Wer am Montag gelesen hat, dass er den Müll
+	// rausbringt, findet das am Mittwoch noch so vor. Dieses Versprechen gilt
+	// der Woche, in der jemand lebt — und nur ihr.
+	//
+	// Nach vorn: Ein Blick verspricht nichts. Die kommende Woche einzufrieren
+	// wäre ein Nebeneffekt des Hinsehens — der erste Klick auf „nächste
+	// Woche" nägelte sie fest, und ein danach eingetragener Anlass käme nie
+	// an.
+	//
+	// Nach hinten: Eine vergangene Woche, die nie geschrieben wurde, hat
+	// niemand gesehen. Sie jetzt zu schreiben erfände Vergangenheit — mit
+	// Zuteilungen, die nie jemand hatte, und einer Rotation, die daraus
+	// weiterrechnet. Bereits geschriebene Wochen sind oben abgefangen; hier
+	// landen nur die leeren.
+	//
+	// Beides wurde erst nötig, als es Pfeile zum Blättern gab. Vorher rief
+	// niemand eine andere Woche auf, und die Regel „erstes Ansehen" und die
+	// Regel „laufende Woche" sahen gleich aus.
+	if week != aktuelleWoche(zeile.Timezone) {
 		return result, haushalt, nil
 	}
 
@@ -414,4 +452,23 @@ func parseUUID(s string) (pgtype.UUID, bool) {
 	copy(u.Bytes[:], b)
 	u.Valid = true
 	return u, true
+}
+
+// aktuelleWoche ist die laufende Woche in der Zeitzone des Haushalts.
+//
+// Die Zeitzone gehört hierher und nicht in den Planer: Der rechnet in UTC und
+// kennt keine Uhr (ADR-0002). Ob „heute" schon Montag ist, entscheidet sich
+// aber dort, wo die Menschen wohnen — für einen Haushalt in Berlin ist es
+// sonntags um 23:30 Uhr noch die alte Woche, in UTC schon die neue.
+//
+// Eine unbekannte Zeitzone ergibt UTC. Falsch zu rechnen ist besser, als
+// deshalb gar keinen Plan auszuliefern.
+func aktuelleWoche(zone string) planner.Week {
+	ort := time.UTC
+	if zone != "" {
+		if geladen, err := time.LoadLocation(zone); err == nil {
+			ort = geladen
+		}
+	}
+	return planner.WeekOf(planner.DateOf(time.Now().In(ort)))
 }

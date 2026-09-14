@@ -31,15 +31,47 @@ function heuteInBerlin(jetzt: Date): Date {
  * des Vorjahres gehören.
  */
 export function aktuelleWoche(jetzt: Date = new Date()): string {
-  const d = heuteInBerlin(jetzt);
+  return wocheVon(heuteInBerlin(jetzt));
+}
+
+/**
+ * Die ISO-Woche zu einem Datum. Erwartet ein Datum in UTC-Mitternacht.
+ *
+ * Einmal geschrieben und dreimal gebraucht: von `aktuelleWoche` und von
+ * `wocheVersetzt`. Drei Abschriften derselben Kalenderrechnung wären drei
+ * Gelegenheiten, sie um den Jahreswechsel falsch zu machen.
+ */
+function wocheVon(datum: Date): string {
+  const d = new Date(datum);
   const wochentag = (d.getUTCDay() + 6) % 7; // Montag = 0
   d.setUTCDate(d.getUTCDate() - wochentag + 3); // auf den Donnerstag
   const jahr = d.getUTCFullYear();
   const januar4 = Date.UTC(jahr, 0, 4);
   const versatz = (new Date(januar4).getUTCDay() + 6) % 7;
-  const woche =
-    1 + Math.round(((d.getTime() - januar4) / 86_400_000 - 3 + versatz) / 7);
+  const woche = 1 + Math.round(((d.getTime() - januar4) / 86_400_000 - 3 + versatz) / 7);
   return `${jahr}-W${String(woche).padStart(2, "0")}`;
+}
+
+/** Der Montag einer Woche, als UTC-Mitternacht. */
+function montagVon(woche: string): Date {
+  const [jahr, nummer] = woche.split("-W").map(Number);
+  const januar4 = new Date(Date.UTC(jahr, 0, 4));
+  const versatz = (januar4.getUTCDay() + 6) % 7;
+  const montag = new Date(januar4);
+  montag.setUTCDate(januar4.getUTCDate() - versatz + (nummer - 1) * 7);
+  return montag;
+}
+
+/**
+ * Die Woche n Wochen weiter, bei negativem n zurück.
+ *
+ * Gerechnet wird über den Montag und nicht über die Nummer: Ein Jahr hat 52
+ * oder 53 ISO-Wochen, und „W53 + 1 = W54" gibt es nicht.
+ */
+export function wocheVersetzt(woche: string, n: number): string {
+  const montag = montagVon(woche);
+  montag.setUTCDate(montag.getUTCDate() + n * 7);
+  return wocheVon(montag);
 }
 
 /** Der heutige Kalendertag als „2026-09-19", nach der Uhr in Berlin. */
@@ -64,11 +96,7 @@ export function tagLesbar(iso: string): string {
 
 /** Montag und Sonntag einer Woche als „14.09. bis 20.09.". */
 export function wochenSpanne(woche: string): string {
-  const [jahr, nummer] = woche.split("-W").map(Number);
-  const januar4 = new Date(Date.UTC(jahr, 0, 4));
-  const versatz = (januar4.getUTCDay() + 6) % 7;
-  const montag = new Date(januar4);
-  montag.setUTCDate(januar4.getUTCDate() - versatz + (nummer - 1) * 7);
+  const montag = montagVon(woche);
   const sonntag = new Date(montag);
   sonntag.setUTCDate(montag.getUTCDate() + 6);
   const kurz = (d: Date) =>

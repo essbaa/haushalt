@@ -601,6 +601,28 @@ dauert zehn Sekunden und hätte die zweite Migration gespart. Und: Eine neue
 Ereignisart ist eine Schemaänderung, keine Codeänderung — sie gehört vor dem
 Deploy nach Neon, sonst trifft es dort einen echten Haushalt.
 
+### 4.4 Eine neue Funktion machte eine alte Zweideutigkeit sichtbar
+
+**Symptom** — Keins. Gefunden beim Lesen von `storage.Plan`, bevor die
+Blätterpfeile gebaut waren.
+
+**Ursache** — `Plan` schreibt jede angesehene Woche fest. Die Regel aus
+ADR-0008 heißt „beim ersten Ansehen", und solange es keinen Weg zu einer
+anderen Woche gab, war das dasselbe wie „die laufende Woche". Mit Pfeilen
+hätte der erste Klick auf „nächste Woche" sie eingefroren — jeder danach
+eingetragene Anlass wäre dort nie angekommen. Und beim Zurückblättern hätte
+die App Vergangenheit erfunden: Zuteilungen, die nie jemand hatte, und eine
+Rotation, die daraus weiterrechnet.
+
+**Lösung** — Festgeschrieben wird nur die laufende Woche, in der Zeitzone des
+Haushalts. Künftige Wochen tragen ein Banner, das sagt, dass sie eine Vorschau
+sind und warum dort nichts abzuhaken ist.
+
+**Lehre** — **Eine Regel, die nie auf die Probe gestellt wurde, ist nicht
+eindeutig — sie ist nur unangefochten.** Beim Bauen einer neuen Funktion lohnt
+die Frage, welche bestehende Regel dadurch zum ersten Mal in einen Fall
+gerät, für den sie nie geschrieben wurde.
+
 ## 5. Web
 
 ### 5.1 React Compiler verbietet die Zuweisung an `window.location`
