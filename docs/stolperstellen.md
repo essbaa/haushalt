@@ -575,6 +575,32 @@ gibt, muss Daten beim ersten Schreiben richtig schreiben.
 
 ---
 
+### 4.3 Zwei geschlossene Vokabulare, eines nach dem anderen
+
+**Symptom** — Umverteilen antwortete mit 500. Nach der Korrektur: wieder 500.
+
+**Ursache** — `event.kind` ist durch einen CHECK auf sechs Wörter begrenzt,
+„umverteilt" war keines davon. Migration geschrieben, angewendet — und danach
+scheiterte dieselbe Anfrage an `assignment.reason_code`, der genauso begrenzt
+ist und `von_hand` nicht kannte. Zwei Migrationen (00010, 00011) für eine
+Funktion, weil ich nach dem ersten Fund nicht weitergesucht habe.
+
+**Erschwerend** — `verschoben` stand bereits in der Liste und hätte gepasst.
+Verworfen: Das Wort gehört der Verschiebung auf einen anderen *Tag*, die noch
+kommt. Zwei verschiedene Rückmeldungen unter einem Namen sind später nicht
+mehr zu trennen — und das Protokoll wird gelesen, um daraus zu lernen.
+
+**Nicht gemacht** — 00010 nachträglich erweitern. Goose merkt sich die Nummer,
+nicht den Inhalt; eine geänderte 00010 wäre lokal nie wieder gelaufen, auf Neon
+aber in der neuen Fassung. Zwei Schemata, die beide „Stand 00010" heißen, sieht
+man erst in der Produktion.
+
+**Lehre** — **Wer ein neues Wort in die Datenbank schreibt, sucht vorher ALLE
+Stellen, an denen Wörter begrenzt sind.** `grep -n "CHECK (.* IN" db/migrations`
+dauert zehn Sekunden und hätte die zweite Migration gespart. Und: Eine neue
+Ereignisart ist eine Schemaänderung, keine Codeänderung — sie gehört vor dem
+Deploy nach Neon, sonst trifft es dort einen echten Haushalt.
+
 ## 5. Web
 
 ### 5.1 React Compiler verbietet die Zuweisung an `window.location`
@@ -675,11 +701,26 @@ fertig hielt.
 **Lösung** — Eine neue Antwort setzt `gerechnet` zurück, das Neurechnen leert
 die gemerkten Antworten.
 
-**Lehre** — **Jedes `useState`, das eine Aussage über die *Daten* trifft statt
-über die *Bedienung*, ist nach einem `router.refresh()` falsch.** „Ist
-aufgeklappt" überlebt eine Aktualisierung zu Recht, „ist schon gerechnet"
-nicht. Beim Schreiben eines `useState` in einer Client Component lohnt die
-Frage: Bin ich gerade dabei, Serverwissen im Browser zu spiegeln?
+**Und dasselbe ein drittes Mal, eine Stunde später** — „Ich klicke in den
+Einstellungen auf *mittel*, es passiert nichts." Es passierte etwas: Der Dienst
+rechnete die Stufe in Minuten um und speicherte sie. Nur hielt `PersonTeil` die
+Minuten in `useState`, und `useState` nimmt den Anfangswert genau einmal — die
+Zeile „Zeit in der Woche" zeigte weiter die Zahl von vor dem Laden. Behoben,
+indem der lokale Zustand nur noch einen *Entwurf* hält, solange die Minuten
+aufgeklappt sind; zugeklappt kommt die Zahl aus dem Serverstand.
+
+Der erste Versuch war ein wechselnder `key` auf der Komponente. Das funktioniert
+und hätte einen getippten, noch nicht gespeicherten Namen mitgerissen, sobald
+jemand daneben auf „mittel" tippt. Zurückgenommen: Die grobe Lösung war der
+nächste Fehler.
+
+**Lehre** — **Was der Server weiß, wird nicht nebenher im Browser
+mitgeführt.** Lokaler Zustand darf einen Entwurf halten, solange jemand tippt,
+und eine Bedienfrage beantworten („ist aufgeklappt") — aber keine Kopie
+dessen, was gerade gespeichert wurde. Dreimal an einem Abend derselbe Fehler,
+und jedes Mal sah es aus, als hätte die App die Eingabe verschluckt: Die Sache
+war gespeichert, die Oberfläche zeigte einen Stand, den sie sich vorher
+gemerkt hatte.
 
 ### 5.7 Die Navigation stand hinter dem Inhalt
 
@@ -702,6 +743,43 @@ nur das Häkchen, die häufigste Handlung und die Alternative zur Wischgeste.
 Eine lange Hauptseite verschiebt jede spätere Ergänzung weiter aus dem Blick,
 und niemand merkt es, solange man die Seite nur in der Entwicklung von oben
 liest.
+
+### 5.8 Beschriftung und Eingabefeld klebten aneinander
+
+**Symptom** — „Zimmer" und das Eingabefeld standen ohne Abstand nebeneinander.
+
+**Ursache** — `<label class="block space-y-1.5">` mit einem `<span>` und einem
+`<input>` darin. Beide sind inline, stehen also auf derselben Zeile, und
+`space-y` setzt einen *oberen* Abstand — der bewirkt in einer Zeile nichts. An
+den vier anderen Stellen mit demselben Aufbau fällt es nicht auf, weil dort das
+Eingabefeld selbst `block` trägt und ohnehin umbricht.
+
+**Lösung** — `block` an die Beschriftung, an allen fünf Stellen.
+
+**Lehre** — Ein Fehler, der nur an einer Stelle sichtbar ist, steht oft an
+fünf. Wenn eine Klassenkombination falsch ist, lohnt `grep` nach genau dieser
+Kombination, bevor man die eine Stelle repariert.
+
+### 5.9 Eine Stufe, die nicht angezeigt wurde, weil ich sie nicht nachbauen wollte
+
+**Symptom** — „Die Zeit wird angepasst, aber es wird nicht gezeigt, was gerade
+ausgewählt ist."
+
+**Ursache** — Absicht, und trotzdem falsch. Die Knöpfe „wenig / mittel / viel"
+setzten eine Stufe, ohne eine anzuzeigen; im Code stand als Begründung, welche
+Minuten „mittel" bedeutet, wisse nur der Planer, und das hier nachzubauen wäre
+eine zweite Wahrheit. Der erste Teil stimmt. Der Schluss daraus war bequem:
+Weil die Anzeige schwierig war, gab es keine.
+
+**Lösung** — Der Planer beantwortet jetzt auch die Rückrichtung (`BudgetOf`:
+Minuten → Stufe, leer wenn keine genau passt), die Stufe steht im Vertrag als
+`Mitglied.zeit`, und die Oberfläche markiert sie. Passt keine, ist keine
+markiert und daneben steht „eigene Minuten" — dann weiß man, warum nichts
+leuchtet.
+
+**Lehre** — **Nachbauen wäre eine zweite Wahrheit. Nachfragen ist keine.**
+„Das gehört woanders hin" ist ein Argument gegen den Ort einer Rechnung, nie
+eines dafür, das Ergebnis wegzulassen.
 
 ## 6. Betrieb
 

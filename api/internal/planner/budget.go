@@ -48,3 +48,26 @@ func (b TimeBudget) Known() bool {
 	_, ok := budgets[b]
 	return ok
 }
+
+// BudgetOf ist die Rückrichtung: Welche Stufe gehört zu diesen Minuten?
+//
+// Leer, wenn keine passt — dann hat jemand die Minuten von Hand gesetzt, und
+// das ist ein eigener, gültiger Zustand. „mittel" zurückzugeben, weil es am
+// nächsten liegt, wäre eine Behauptung über eine Absicht, die niemand geäußert
+// hat.
+//
+// Die Funktion steht hier und nicht in der Oberfläche. Welche Minuten „mittel"
+// bedeutet, weiß genau eine Stelle im System; die Anzeige fragt nach, statt es
+// nachzubauen. Eine nachgebaute Zuordnung wäre eine zweite Wahrheit — und die
+// zweite ist immer die, die niemand pflegt.
+//
+// Die Reihenfolge ist fest, damit zwei Aufrufe dasselbe ergeben: Bei einer
+// Karte wäre sie es nicht.
+func BudgetOf(minuten [7]int) TimeBudget {
+	for _, b := range []TimeBudget{BudgetNone, BudgetLow, BudgetMedium, BudgetHigh} {
+		if budgets[b] == minuten {
+			return b
+		}
+	}
+	return ""
+}

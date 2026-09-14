@@ -52,7 +52,7 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
   return (
     <form onSubmit={absenden} className="space-y-4">
       <label className="block space-y-1.5">
-        <span className="text-sm font-semibold">Code</span>
+        <span className="block text-sm font-semibold">Code</span>
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}

@@ -1362,6 +1362,20 @@ components:
             Verfügbare Minuten je Wochentag, Index 0 = Montag. Beim Einrichten
             aus einer der drei Stufen geraten und hier korrigierbar. Die Zahlen
             tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
+        zeit:
+          type: string
+          enum: [keine, wenig, mittel, viel]
+          description: |
+            Die Stufe, zu der diese Minuten gehören. **Fehlt, wenn keine
+            genau passt** — dann hat jemand die Minuten von Hand gesetzt, und
+            das ist ein eigener gültiger Zustand. Die nächstgelegene Stufe
+            zurückzugeben wäre eine Behauptung über eine Absicht, die niemand
+            geäußert hat.
+
+            Ausgerechnet wird sie im Planer (`BudgetOf`), nicht in der
+            Oberfläche: Welche Minuten „mittel" bedeutet, weiß genau eine
+            Stelle im System. Eine nachgebaute Zuordnung wäre eine zweite
+            Wahrheit — und die zweite ist immer die, die niemand pflegt.
         betreuung:
           type: string
           enum: [keine, kita, schule]

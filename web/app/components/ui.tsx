@@ -175,7 +175,7 @@ export function Feld({
 }: ComponentProps<"input"> & { beschriftung: string; hinweis?: string }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm font-semibold">{beschriftung}</span>
+      <span className="block text-sm font-semibold">{beschriftung}</span>
       <input
         className={`block min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base text-fg transition-colors placeholder:text-subtle focus:border-primary ${className}`}
         {...rest}

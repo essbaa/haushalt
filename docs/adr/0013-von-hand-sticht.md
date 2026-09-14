@@ -60,6 +60,15 @@ Das ist genau richtig und war nicht geplant. Es folgt aus der Regel aus
 ADR-0008: Was Spuren hinterlassen hat, bleibt; was nur ein Vorschlag war, wird
 neu gerechnet. Eine Umverteilung ist eine Spur.
 
+**Beides sind Schemaänderungen, nicht Codeänderungen.** `event.kind` und
+`assignment.reason_code` sind durch CHECK-Bedingungen auf feste Wortlisten
+begrenzt — ein geschlossenes Vokabular, damit ein Tippfehler keine neue
+Ereignisart erfindet. `umverteilt` und `von_hand` brauchten deshalb die
+Migrationen 00010 und 00011, und sie müssen vor dem Deploy nach Neon. Das ist
+der Merksatz vom Morgen in seiner freundlichen Form: Das Schema trifft
+Produktentscheidungen — und hier hat es widersprochen, bevor ein Haushalt es
+gemerkt hätte.
+
 ## Konsequenzen
 
 **Dafür:**
@@ -70,6 +79,8 @@ neu gerechnet. Eine Umverteilung ist eine Spur.
   danebenliegt — die einzige Quelle dafür, die nicht aus Vermutungen besteht.
 - Eine offene Aufgabe lässt sich mit demselben Handgriff übernehmen. Derselbe
   Knopf heißt dann „Übernehmen" statt „Wer macht das?".
+- Das Überleben des Neurechnens ist **geprüft**, nicht abgeleitet: umverteilt,
+  Woche neu gerechnet, Aufgabe stand weiter bei derselben Person.
 
 **Dagegen:**
 

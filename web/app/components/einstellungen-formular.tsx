@@ -179,9 +179,14 @@ function HaushaltTeil({
         </button>
       </div>
 
+      {/* Die Beschriftung braucht `block`. Ohne das stehen span und input als
+          zwei Inline-Elemente auf derselben Zeile und kleben aneinander —
+          `space-y` setzt nur einen oberen Abstand, und der bewirkt in einer
+          Zeile nichts. An den anderen Stellen fällt es nicht auf, weil dort
+          das Eingabefeld selbst `block` trägt. */}
       <div className="flex flex-wrap items-end gap-4">
         <label className="block space-y-1.5">
-          <span className="text-sm font-semibold">Zimmer</span>
+          <span className="block text-sm font-semibold">Zimmer</span>
           <input
             type="number"
             inputMode="numeric"
@@ -196,7 +201,7 @@ function HaushaltTeil({
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-sm font-semibold">Bäder</span>
+          <span className="block text-sm font-semibold">Bäder</span>
           <input
             type="number"
             inputMode="numeric"
@@ -267,8 +272,22 @@ function PersonTeil({
 }) {
   const [name, setName] = useState(person.name);
   const [jahr, setJahr] = useState(person.geburtsjahr?.toString() ?? "");
-  const [minuten, setMinuten] = useState<number[]>(person.minuten ?? new Array(7).fill(0));
+  // Die Minuten liegen nur im Zustand, solange sie bearbeitet werden.
+  //
+  // Vorher hielt `useState` sie dauerhaft — und `useState` nimmt den
+  // Anfangswert genau einmal. Nach dem Speichern kam der neue Haushalt
+  // zurück, die Prop änderte sich, der Zustand nicht: Ein Klick auf „mittel"
+  // war längst gespeichert, während die Zeile weiter die alte Stundenzahl
+  // zeigte. „Nichts passiert" war die einzig mögliche Schlussfolgerung.
+  //
+  // Zugeklappt kommt die Zahl deshalb aus dem Serverstand, und beim Aufklappen
+  // wird der Entwurf frisch daraus gefüllt. Das ist die Regel dahinter: Was
+  // der Server weiß, wird nicht nebenher im Browser mitgeführt.
+  const [entwurf, setEntwurf] = useState<number[]>([]);
   const [offen, setOffen] = useState(false);
+
+  const gespeichert = person.minuten ?? new Array(7).fill(0);
+  const minuten = offen ? entwurf : gespeichert;
 
   // Die eigene Zeit setzt jeder selbst, alles Weitere die planenden. Dieselbe
   // Regel steht im Dienst; hier steuert sie nur, was man anfassen kann.
@@ -361,33 +380,52 @@ function PersonTeil({
       {darfZeit && person.rolle !== "betreut" && (
         <div className="space-y-2">
           <div className="space-y-2">
-            <p className="text-sm">
-              <span className="font-semibold">{stunden(summe)}</span>{" "}
-              <span className="text-muted">Zeit in der Woche</span>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span>
+                <span className="font-semibold">{stunden(summe)}</span>{" "}
+                <span className="text-muted">Zeit in der Woche</span>
+              </span>
+              {!person.zeit && (
+                <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">
+                  eigene Minuten
+                </span>
+              )}
             </p>
-            {/* Die Knöpfe setzen eine Stufe, sie zeigen keine an. Welche Stufe
-                zu welchen Minuten gehört, weiß der Planer — das hier
-                nachzubauen wäre eine zweite Wahrheit, und sie wäre die, die
-                niemand pflegt. */}
+            {/* Welche Stufe gerade gilt, rechnet der Planer aus und schickt es
+                mit (`zeit`, siehe BudgetOf). Die Zuordnung hier nachzubauen
+                wäre eine zweite Wahrheit gewesen — sie nicht anzuzeigen war
+                aber auch keine Lösung: Ein Knopfpaar ohne Zustand lässt den
+                Nutzer raten, was gerade eingestellt ist.
+                Passt keine Stufe, ist keine markiert und daneben steht, warum. */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted">Ändern auf</span>
-              {["wenig", "mittel", "viel"].map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => stufe(w)}
-                  disabled={laeuft}
-                  className="inline-flex min-h-10 items-center rounded-md border border-line-strong px-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
-                >
-                  {w}
-                </button>
-              ))}
+              {["wenig", "mittel", "viel"].map((w) => {
+                const aktiv = person.zeit === w;
+                return (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => stufe(w)}
+                    disabled={laeuft}
+                    aria-pressed={aktiv}
+                    className={`inline-flex min-h-10 items-center rounded-md border px-3.5 text-sm font-semibold transition-colors disabled:opacity-45 ${
+                      aktiv
+                        ? "border-primary bg-primary-soft text-primary"
+                        : "border-line-strong hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {w}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => setOffen((o) => !o)}
+            onClick={() => {
+              if (!offen) setEntwurf(gespeichert);
+              setOffen((o) => !o);
+            }}
             className="text-xs text-muted underline"
           >
             {offen ? "Minuten zuklappen" : "Minuten je Tag"}
@@ -405,7 +443,7 @@ function PersonTeil({
                       max={480}
                       value={minuten[i] ?? 0}
                       onChange={(e) =>
-                        setMinuten((alt) =>
+                        setEntwurf((alt) =>
                           alt.map((v, k) => (k === i ? Number(e.target.value) : v)),
                         )
                       }

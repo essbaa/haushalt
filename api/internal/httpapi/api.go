@@ -469,6 +469,13 @@ func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 			jahr := m.BirthYear
 			mitglied.Geburtsjahr = &jahr
 		}
+		// Die Stufe wird gerechnet, nicht gespeichert: Gespeichert sind die
+		// Minuten. Passt keine Stufe genau, bleibt das Feld leer — dann hat
+		// jemand von Hand gesetzt, und das ist ein eigener Zustand.
+		if stufe := planner.BudgetOf(m.CapacityMinutes); stufe != "" {
+			zeit := openapi.MitgliedZeit(stufe)
+			mitglied.Zeit = &zeit
+		}
 		if m.Care != "" {
 			betreuung := openapi.MitgliedBetreuung(m.Care)
 			mitglied.Betreuung = &betreuung

@@ -764,6 +764,20 @@ export interface components {
              */
             minuten?: number[];
             /**
+             * @description Die Stufe, zu der diese Minuten gehören. **Fehlt, wenn keine
+             *     genau passt** — dann hat jemand die Minuten von Hand gesetzt, und
+             *     das ist ein eigener gültiger Zustand. Die nächstgelegene Stufe
+             *     zurückzugeben wäre eine Behauptung über eine Absicht, die niemand
+             *     geäußert hat.
+             *
+             *     Ausgerechnet wird sie im Planer (`BudgetOf`), nicht in der
+             *     Oberfläche: Welche Minuten „mittel" bedeutet, weiß genau eine
+             *     Stelle im System. Eine nachgebaute Zuordnung wäre eine zweite
+             *     Wahrheit — und die zweite ist immer die, die niemand pflegt.
+             * @enum {string}
+             */
+            zeit?: "keine" | "wenig" | "mittel" | "viel";
+            /**
              * @description Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
              *     hängt, welche Aufgaben der Haushalt überhaupt hat — ohne Kita-Kind
              *     keine Kita-Tasche.

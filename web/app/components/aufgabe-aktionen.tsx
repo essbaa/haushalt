@@ -168,7 +168,7 @@ export function AufgabeAktionen({
       {fragt && (
         <div className="space-y-2 rounded-md border border-line bg-surface-2 p-3">
           <label className="block space-y-1.5">
-            <span className="text-sm font-semibold">Warum gibst du sie ab?</span>
+            <span className="block text-sm font-semibold">Warum gibst du sie ab?</span>
             <input
               value={grund}
               onChange={(e) => setGrund(e.target.value)}

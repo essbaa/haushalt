@@ -276,6 +276,30 @@ func (e MitgliedRolle) Valid() bool {
 	}
 }
 
+// Defines values for MitgliedZeit.
+const (
+	MitgliedZeitKeine  MitgliedZeit = "keine"
+	MitgliedZeitMittel MitgliedZeit = "mittel"
+	MitgliedZeitViel   MitgliedZeit = "viel"
+	MitgliedZeitWenig  MitgliedZeit = "wenig"
+)
+
+// Valid indicates whether the value is a known member of the MitgliedZeit enum.
+func (e MitgliedZeit) Valid() bool {
+	switch e {
+	case MitgliedZeitKeine:
+		return true
+	case MitgliedZeitMittel:
+		return true
+	case MitgliedZeitViel:
+		return true
+	case MitgliedZeitWenig:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MitgliedAenderungBetreuung.
 const (
 	MitgliedAenderungBetreuungKeine  MitgliedAenderungBetreuung = "keine"
@@ -845,6 +869,18 @@ type Mitglied struct {
 	// Rolle `planend` plant und führt aus, `ausfuehrend` führt nur aus,
 	// `betreut` erzeugt Arbeit ohne welche zu übernehmen.
 	Rolle MitgliedRolle `json:"rolle"`
+
+	// Zeit Die Stufe, zu der diese Minuten gehören. **Fehlt, wenn keine
+	// genau passt** — dann hat jemand die Minuten von Hand gesetzt, und
+	// das ist ein eigener gültiger Zustand. Die nächstgelegene Stufe
+	// zurückzugeben wäre eine Behauptung über eine Absicht, die niemand
+	// geäußert hat.
+	//
+	// Ausgerechnet wird sie im Planer (`BudgetOf`), nicht in der
+	// Oberfläche: Welche Minuten „mittel" bedeutet, weiß genau eine
+	// Stelle im System. Eine nachgebaute Zuordnung wäre eine zweite
+	// Wahrheit — und die zweite ist immer die, die niemand pflegt.
+	Zeit *MitgliedZeit `json:"zeit,omitempty"`
 }
 
 // MitgliedBetreuung Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
@@ -855,6 +891,18 @@ type MitgliedBetreuung string
 // MitgliedRolle `planend` plant und führt aus, `ausfuehrend` führt nur aus,
 // `betreut` erzeugt Arbeit ohne welche zu übernehmen.
 type MitgliedRolle string
+
+// MitgliedZeit Die Stufe, zu der diese Minuten gehören. **Fehlt, wenn keine
+// genau passt** — dann hat jemand die Minuten von Hand gesetzt, und
+// das ist ein eigener gültiger Zustand. Die nächstgelegene Stufe
+// zurückzugeben wäre eine Behauptung über eine Absicht, die niemand
+// geäußert hat.
+//
+// Ausgerechnet wird sie im Planer (`BudgetOf`), nicht in der
+// Oberfläche: Welche Minuten „mittel" bedeutet, weiß genau eine
+// Stelle im System. Eine nachgebaute Zuordnung wäre eine zweite
+// Wahrheit — und die zweite ist immer die, die niemand pflegt.
+type MitgliedZeit string
 
 // MitgliedAenderung Jedes Feld ist freiwillig. Was fehlt, bleibt stehen.
 type MitgliedAenderung struct {
