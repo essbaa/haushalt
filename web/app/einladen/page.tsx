@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Bereiche } from "@/app/components/bereiche";
 import { EinladenFormular, type Offene } from "@/app/components/einladen-formular";
 import { ladeHaushalte } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -20,6 +20,7 @@ export default async function Einladen({
   const token = await serverToken();
 
   let offene: Offene[] = [];
+  let planend = false;
   if (haushalt && token) {
     const haushalte = await ladeHaushalte(token);
     const gewaehlt = haushalte.find((h) => h.id === haushalt);
@@ -28,14 +29,12 @@ export default async function Einladen({
       // meldet sich nicht an — ein Zweijähriger erzeugt Arbeit ohne Konto.
       .filter((m) => !m.hat_zugang && m.rolle !== "betreut")
       .map((m) => ({ id: m.id, name: m.name, rolle: m.rolle }));
+    planend = gewaehlt?.meine_rolle === "planend";
   }
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-10">
-      <Link href="/" className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
-        <span aria-hidden="true">←</span>
-        Zurück zum Wochenplan
-      </Link>
+      <Bereiche haushaltId={haushalt} planend={planend} aktiv="einladen" />
 
       <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
         Jemanden einladen

@@ -15,6 +15,12 @@ import { heute } from "@/lib/woche";
  */
 export function Wochenplan({ plan }: { plan: Plan }) {
   const namen = Object.fromEntries(plan.haushalt.mitglieder.map((m) => [m.id, m.name]));
+  // Wer überhaupt Aufgaben übernimmt. Betreute Personen stehen im Haushalt,
+  // aber nicht im Plan — sie zur Auswahl anzubieten hieße, eine Antwort
+  // anzubieten, die der Dienst sicher ablehnt.
+  const kandidaten = plan.haushalt.mitglieder
+    .filter((m) => m.rolle !== "betreut")
+    .map((m) => ({ id: m.id, name: m.name }));
   const ich = plan.ich ?? "";
   const planend = plan.meine_rolle === "planend";
   const heuteISO = heute();
@@ -64,6 +70,15 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         </p>
       )}
 
+      {/* Die Fragen stehen vor der Woche, nicht dahinter.
+          Nach ADR-0010 ist eine Frage das, was die App tut, statt zu raten —
+          und eine Frage hinter zwei Dutzend Zeilen wird nicht beantwortet.
+          Dann rät sie weiter. Beantwortet verschwindet sie; die Kosten sind
+          vorübergehend, der Nutzen bleibt. */}
+      {plan.fragen && plan.fragen.length > 0 && (
+        <Fragen haushaltId={plan.haushalt.id} woche={plan.woche} fragen={plan.fragen} />
+      )}
+
       {tage.length === 0 ? (
         <div className="rounded-lg border border-line bg-surface px-4 py-8 text-center">
           <p className="font-semibold">Diese Woche steht nichts an.</p>
@@ -80,6 +95,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
               heute={tag === heuteISO}
               aufgaben={nachTag.get(tag)!}
               namen={namen}
+              kandidaten={kandidaten}
               ich={ich}
               planend={planend}
               haushaltId={plan.haushalt.id}
@@ -103,6 +119,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
                     heute={false}
                     aufgaben={nachTag.get(tag)!}
                     namen={namen}
+                    kandidaten={kandidaten}
                     ich={ich}
                     planend={planend}
                     haushaltId={plan.haushalt.id}
@@ -112,10 +129,6 @@ export function Wochenplan({ plan }: { plan: Plan }) {
             </details>
           )}
         </section>
-      )}
-
-      {plan.fragen && plan.fragen.length > 0 && (
-        <Fragen haushaltId={plan.haushalt.id} fragen={plan.fragen} />
       )}
 
       {plan.bilanz ? (
@@ -156,6 +169,7 @@ function Tag({
   heute,
   aufgaben,
   namen,
+  kandidaten,
   ich,
   planend,
   haushaltId,
@@ -164,6 +178,7 @@ function Tag({
   heute: boolean;
   aufgaben: Aufgabe[];
   namen: Record<string, string>;
+  kandidaten: { id: string; name: string }[];
   ich: string;
   planend: boolean;
   haushaltId: string;
@@ -194,6 +209,7 @@ function Tag({
             key={a.id ?? `${a.vorlage_id}-${i}`}
             aufgabe={a}
             namen={namen}
+            kandidaten={kandidaten}
             ich={ich}
             planend={planend}
             haushaltId={haushaltId}

@@ -76,6 +76,15 @@ export const PersonPlus = (p: Props) => (
   </Svg>
 );
 
+export const Personen = (p: Props) => (
+  <Svg {...p}>
+    <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 19v-1a4 4 0 0 0-3-3.9" />
+    <path d="M16 3.1a4 4 0 0 1 0 7.8" />
+  </Svg>
+);
+
 export const Pfeil = (p: Props) => (
   <Svg {...p}>
     <path d="M5 12h14M13 6l6 6-6 6" />

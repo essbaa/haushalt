@@ -19,6 +19,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0010](0010-unbekannt-ist-nicht-nein.md) | Unbekannt ist nicht nein | angenommen |
 | [0011](0011-massstab-statt-filter.md) | Maßstab statt Filter | angenommen |
 | [0012](0012-rotation-ist-eine-vorliebe.md) | Rotation ist eine Vorliebe, keine Bedingung | angenommen |
+| [0013](0013-von-hand-sticht.md) | Von Hand sticht: Umverteilen prüft Bedingungen, nicht Vorlieben | angenommen |
 
 ## Aufbau eines Eintrags
 

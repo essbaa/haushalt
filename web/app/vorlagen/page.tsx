@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Bereiche } from "@/app/components/bereiche";
 import { VorlagenListe } from "@/app/components/vorlagen-liste";
 import { ladeHaushalte, ladeVorlagen } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -34,16 +34,14 @@ export default async function Vorlagen({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-10">
-      <Link
-        href={`/?haushalt=${gewaehlt.id}`}
-        className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
-      >
-        <span aria-hidden="true">←</span>
-        Zurück zum Wochenplan
-      </Link>
+      <Bereiche
+        haushaltId={gewaehlt.id}
+        planend={gewaehlt.meine_rolle === "planend"}
+        aktiv="vorlagen"
+      />
 
       <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
-        Eure Woche
+        Aufgaben
       </h1>
       <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
         Alles, was die App kennt, und was davon bei euch gilt. Was ihr nicht

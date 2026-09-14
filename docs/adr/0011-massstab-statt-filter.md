@@ -52,7 +52,7 @@ dasselbe ergeben — auch auf einer anderen Maschine.
 
 **Umgerechnet wird einmal, ganz vorne** (`ScaleTemplates` in `Plan()`). Sonst
 rechnet die Zuteilung mit der einen Zahl, die Kapazitätsprüfung mit der anderen
-und die Anzeige mit einer dritten. Die Seite „Eure Woche" benutzt dieselbe
+und die Anzeige mit einer dritten. Die Seite „Eure Woche" (seit dem 14.9. „Aufgaben") benutzt dieselbe
 Funktion.
 
 **Und die Wohnform wird nicht mehr abgefragt.** Sie bleibt im Modell — sie ist

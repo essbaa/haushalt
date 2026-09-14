@@ -378,6 +378,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/aufgaben/{aufgabeId}/zuteilen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aufgabe von Hand an eine Person geben
+         * @description Der Unterschied zu `abgeben`: Dort sucht die App jemanden nach ihren
+         *     Regeln, hier hat ein Mensch schon gewählt.
+         *
+         *     Geprüft wird nur noch, was die Person nicht übernehmen *kann* — Alter,
+         *     Rolle, Verteilungsregel der Vorlage, und dass eine eigene Aufgabe der
+         *     Person selbst gehört. Was die App nur *bevorzugt* hätte — Rotation,
+         *     Auslastung, Kopflast am Tag — gilt hier nicht. Ein Mensch, der es
+         *     besser weiß, sticht die Annahmen des Planers.
+         *
+         *     Jede Korrektur wird als `manual` festgehalten. Sie ist die ehrlichste
+         *     Rückmeldung, die das Produkt bekommt: Sie sagt, wo der Planer
+         *     danebenlag.
+         *
+         *     Erlaubt ist es der zuständigen Person und jeder planenden.
+         */
+        post: operations["aufgabeZuteilen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/einladungen/{code}/annehmen": {
         parameters: {
             query?: never;
@@ -506,6 +539,13 @@ export interface components {
              * @enum {string}
              */
             zeit?: "keine" | "wenig" | "mittel" | "viel";
+        };
+        Zuteilung: {
+            /**
+             * @description Name der Person, die die Aufgabe jetzt hat.
+             * @example Mia
+             */
+            zustaendig: string;
         };
         Abgabe: {
             /**
@@ -822,7 +862,7 @@ export interface components {
          */
         Begruendung: {
             /** @enum {string} */
-            code: "rotation" | "ausgleich" | "feste_person" | "einzige_moeglichkeit" | "frist" | "eigene_aufgabe";
+            code: "rotation" | "ausgleich" | "feste_person" | "einzige_moeglichkeit" | "frist" | "eigene_aufgabe" | "von_hand";
             /** @description bei `rotation` die Person, die die Aufgabe zuletzt hatte */
             zuletzt_bei?: string | null;
         };
@@ -1604,6 +1644,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Abgabe"];
+                };
+            };
+            /** @description das ist nicht deine Aufgabe */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diese Aufgabe gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    aufgabeZuteilen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                aufgabeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Kennung der Person, die die Aufgabe übernimmt. */
+                    mitglied: string;
+                };
+            };
+        };
+        responses: {
+            /** @description umverteilt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Zuteilung"];
+                };
+            };
+            /** @description diese Person kann die Aufgabe nicht übernehmen */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
                 };
             };
             /** @description das ist nicht deine Aufgabe */

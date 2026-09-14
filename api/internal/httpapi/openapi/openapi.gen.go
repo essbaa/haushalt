@@ -92,6 +92,7 @@ const (
 	FestePerson         BegruendungCode = "feste_person"
 	Frist               BegruendungCode = "frist"
 	Rotation            BegruendungCode = "rotation"
+	VonHand             BegruendungCode = "von_hand"
 )
 
 // Valid indicates whether the value is a known member of the BegruendungCode enum.
@@ -108,6 +109,8 @@ func (e BegruendungCode) Valid() bool {
 	case Frist:
 		return true
 	case Rotation:
+		return true
+	case VonHand:
 		return true
 	default:
 		return false
@@ -1109,6 +1112,14 @@ type Wochenplan struct {
 // Demo-Haushalten und ohne Anmeldung.
 type WochenplanMeineRolle string
 
+// Zuteilung defines model for Zuteilung.
+type Zuteilung struct {
+	// Zustaendig Name der Person, die die Aufgabe jetzt hat.
+	//
+	// Example: Mia
+	Zustaendig string `json:"zustaendig"`
+}
+
 // AufgabeAbgebenJSONBody defines parameters for AufgabeAbgeben.
 type AufgabeAbgebenJSONBody struct {
 	// Grund Freiwillig. Landet im Protokoll und ist später die
@@ -1122,6 +1133,12 @@ type AufgabeAbgebenJSONBody struct {
 type SetErledigtJSONBody struct {
 	// Erledigt Fehlt das Feld, gilt „erledigt".
 	Erledigt *bool `json:"erledigt,omitempty"`
+}
+
+// AufgabeZuteilenJSONBody defines parameters for AufgabeZuteilen.
+type AufgabeZuteilenJSONBody struct {
+	// Mitglied Kennung der Person, die die Aufgabe übernimmt.
+	Mitglied string `json:"mitglied"`
 }
 
 // CreateEinladungJSONBody defines parameters for CreateEinladung.
@@ -1156,6 +1173,9 @@ type AufgabeAbgebenJSONRequestBody AufgabeAbgebenJSONBody
 // SetErledigtJSONRequestBody defines body for SetErledigt for application/json ContentType.
 type SetErledigtJSONRequestBody SetErledigtJSONBody
 
+// AufgabeZuteilenJSONRequestBody defines body for AufgabeZuteilen for application/json ContentType.
+type AufgabeZuteilenJSONRequestBody AufgabeZuteilenJSONBody
+
 // CreateHaushaltJSONRequestBody defines body for CreateHaushalt for application/json ContentType.
 type CreateHaushaltJSONRequestBody = NeuerHaushalt
 
@@ -1188,6 +1208,9 @@ type ServerInterface interface {
 	// SetErledigt Aufgabe abhaken oder wieder öffnen
 	// (POST /api/aufgaben/{aufgabeId}/erledigt)
 	SetErledigt(w http.ResponseWriter, r *http.Request, aufgabeId string)
+	// AufgabeZuteilen Aufgabe von Hand an eine Person geben
+	// (POST /api/aufgaben/{aufgabeId}/zuteilen)
+	AufgabeZuteilen(w http.ResponseWriter, r *http.Request, aufgabeId string)
 	// AcceptEinladung Einer Einladung folgen
 	// (POST /api/einladungen/{code}/annehmen)
 	AcceptEinladung(w http.ResponseWriter, r *http.Request, code string)
@@ -1293,6 +1316,32 @@ func (siw *ServerInterfaceWrapper) SetErledigt(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetErledigt(w, r, aufgabeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AufgabeZuteilen operation middleware
+func (siw *ServerInterfaceWrapper) AufgabeZuteilen(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "aufgabeId" -------------
+	var aufgabeId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "aufgabeId", r.PathValue("aufgabeId"), &aufgabeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aufgabeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AufgabeZuteilen(w, r, aufgabeId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1879,6 +1928,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/erledigt", wrapper.SetErledigt)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/abgeben", wrapper.AufgabeAbgeben)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/zuteilen", wrapper.AufgabeZuteilen)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/einladungen/{code}/annehmen", wrapper.AcceptEinladung)
 
 	return m
@@ -1969,6 +2019,71 @@ func (response SetErledigt403JSONResponse) VisitSetErledigtResponse(w http.Respo
 type SetErledigt404JSONResponse Fehler
 
 func (response SetErledigt404JSONResponse) VisitSetErledigtResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeZuteilenRequestObject struct {
+	AufgabeId string `json:"aufgabeId"`
+	Body      *AufgabeZuteilenJSONRequestBody
+}
+
+type AufgabeZuteilenResponseObject interface {
+	VisitAufgabeZuteilenResponse(w http.ResponseWriter) error
+}
+
+type AufgabeZuteilen200JSONResponse Zuteilung
+
+func (response AufgabeZuteilen200JSONResponse) VisitAufgabeZuteilenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeZuteilen400JSONResponse Fehler
+
+func (response AufgabeZuteilen400JSONResponse) VisitAufgabeZuteilenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeZuteilen403JSONResponse Fehler
+
+func (response AufgabeZuteilen403JSONResponse) VisitAufgabeZuteilenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeZuteilen404JSONResponse Fehler
+
+func (response AufgabeZuteilen404JSONResponse) VisitAufgabeZuteilenResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2807,6 +2922,9 @@ type StrictServerInterface interface {
 	// SetErledigt Aufgabe abhaken oder wieder öffnen
 	// (POST /api/aufgaben/{aufgabeId}/erledigt)
 	SetErledigt(ctx context.Context, request SetErledigtRequestObject) (SetErledigtResponseObject, error)
+	// AufgabeZuteilen Aufgabe von Hand an eine Person geben
+	// (POST /api/aufgaben/{aufgabeId}/zuteilen)
+	AufgabeZuteilen(ctx context.Context, request AufgabeZuteilenRequestObject) (AufgabeZuteilenResponseObject, error)
 	// AcceptEinladung Einer Einladung folgen
 	// (POST /api/einladungen/{code}/annehmen)
 	AcceptEinladung(ctx context.Context, request AcceptEinladungRequestObject) (AcceptEinladungResponseObject, error)
@@ -2964,6 +3082,39 @@ func (sh *strictHandler) SetErledigt(w http.ResponseWriter, r *http.Request, auf
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetErledigtResponseObject); ok {
 		if err := validResponse.VisitSetErledigtResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AufgabeZuteilen operation middleware
+func (sh *strictHandler) AufgabeZuteilen(w http.ResponseWriter, r *http.Request, aufgabeId string) {
+	var request AufgabeZuteilenRequestObject
+
+	request.AufgabeId = aufgabeId
+
+	var body AufgabeZuteilenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AufgabeZuteilen(ctx, request.(AufgabeZuteilenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AufgabeZuteilen")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AufgabeZuteilenResponseObject); ok {
+		if err := validResponse.VisitAufgabeZuteilenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

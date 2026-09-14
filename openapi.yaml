@@ -775,6 +775,69 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/aufgaben/{aufgabeId}/zuteilen:
+    post:
+      tags: [plan]
+      summary: Aufgabe von Hand an eine Person geben
+      description: |
+        Der Unterschied zu `abgeben`: Dort sucht die App jemanden nach ihren
+        Regeln, hier hat ein Mensch schon gewählt.
+
+        Geprüft wird nur noch, was die Person nicht übernehmen *kann* — Alter,
+        Rolle, Verteilungsregel der Vorlage, und dass eine eigene Aufgabe der
+        Person selbst gehört. Was die App nur *bevorzugt* hätte — Rotation,
+        Auslastung, Kopflast am Tag — gilt hier nicht. Ein Mensch, der es
+        besser weiß, sticht die Annahmen des Planers.
+
+        Jede Korrektur wird als `manual` festgehalten. Sie ist die ehrlichste
+        Rückmeldung, die das Produkt bekommt: Sie sagt, wo der Planer
+        danebenlag.
+
+        Erlaubt ist es der zuständigen Person und jeder planenden.
+      operationId: aufgabeZuteilen
+      parameters:
+        - name: aufgabeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mitglied]
+              properties:
+                mitglied:
+                  type: string
+                  description: Kennung der Person, die die Aufgabe übernimmt.
+      responses:
+        "200":
+          description: umverteilt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zuteilung"
+        "400":
+          description: diese Person kann die Aufgabe nicht übernehmen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das ist nicht deine Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diese Aufgabe gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/einladungen/{code}/annehmen:
     post:
       tags: [haushalt]
@@ -964,6 +1027,15 @@ components:
             Fehlt die Angabe, gilt „mittel"; bei betreuten Personen immer
             „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
             keine.
+
+    Zuteilung:
+      type: object
+      required: [zustaendig]
+      properties:
+        zustaendig:
+          type: string
+          description: Name der Person, die die Aufgabe jetzt hat.
+          example: Mia
 
     Abgabe:
       type: object
@@ -1426,7 +1498,7 @@ components:
         code:
           type: string
           enum:
-            [rotation, ausgleich, feste_person, einzige_moeglichkeit, frist, eigene_aufgabe]
+            [rotation, ausgleich, feste_person, einzige_moeglichkeit, frist, eigene_aufgabe, von_hand]
         zuletzt_bei:
           type: string
           nullable: true

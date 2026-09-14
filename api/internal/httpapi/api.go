@@ -43,6 +43,10 @@ type Plans interface {
 	// HandOver gibt eine Aufgabe zurück in den Haushalt und liefert den Namen
 	// der Person, die übernimmt — leer, wenn niemand geeignet ist.
 	HandOver(ctx context.Context, subject, taskID, reason string) (string, error)
+	// Reassign gibt eine Aufgabe von Hand an eine bestimmte Person und
+	// liefert deren Namen. Anders als HandOver wählt hier ein Mensch — der
+	// Planer prüft nur noch, was diese Person nicht übernehmen kann.
+	Reassign(ctx context.Context, subject, taskID, memberID string) (string, error)
 	// UpdateHousehold ändert die Einstellungen. Nur planende Personen.
 	UpdateHousehold(ctx context.Context, subject, id string, c planner.HouseholdChange) (planner.Household, error)
 	// UpdateMember ändert eine Person. Den eigenen Namen und die eigene Zeit
@@ -526,6 +530,37 @@ func (a api) AufgabeAbgeben(ctx context.Context, r openapi.AufgabeAbgebenRequest
 		antwort.Uebernimmt = &name
 	}
 	return antwort, nil
+}
+
+// AufgabeZuteilen gibt eine Aufgabe von Hand an eine bestimmte Person.
+func (a api) AufgabeZuteilen(ctx context.Context, r openapi.AufgabeZuteilenRequestObject) (openapi.AufgabeZuteilenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.AufgabeZuteilen403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil || r.Body.Mitglied == "" {
+		return openapi.AufgabeZuteilen400JSONResponse{Fehler: "es fehlt die Person, die übernehmen soll"}, nil
+	}
+
+	name, err := a.plans.Reassign(ctx, id.Subject, r.AufgabeId, r.Body.Mitglied)
+
+	// Die Meldung zu ErrNotEligible ist für Menschen geschrieben und steht im
+	// Fehler selbst — „Bad putzen gilt ab 12 Jahren“ hilft, „nicht geeignet“
+	// nicht. Deshalb errors.As und nicht errors.Is.
+	var ungeeignet planner.NotEligibleError
+	switch {
+	case errors.Is(err, planner.ErrUnknownTask):
+		return openapi.AufgabeZuteilen404JSONResponse{Fehler: "diese Aufgabe gibt es nicht"}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.AufgabeZuteilen403JSONResponse{Fehler: "das ist nicht deine Aufgabe"}, nil
+	case errors.Is(err, planner.ErrUnknownMember):
+		return openapi.AufgabeZuteilen400JSONResponse{Fehler: "diese Person gehört nicht zum Haushalt"}, nil
+	case errors.As(err, &ungeeignet):
+		return openapi.AufgabeZuteilen400JSONResponse{Fehler: ungeeignet.Grund}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.AufgabeZuteilen200JSONResponse{Zustaendig: name}, nil
 }
 
 // UpdateHaushalt ändert die Einstellungen eines Haushalts.

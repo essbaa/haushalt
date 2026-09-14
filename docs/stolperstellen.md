@@ -515,6 +515,26 @@ sobald es geschrieben ist. Der Abschnitt „Dagegen" in ADR-0003 nannte die
 richtige Ursache übrigens schon am 7. September; es fehlte nur die Zahl
 daneben und die Frage, wer die Rechnung bezahlt.
 
+### 3.14 Eine Schnittstelle, drei Erfüllungen — zwei gefunden
+
+**Symptom** — `go vet`: *\*library.Catalog does not implement httpapi.Plans
+(missing method Reassign)*.
+
+**Ursache** — `httpapi.Plans` hat drei Erfüllungen: den Speicher (echte
+Datenbank), den Katalog (die Beispielhaushalte aus dem Repo) und die Attrappe
+im Test. Beim Nachziehen hatte ich an Speicher und Attrappe gedacht und den
+Katalog vergessen — er steht in einem anderen Paket und fällt beim Suchen
+durchs Raster.
+
+**Lösung** — `Reassign` gibt dort `ErrUnknownTask` zurück, wie `MarkDone` und
+`HandOver` daneben: Die Wochen aus dem Repo werden gerechnet und nicht
+geschrieben, es gibt keine Aufgabe, die man umverteilen könnte.
+
+**Lehre** — Bei einer neuen Methode an einer Schnittstelle zuerst
+`grep -rn "InterfaceName"` über das ganze Repo, nicht nur über das Paket, in
+dem man gerade arbeitet. Der Übersetzer findet es sowieso — er findet es nur
+später als man selbst könnte.
+
 ## 4. Datenbank und Schema
 
 ### 4.1 Das Schema hatte eine Produktentscheidung getroffen
@@ -618,6 +638,70 @@ Anmelde-Parameter `?weiter=` hätte auf eine fremde Domain zeigen können.
 **Lösung** — Nur Pfade akzeptieren, und keine, die mit `//` beginnen.
 
 ---
+
+### 5.5 Die Antwort war gespeichert, die Frage kam wieder
+
+**Symptom** — „Wenn ich eine Frage beantworte, passiert nichts. Es flackert
+kurz, dann steht die Frage wieder da."
+
+**Ursache** — Die Antwort war korrekt gespeichert. Nur kommen die Fragen aus
+`Result.Skipped`, und bei einer festgeschriebenen Woche ist das die
+eingefrorene Momentaufnahme aus `week_plan.skipped` (ADR-0008). `SetFacts`
+schreibt das Faktum an den Haushalt und rührt die Woche nicht an — genau wie
+`UpdateHousehold`, wo dafür der Knopf „Diese Woche neu rechnen" danebensteht.
+Die Fragen hatten keinen solchen Knopf. Das Flackern war `router.refresh()`,
+das brav dasselbe neu lud.
+
+**Lösung** — Die Karte klappt nach der Antwort zu einer Bestätigung zusammen
+(„Notiert. … — ab nächster Woche."), und darunter steht „Schon diese Woche"
+— nur, wenn mindestens ein Ja dabei war, denn ein Nein schaltet nichts frei.
+Nicht stillschweigend neu rechnen: Wer auf „Habt ihr Pflanzen? — Ja" tippt,
+rechnet nicht damit, dass sich der Samstag umsortiert.
+
+**Lehre** — **Eine Antwort, die nichts sichtbar bewirkt, sieht aus wie eine
+verlorene Antwort.** Der Fehler war nicht im Speichern, sondern im Schweigen
+danach.
+
+### 5.6 Zustand im Browser, der eine Server-Aktualisierung überlebt
+
+**Symptom** — Nach „Schon diese Woche" kamen zwei neue Fragen. Beantwortet —
+und der Knopf kam nicht wieder.
+
+**Ursache** — `router.refresh()` tauscht die Daten aus und lässt die Komponente
+stehen. Mein `gerechnet`-Flag war danach noch `true`, und der Knopf hängt an
+`!gerechnet`. Zwei frische Fragen liefen in eine Komponente, die sich für
+fertig hielt.
+
+**Lösung** — Eine neue Antwort setzt `gerechnet` zurück, das Neurechnen leert
+die gemerkten Antworten.
+
+**Lehre** — **Jedes `useState`, das eine Aussage über die *Daten* trifft statt
+über die *Bedienung*, ist nach einem `router.refresh()` falsch.** „Ist
+aufgeklappt" überlebt eine Aktualisierung zu Recht, „ist schon gerechnet"
+nicht. Beim Schreiben eines `useState` in einer Client Component lohnt die
+Frage: Bin ich gerade dabei, Serverwissen im Browser zu spiegeln?
+
+### 5.7 Die Navigation stand hinter dem Inhalt
+
+**Symptom** — „Ich finde es mühsam, bis nach unten zu scrollen, um die Fragen
+oder die Knöpfe zu sehen." Und danach: „Einstellungen, Aufgaben, Anlässe —
+die sind immer noch ganz unten."
+
+**Ursache** — Gewachsen, nicht entschieden. Die Bereichslinks waren als
+Nachtrag unter den Wochenplan gekommen, als es drei Aufgaben und drei Links
+gab. Bei zwei Dutzend Aufgaben mit je einer Knöpfeleiste darunter war die
+Navigation der am schwersten erreichbare Teil der Oberfläche.
+
+**Lösung** — Drei Dinge, alle in dieselbe Richtung: die Bereiche als Streifen
+unter die Überschrift (auf allen fünf Seiten, er ersetzt dort den
+„Zurück“-Link), die Fragen über die Woche statt darunter, und die
+Aufgabenzeile klappt ihre Aktionen erst beim Antippen auf — sichtbar bleibt
+nur das Häkchen, die häufigste Handlung und die Alternative zur Wischgeste.
+
+**Lehre** — **Was unten steht, wurde nicht entschieden, sondern angehängt.**
+Eine lange Hauptseite verschiebt jede spätere Ergänzung weiter aus dem Blick,
+und niemand merkt es, solange man die Seite nur in der Entwicklung von oben
+liest.
 
 ## 6. Betrieb
 

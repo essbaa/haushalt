@@ -148,6 +148,123 @@ func (p *Plans) HandOver(ctx context.Context, subject, aufgabeID, grund string) 
 	return name, nil
 }
 
+// Reassign gibt eine Aufgabe von Hand an eine bestimmte Person.
+//
+// Der Unterschied zu HandOver ist die Richtung: Dort sucht der Planer jemanden
+// nach seinen Regeln, hier hat ein Mensch schon gewählt. Der Planer prüft
+// deshalb nur noch, was diese Person nicht übernehmen *kann* — Alter, Rolle,
+// Verteilungsregel, eigene Aufgabe — und nicht, was er selbst bevorzugt hätte
+// (planner.Reassign, ADR-0012).
+//
+// `manual = true` setzt SetAssignment ohnehin. Das ist keine Nebenwirkung,
+// sondern der Zweck der Übung: Jede Korrektur von Hand sagt, wo der Planer
+// danebenlag, und diese Spalte ist die einzige Stelle, an der das später
+// nachzulesen ist.
+//
+// Zurückgegeben wird der Name der Person, die jetzt zuständig ist.
+func (p *Plans) Reassign(ctx context.Context, subject, aufgabeID, mitgliedID string) (string, error) {
+	aufgabe, err := p.zustaendig(ctx, subject, aufgabeID)
+	if err != nil {
+		return "", err
+	}
+	ziel, ok := parseUUID(mitgliedID)
+	if !ok {
+		return "", planner.ErrUnknownMember
+	}
+
+	zeile, err := p.db.GetHousehold(ctx, aufgabe.HouseholdID)
+	if err != nil {
+		return "", err
+	}
+	haushalt, err := p.household(ctx, zeile)
+	if err != nil {
+		return "", err
+	}
+	vorlagen, err := p.templates(ctx, zeile.ID)
+	if err != nil {
+		return "", err
+	}
+	hist, err := p.history(ctx, zeile.ID)
+	if err != nil {
+		return "", err
+	}
+	woche, err := planner.ParseWeek(aufgabe.ISOWeek)
+	if err != nil {
+		return "", err
+	}
+	stand, err := p.geschriebeneWoche(ctx, haushalt, zeile.ID, woche, vorlagen)
+	if err != nil {
+		return "", err
+	}
+
+	grund, err := planner.Reassign(planner.Input{
+		Household: haushalt,
+		Templates: vorlagen,
+		Week:      woche,
+		History:   hist,
+		Limits:    planner.DefaultLimits(),
+	}, stand.Tasks, formatUUID(aufgabe.ID), formatUUID(ziel))
+	if err != nil {
+		return "", err
+	}
+
+	name := ""
+	for _, m := range haushalt.Members {
+		if m.ID == formatUUID(ziel) {
+			name = m.Name
+		}
+	}
+
+	// Schon dort. Kein Fehler und kein Ereignis — ein Protokolleintrag, der
+	// nichts festhält, macht die Auswertung später schlechter, nicht besser.
+	if aufgabe.AssigneeID.Valid && aufgabe.AssigneeID == ziel {
+		return name, nil
+	}
+
+	tx, err := p.db.Pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := p.db.Queries.WithTx(tx)
+
+	// Erst weg, dann neu — es gibt genau eine Zuteilung je Aufgabe, und eine
+	// abgegebene hat gar keine.
+	if err := q.ClearAssignment(ctx, aufgabe.ID); err != nil {
+		return "", err
+	}
+	if err := q.SetAssignment(ctx, db.SetAssignmentParams{
+		TaskInstanceID: aufgabe.ID,
+		MemberID:       ziel,
+		ReasonCode:     string(grund.Code),
+		ReasonPrevious: aufgabe.AssigneeID,
+	}); err != nil {
+		return "", err
+	}
+
+	nutzlast, err := json.Marshal(map[string]string{
+		"von": formatUUID(aufgabe.AssigneeID),
+		"an":  formatUUID(ziel),
+	})
+	if err != nil {
+		return "", err
+	}
+	if _, err := q.AppendEvent(ctx, db.AppendEventParams{
+		HouseholdID:    aufgabe.HouseholdID,
+		MemberID:       aufgabe.MemberID,
+		TaskInstanceID: aufgabe.ID,
+		Kind:           "umverteilt",
+		Payload:        nutzlast,
+	}); err != nil {
+		return "", err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
 // zustaendig holt die Aufgabe und prüft in einem Zug, ob dieser Aufrufer sie
 // anfassen darf.
 //

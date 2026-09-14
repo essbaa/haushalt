@@ -110,6 +110,10 @@ func (c *Catalog) HandOver(context.Context, string, string, string) (string, err
 	return "", planner.ErrUnknownTask
 }
 
+func (c *Catalog) Reassign(context.Context, string, string, string) (string, error) {
+	return "", planner.ErrUnknownTask
+}
+
 func (c *Catalog) Households(context.Context, string) ([]planner.Household, error) {
 	out := make([]planner.Household, 0, len(c.order))
 	for _, id := range c.order {

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Bereiche } from "@/app/components/bereiche";
 import { EinstellungenFormular } from "@/app/components/einstellungen-formular";
 import { ladeHaushalte, type Haushalt } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -30,10 +30,11 @@ export default async function Einstellungen({
 
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-10">
-      <Link href={`/?haushalt=${gewaehlt.id}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
-        <span aria-hidden="true">←</span>
-        Zurück zum Wochenplan
-      </Link>
+      <Bereiche
+        haushaltId={gewaehlt.id}
+        planend={gewaehlt.meine_rolle === "planend"}
+        aktiv="einstellungen"
+      />
 
       <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
         Einstellungen

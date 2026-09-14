@@ -44,6 +44,10 @@ func (fakePlans) HandOver(context.Context, string, string, string) (string, erro
 	return "", planner.ErrUnknownTask
 }
 
+func (fakePlans) Reassign(context.Context, string, string, string) (string, error) {
+	return "", planner.ErrUnknownTask
+}
+
 func (fakePlans) Invite(context.Context, string, string, planner.Role, string) (planner.Invitation, error) {
 	return planner.Invitation{}, planner.ErrNotAllowed
 }

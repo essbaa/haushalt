@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Bereiche } from "@/app/components/bereiche";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
@@ -80,12 +81,22 @@ export default async function Page({
           </nav>
         )}
 
-        <div className="mb-8 space-y-1">
+        <div className="mb-5 space-y-1">
           <h1 className="text-3xl font-extrabold tracking-tight text-balance">
             {plan?.haushalt.name ?? "Der Wochenplan"}
           </h1>
           <p className="text-sm text-muted">{wochenSpanne(woche)}</p>
         </div>
+
+        {eigener && plan && (
+          <div className="mb-8">
+            <Bereiche
+              haushaltId={plan.haushalt.id}
+              planend={plan.meine_rolle === "planend"}
+              aktiv="plan"
+            />
+          </div>
+        )}
 
         {fehler && (
           <div className="mb-8 rounded-lg border border-line bg-surface px-4 py-3">
@@ -95,41 +106,6 @@ export default async function Page({
         )}
 
         {plan && <Wochenplan plan={plan} />}
-
-        {eigener && plan && (
-          <nav className="mt-10 flex flex-wrap gap-2 border-t border-line pt-6">
-            <Link
-              href={`/einstellungen?haushalt=${plan.haushalt.id}`}
-              className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
-            >
-              Einstellungen
-            </Link>
-            {plan.meine_rolle === "planend" && (
-              <Link
-                href={`/vorlagen?haushalt=${plan.haushalt.id}`}
-                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
-              >
-                Eure Woche
-              </Link>
-            )}
-            {plan.meine_rolle === "planend" && (
-              <Link
-                href={`/termine?haushalt=${plan.haushalt.id}`}
-                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
-              >
-                Anlässe
-              </Link>
-            )}
-            {plan.meine_rolle === "planend" && (
-              <Link
-                href={`/einladen?haushalt=${plan.haushalt.id}`}
-                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
-              >
-                Jemanden einladen
-              </Link>
-            )}
-          </nav>
-        )}
 
         {!token && (
           <p className="mt-10 border-t border-line pt-6 text-sm leading-relaxed text-muted">

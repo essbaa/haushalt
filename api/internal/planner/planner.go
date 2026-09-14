@@ -34,6 +34,39 @@ var ErrUnknownInvitation = errors.New("planner: einladung ungültig")
 // Auskunft für beides — siehe ErrUnknownHousehold.
 var ErrUnknownTask = errors.New("planner: unbekannte aufgabe")
 
+// ErrUnknownMember sagt, dass es diese Person in diesem Haushalt nicht gibt.
+//
+// Kein 404 für den Aufrufer: Er ist im Haushalt und darf erfahren, dass die
+// Kennung nicht dazugehört. Verschwiegen wird nur, was ihn nichts angeht.
+var ErrUnknownMember = errors.New("planner: unbekannte person")
+
+// ErrNotEligible sagt, dass diese Person diese Aufgabe nicht übernehmen kann.
+//
+// Nicht „darf nicht“, sondern „kann nicht“: Alter, Rolle, die
+// Verteilungsregel der Vorlage. Vorlieben des Planers — Rotation, Auslastung,
+// Aufgabenlänge bei Kindern — erzeugen diesen Fehler ausdrücklich nicht
+// (siehe Reassign).
+//
+// Der Grund ist für Menschen geschrieben und steht in NotEligibleError.Grund
+// — ohne technisches Vorwort, damit er unverändert in die Antwort gehen kann.
+var ErrNotEligible = errors.New("planner: nicht geeignet")
+
+// NotEligibleError trägt den Grund, den ein Mensch lesen soll.
+//
+// Ein eigener Typ statt fmt.Errorf("%w: …"), weil die Oberfläche genau diesen
+// Satz anzeigt. Würde sie err.Error() nehmen, stünde „planner: nicht geeignet:
+// …“ im Formular — die Herkunft des Fehlers geht niemanden etwas an, der
+// gerade eine Aufgabe verschieben will.
+type NotEligibleError struct {
+	Grund string
+}
+
+func (e NotEligibleError) Error() string { return ErrNotEligible.Error() + ": " + e.Grund }
+
+// Is macht errors.Is(err, ErrNotEligible) wahr, ohne dass der Sentinel
+// eingewickelt werden muss.
+func (e NotEligibleError) Is(target error) bool { return target == ErrNotEligible }
+
 // Invitation ist ein ausgestellter Code.
 //
 // For ist der Name der Person, die dieser Code übernimmt — leer, wenn jemand
@@ -192,6 +225,7 @@ const (
 	ReasonOnlyOne  ReasonCode = "einzige_moeglichkeit"
 	ReasonDeadline ReasonCode = "frist"
 	ReasonOwn      ReasonCode = "eigene_aufgabe" // gehört dieser Person selbst
+	ReasonManual   ReasonCode = "von_hand"       // ein Mensch hat umverteilt
 )
 
 type Reason struct {
