@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
 import { Uhr } from "@/app/components/icons";
+import { Laedt } from "@/app/components/laedt";
 import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
@@ -96,24 +97,31 @@ export default async function Page({
             <Link
               href={adresse(gewaehlterHaushalt, wocheVersetzt(woche, -1))}
               aria-label="Woche davor"
-              className="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+              className="inline-flex size-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
-              <span aria-hidden="true">‹</span>
+              <Laedt>
+                <span aria-hidden="true">‹</span>
+              </Laedt>
             </Link>
             <span className="text-sm tabular-nums text-muted">{wochenSpanne(woche)}</span>
             <Link
               href={adresse(gewaehlterHaushalt, wocheVersetzt(woche, 1))}
               aria-label="Woche danach"
-              className="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+              className="inline-flex size-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
-              <span aria-hidden="true">›</span>
+              <Laedt>
+                <span aria-hidden="true">›</span>
+              </Laedt>
             </Link>
             {woche !== jetzt && (
               <Link
                 href={adresse(gewaehlterHaushalt, jetzt)}
                 className="ml-1 inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
               >
-                Diese Woche
+                <span className="inline-flex items-center gap-2">
+                  Diese Woche
+                  <Laedt />
+                </span>
               </Link>
             )}
           </div>

@@ -141,3 +141,25 @@ summary {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Datumsfelder auf dem iPhone.
+ *
+ * Safari gibt `input[type=date]` eine eigene, vom Inhalt abgeleitete Breite
+ * und ignoriert damit die Breite, die daneben für alle anderen Felder gilt.
+ * Ergebnis: Das Feld steht breiter als die übrigen und läuft aus der Karte.
+ * `appearance: none` gibt die Breite zurück an das Layout.
+ *
+ * Steht hier und nicht an der Komponente, weil es kein Entwurf ist, sondern
+ * eine Eigenheit des Browsers — sie gilt für jedes Datumsfeld, auch für das
+ * nächste, das jemand einbaut.
+ */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}

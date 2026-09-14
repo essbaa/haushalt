@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { AufgabeAktionen } from "@/app/components/aufgabe-aktionen";
 import { Haken, Kreis } from "@/app/components/icons";
 import { Zeichen } from "@/app/components/ui";
@@ -47,6 +47,13 @@ export function AufgabeZeile({
   const feld = useId();
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // router.refresh() holt die Server Components neu und ist nicht abgewartet:
+  // Ohne useTransition steht der Knopf wieder bereit, während die neuen Daten
+  // noch unterwegs sind — die Zeile sieht fertig aus und ändert sich eine
+  // Sekunde später doch noch. `uebergang` hält den Zustand, bis der Server
+  // geantwortet hat.
+  const [uebergang, starten] = useTransition();
+  const beschaeftigt = laeuft || uebergang;
 
   const meine = ich !== "" && a.zustaendig === ich;
   const offen = a.zustaendig === "";
@@ -62,7 +69,7 @@ export function AufgabeZeile({
         { aktiv },
       );
       setAus(!aktiv);
-      if (aktiv) router.refresh();
+      if (aktiv) starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
       setAus(false);
@@ -77,7 +84,7 @@ export function AufgabeZeile({
       await postMitToken<void>(`/api/aufgaben/${encodeURIComponent(a.id)}/erledigt`, {
         erledigt: !a.erledigt,
       });
-      router.refresh();
+      starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     }
@@ -94,7 +101,7 @@ export function AufgabeZeile({
         <button
           type="button"
           onClick={() => vorlage(true)}
-          disabled={laeuft}
+          disabled={beschaeftigt}
           className="inline-flex min-h-10 items-center rounded-full border border-line-strong px-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
         >
           Rückgängig
@@ -181,9 +188,10 @@ export function AufgabeZeile({
         <button
           type="button"
           onClick={abhaken}
+          disabled={beschaeftigt}
           aria-pressed={a.erledigt ?? false}
           aria-label={a.erledigt ? `${a.titel} wieder öffnen` : `${a.titel} abhaken`}
-          className={`-mr-1 flex size-11 shrink-0 items-center justify-center self-start rounded-full transition-colors ${
+          className={`-mr-1 flex size-11 shrink-0 items-center justify-center self-start rounded-full transition-colors disabled:opacity-45 ${
             a.erledigt
               ? // Erledigtes wird leise. Ein gefüllter Knopf auf der Zeile, die
                 // niemanden mehr interessiert, zieht den Blick genau dorthin,

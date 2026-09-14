@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Laedt } from "@/app/components/laedt";
 
 /**
  * Die Bereiche der App.
@@ -66,7 +67,10 @@ export function Bereiche({
                 : "border-line-strong text-muted hover:border-primary hover:text-primary"
             }`}
           >
-            {b.titel}
+            <span className="inline-flex items-center gap-2">
+              {b.titel}
+              <Laedt />
+            </span>
           </Link>
         );
       })}

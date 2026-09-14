@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Personen, Zurueck } from "@/app/components/icons";
 import { postMitToken } from "@/lib/browser-token";
 
@@ -58,13 +58,20 @@ export function AufgabeAktionen({
   const [grund, setGrund] = useState("");
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  // router.refresh() holt die Server Components neu und ist nicht abgewartet:
+  // Ohne useTransition steht der Knopf wieder bereit, während die neuen Daten
+  // noch unterwegs sind — die Zeile sieht fertig aus und ändert sich eine
+  // Sekunde später doch noch. `uebergang` hält den Zustand, bis der Server
+  // geantwortet hat.
+  const [uebergang, starten] = useTransition();
+  const beschaeftigt = laeuft || uebergang;
 
   async function tun(arbeit: () => Promise<void>) {
     setLaeuft(true);
     setFehler(null);
     try {
       await arbeit();
-      router.refresh();
+      starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     } finally {
@@ -106,7 +113,7 @@ export function AufgabeAktionen({
           <button
             type="button"
             onClick={abschalten}
-            disabled={laeuft}
+            disabled={beschaeftigt}
             className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
           >
             Brauchen wir nicht
@@ -117,7 +124,7 @@ export function AufgabeAktionen({
           <button
             type="button"
             onClick={() => setFragt(true)}
-            disabled={laeuft}
+            disabled={beschaeftigt}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
           >
             <Zurueck className="size-4" />
@@ -129,7 +136,7 @@ export function AufgabeAktionen({
           <button
             type="button"
             onClick={() => setVerteilt((v) => !v)}
-            disabled={laeuft}
+            disabled={beschaeftigt}
             aria-expanded={verteilt}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
           >
@@ -148,7 +155,7 @@ export function AufgabeAktionen({
                 key={m.id}
                 type="button"
                 onClick={() => zuteilen(m.id)}
-                disabled={laeuft}
+                disabled={beschaeftigt}
                 className="inline-flex min-h-10 items-center rounded-full border border-line-strong bg-surface px-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
               >
                 {m.name}
@@ -182,7 +189,7 @@ export function AufgabeAktionen({
             <button
               type="button"
               onClick={abgeben}
-              disabled={laeuft}
+              disabled={beschaeftigt}
               className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
             >
               Zurückgeben

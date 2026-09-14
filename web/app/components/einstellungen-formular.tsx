@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { Haushalt, Mitglied } from "@/lib/api";
 import { Auswahl, Marke } from "@/app/components/ui";
 import { patchMitToken, postMitToken } from "@/lib/browser-token";
@@ -31,6 +31,13 @@ export function EinstellungenFormular({
   const [laeuft, setLaeuft] = useState(false);
   const [geaendert, setGeaendert] = useState(false);
   const [gerechnet, setGerechnet] = useState(false);
+  // router.refresh() holt die Server Components neu und ist nicht abgewartet:
+  // Ohne useTransition steht der Knopf wieder bereit, während die neuen Daten
+  // noch unterwegs sind — die Zeile sieht fertig aus und ändert sich eine
+  // Sekunde später doch noch. `uebergang` hält den Zustand, bis der Server
+  // geantwortet hat.
+  const [uebergang, starten] = useTransition();
+  const beschaeftigt = laeuft || uebergang;
 
   async function schicke(tun: () => Promise<Haushalt>) {
     setLaeuft(true);
@@ -39,7 +46,7 @@ export function EinstellungenFormular({
       setStand(await tun());
       setGeaendert(true);
       setGerechnet(false);
-      router.refresh();
+      starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     } finally {
@@ -56,7 +63,7 @@ export function EinstellungenFormular({
       );
       setGerechnet(true);
       setGeaendert(false);
-      router.refresh();
+      starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     } finally {
@@ -69,7 +76,7 @@ export function EinstellungenFormular({
       {planend && (
         <HaushaltTeil
           stand={stand}
-          laeuft={laeuft}
+          laeuft={beschaeftigt}
           speichern={(aenderung) =>
             schicke(() =>
               patchMitToken<Haushalt>(
@@ -89,7 +96,7 @@ export function EinstellungenFormular({
             person={m}
             planend={planend}
             ichSelbst={m.id === stand.ich}
-            laeuft={laeuft}
+            laeuft={beschaeftigt}
             speichern={(aenderung) =>
               schicke(() =>
                 patchMitToken<Haushalt>(

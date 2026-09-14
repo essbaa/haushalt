@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import type { Frage } from "@/lib/api";
 import { patchMitToken, postMitToken } from "@/lib/browser-token";
 
@@ -49,6 +49,12 @@ export function Fragen({
   const [beantwortet, setBeantwortet] = useState<Record<string, boolean>>({});
   const [gerechnet, setGerechnet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // router.refresh() holt die Server Components neu und ist nicht abgewartet:
+  // Ohne useTransition steht der Knopf wieder bereit, während die neuen Daten
+  // noch unterwegs sind — die Zeile sieht fertig aus und ändert sich eine
+  // Sekunde später doch noch. `uebergang` hält den Zustand, bis der Server
+  // geantwortet hat.
+  const [uebergang, starten] = useTransition();
 
   async function antworten(faktum: string, wert: boolean) {
     setLaeuft(faktum);
@@ -80,7 +86,7 @@ export function Fragen({
       // Frage als Bestätigung der alten.
       setBeantwortet({});
       setGerechnet(true);
-      router.refresh();
+      starten(() => router.refresh());
     } catch (e) {
       setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     } finally {
@@ -148,7 +154,7 @@ export function Fragen({
                   <button
                     type="button"
                     onClick={() => antworten(f.faktum, true)}
-                    disabled={laeuft !== null}
+                    disabled={laeuft !== null || uebergang}
                     className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
                   >
                     {laeuft === f.faktum ? "Einen Moment …" : "Ja"}
@@ -156,7 +162,7 @@ export function Fragen({
                   <button
                     type="button"
                     onClick={() => antworten(f.faktum, false)}
-                    disabled={laeuft !== null}
+                    disabled={laeuft !== null || uebergang}
                     className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-5 text-sm font-semibold text-muted transition-colors hover:border-line-strong hover:text-fg disabled:opacity-45"
                   >
                     Nein
@@ -172,7 +178,7 @@ export function Fragen({
             <button
               type="button"
               onClick={neuRechnen}
-              disabled={laeuft !== null}
+              disabled={laeuft !== null || uebergang}
               className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
             >
               {laeuft === "woche" ? "Einen Moment …" : "Schon diese Woche"}
