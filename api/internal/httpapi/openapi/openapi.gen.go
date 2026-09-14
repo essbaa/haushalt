@@ -18,18 +18,45 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for AnlassArt.
+const (
+	AnlassArtArzttermin       AnlassArt = "arzttermin"
+	AnlassArtElternabend      AnlassArt = "elternabend"
+	AnlassArtGeburtstag       AnlassArt = "geburtstag"
+	AnlassArtKindergeburtstag AnlassArt = "kindergeburtstag"
+	AnlassArtSonstiges        AnlassArt = "sonstiges"
+)
+
+// Valid indicates whether the value is a known member of the AnlassArt enum.
+func (e AnlassArt) Valid() bool {
+	switch e {
+	case AnlassArtArzttermin:
+		return true
+	case AnlassArtElternabend:
+		return true
+	case AnlassArtGeburtstag:
+		return true
+	case AnlassArtKindergeburtstag:
+		return true
+	case AnlassArtSonstiges:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AufgabeArt.
 const (
-	Ausfuehrung  AufgabeArt = "ausfuehrung"
-	Organisation AufgabeArt = "organisation"
+	AufgabeArtAusfuehrung  AufgabeArt = "ausfuehrung"
+	AufgabeArtOrganisation AufgabeArt = "organisation"
 )
 
 // Valid indicates whether the value is a known member of the AufgabeArt enum.
 func (e AufgabeArt) Valid() bool {
 	switch e {
-	case Ausfuehrung:
+	case AufgabeArtAusfuehrung:
 		return true
-	case Organisation:
+	case AufgabeArtOrganisation:
 		return true
 	default:
 		return false
@@ -204,6 +231,27 @@ func (e Kategorie) Valid() bool {
 	}
 }
 
+// Defines values for MitgliedBetreuung.
+const (
+	MitgliedBetreuungKeine  MitgliedBetreuung = "keine"
+	MitgliedBetreuungKita   MitgliedBetreuung = "kita"
+	MitgliedBetreuungSchule MitgliedBetreuung = "schule"
+)
+
+// Valid indicates whether the value is a known member of the MitgliedBetreuung enum.
+func (e MitgliedBetreuung) Valid() bool {
+	switch e {
+	case MitgliedBetreuungKeine:
+		return true
+	case MitgliedBetreuungKita:
+		return true
+	case MitgliedBetreuungSchule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MitgliedRolle.
 const (
 	MitgliedRolleAusfuehrend MitgliedRolle = "ausfuehrend"
@@ -219,6 +267,27 @@ func (e MitgliedRolle) Valid() bool {
 	case MitgliedRolleBetreut:
 		return true
 	case MitgliedRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MitgliedAenderungBetreuung.
+const (
+	MitgliedAenderungBetreuungKeine  MitgliedAenderungBetreuung = "keine"
+	MitgliedAenderungBetreuungKita   MitgliedAenderungBetreuung = "kita"
+	MitgliedAenderungBetreuungSchule MitgliedAenderungBetreuung = "schule"
+)
+
+// Valid indicates whether the value is a known member of the MitgliedAenderungBetreuung enum.
+func (e MitgliedAenderungBetreuung) Valid() bool {
+	switch e {
+	case MitgliedAenderungBetreuungKeine:
+		return true
+	case MitgliedAenderungBetreuungKita:
+		return true
+	case MitgliedAenderungBetreuungSchule:
 		return true
 	default:
 		return false
@@ -264,6 +333,57 @@ func (e MitgliedAenderungZeit) Valid() bool {
 	case MitgliedAenderungZeitViel:
 		return true
 	case MitgliedAenderungZeitWenig:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeueVorlageAlleTage.
+const (
+	N1  NeueVorlageAlleTage = 1
+	N14 NeueVorlageAlleTage = 14
+	N30 NeueVorlageAlleTage = 30
+	N7  NeueVorlageAlleTage = 7
+)
+
+// Valid indicates whether the value is a known member of the NeueVorlageAlleTage enum.
+func (e NeueVorlageAlleTage) Valid() bool {
+	switch e {
+	case N1:
+		return true
+	case N14:
+		return true
+	case N30:
+		return true
+	case N7:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeuerAnlassArt.
+const (
+	NeuerAnlassArtArzttermin       NeuerAnlassArt = "arzttermin"
+	NeuerAnlassArtElternabend      NeuerAnlassArt = "elternabend"
+	NeuerAnlassArtGeburtstag       NeuerAnlassArt = "geburtstag"
+	NeuerAnlassArtKindergeburtstag NeuerAnlassArt = "kindergeburtstag"
+	NeuerAnlassArtSonstiges        NeuerAnlassArt = "sonstiges"
+)
+
+// Valid indicates whether the value is a known member of the NeuerAnlassArt enum.
+func (e NeuerAnlassArt) Valid() bool {
+	switch e {
+	case NeuerAnlassArtArzttermin:
+		return true
+	case NeuerAnlassArtElternabend:
+		return true
+	case NeuerAnlassArtGeburtstag:
+		return true
+	case NeuerAnlassArtKindergeburtstag:
+		return true
+	case NeuerAnlassArtSonstiges:
 		return true
 	default:
 		return false
@@ -335,28 +455,82 @@ func (e NeuesMitgliedZeit) Valid() bool {
 
 // Defines values for UebersprungenGrund.
 const (
-	Abgewaehlt      UebersprungenGrund = "abgewaehlt"
-	GiltNicht       UebersprungenGrund = "gilt_nicht"
-	KeineKapazitaet UebersprungenGrund = "keine_kapazitaet"
-	NichtFaellig    UebersprungenGrund = "nicht_faellig"
-	NiemandGeeignet UebersprungenGrund = "niemand_geeignet"
-	Startdichte     UebersprungenGrund = "startdichte"
+	UebersprungenGrundAbgewaehlt      UebersprungenGrund = "abgewaehlt"
+	UebersprungenGrundGiltNicht       UebersprungenGrund = "gilt_nicht"
+	UebersprungenGrundKeineKapazitaet UebersprungenGrund = "keine_kapazitaet"
+	UebersprungenGrundNichtFaellig    UebersprungenGrund = "nicht_faellig"
+	UebersprungenGrundNiemandGeeignet UebersprungenGrund = "niemand_geeignet"
+	UebersprungenGrundStartdichte     UebersprungenGrund = "startdichte"
 )
 
 // Valid indicates whether the value is a known member of the UebersprungenGrund enum.
 func (e UebersprungenGrund) Valid() bool {
 	switch e {
-	case Abgewaehlt:
+	case UebersprungenGrundAbgewaehlt:
 		return true
-	case GiltNicht:
+	case UebersprungenGrundGiltNicht:
 		return true
-	case KeineKapazitaet:
+	case UebersprungenGrundKeineKapazitaet:
 		return true
-	case NichtFaellig:
+	case UebersprungenGrundNichtFaellig:
 		return true
-	case NiemandGeeignet:
+	case UebersprungenGrundNiemandGeeignet:
 		return true
-	case Startdichte:
+	case UebersprungenGrundStartdichte:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VorlagenStandArt.
+const (
+	VorlagenStandArtAusfuehrung  VorlagenStandArt = "ausfuehrung"
+	VorlagenStandArtOrganisation VorlagenStandArt = "organisation"
+)
+
+// Valid indicates whether the value is a known member of the VorlagenStandArt enum.
+func (e VorlagenStandArt) Valid() bool {
+	switch e {
+	case VorlagenStandArtAusfuehrung:
+		return true
+	case VorlagenStandArtOrganisation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VorlagenStandGrund.
+const (
+	VorlagenStandGrundAbgewaehlt      VorlagenStandGrund = "abgewaehlt"
+	VorlagenStandGrundBrauchtTermin   VorlagenStandGrund = "braucht_termin"
+	VorlagenStandGrundGiltNicht       VorlagenStandGrund = "gilt_nicht"
+	VorlagenStandGrundKeineKapazitaet VorlagenStandGrund = "keine_kapazitaet"
+	VorlagenStandGrundNichtFaellig    VorlagenStandGrund = "nicht_faellig"
+	VorlagenStandGrundNiemandGeeignet VorlagenStandGrund = "niemand_geeignet"
+	VorlagenStandGrundStartdichte     VorlagenStandGrund = "startdichte"
+	VorlagenStandGrundUnbekannt       VorlagenStandGrund = "unbekannt"
+)
+
+// Valid indicates whether the value is a known member of the VorlagenStandGrund enum.
+func (e VorlagenStandGrund) Valid() bool {
+	switch e {
+	case VorlagenStandGrundAbgewaehlt:
+		return true
+	case VorlagenStandGrundBrauchtTermin:
+		return true
+	case VorlagenStandGrundGiltNicht:
+		return true
+	case VorlagenStandGrundKeineKapazitaet:
+		return true
+	case VorlagenStandGrundNichtFaellig:
+		return true
+	case VorlagenStandGrundNiemandGeeignet:
+		return true
+	case VorlagenStandGrundStartdichte:
+		return true
+	case VorlagenStandGrundUnbekannt:
 		return true
 	default:
 		return false
@@ -411,6 +585,31 @@ type Abgabe struct {
 	// Example: Ben
 	Uebernimmt *string `json:"uebernimmt,omitempty"`
 }
+
+// Anlass defines model for Anlass.
+type Anlass struct {
+	// Art Verbindet den Anlass mit den Vorlagen, die daran hängen. Eine feste
+	// Liste, weil ein freier Text nie zu einer Vorlage passen würde — man
+	// hätte etwas eingetragen und nie erfahren, warum nichts passiert.
+	Art AnlassArt `json:"art"`
+	Id  string    `json:"id"`
+
+	// Jaehrlich Geburtstage wiederholen sich, Termine nicht.
+	Jaehrlich bool `json:"jaehrlich"`
+
+	// Tag Kalendertag ohne Uhrzeit (ADR-0002).
+	//
+	// Example: 2026-11-08
+	Tag string `json:"tag"`
+
+	// Titel Example: Geburtstag von Mia
+	Titel string `json:"titel"`
+}
+
+// AnlassArt Verbindet den Anlass mit den Vorlagen, die daran hängen. Eine feste
+// Liste, weil ein freier Text nie zu einer Vorlage passen würde — man
+// hätte etwas eingetragen und nie erfahren, warum nichts passiert.
+type AnlassArt string
 
 // Aufgabe defines model for Aufgabe.
 type Aufgabe struct {
@@ -526,15 +725,30 @@ type Fehler struct {
 	Fehler string `json:"fehler"`
 }
 
+// Frage defines model for Frage.
+type Frage struct {
+	// Dann Was eine Antwort mit Ja bringt.
+	//
+	// Example: Dann erinnere ich alle paar Tage ans Gießen.
+	Dann string `json:"dann"`
+
+	// Faktum Example: pflanzen
+	Faktum string `json:"faktum"`
+
+	// Frage Example: Habt ihr Pflanzen, die gegossen werden müssen?
+	Frage string `json:"frage"`
+}
+
 // Haushalt defines model for Haushalt.
 type Haushalt struct {
 	Auto   *bool `json:"auto,omitempty"`
+	Baeder *int  `json:"baeder,omitempty"`
 	Garten *bool `json:"garten,omitempty"`
 
-	// Haustiere Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
-	// entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
-	// Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
-	// könnten die Einstellungen nicht zeigen, was angenommen wurde.
+	// Haustiere Garten, Auto und Haustiere entscheiden, welche Aufgaben es im
+	// Haushalt überhaupt gibt — ohne Garten kein Rasen, ohne Auto kein
+	// TÜV. Ohne diese Felder könnten die Einstellungen nicht zeigen, was
+	// angenommen wurde.
 	Haustiere *[]string `json:"haustiere,omitempty"`
 
 	// Ich Kennung des Aufrufers als Person in diesem Haushalt. Damit weiß die
@@ -554,6 +768,7 @@ type Haushalt struct {
 	// Name Example: Familie A
 	Name     string            `json:"name"`
 	Wohnform *HaushaltWohnform `json:"wohnform,omitempty"`
+	Zimmer   *int              `json:"zimmer,omitempty"`
 }
 
 // HaushaltMeineRolle Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei den
@@ -569,6 +784,7 @@ type HaushaltWohnform string
 // Einstellungsseite.
 type HaushaltAenderung struct {
 	Auto   *bool `json:"auto,omitempty"`
+	Baeder *int  `json:"baeder,omitempty"`
 	Garten *bool `json:"garten,omitempty"`
 
 	// Haustiere Vollständige Liste. Leer heißt „keine mehr".
@@ -576,6 +792,7 @@ type HaushaltAenderung struct {
 	Name      *string                    `json:"name,omitempty"`
 	Wohnform  *HaushaltAenderungWohnform `json:"wohnform,omitempty"`
 	Zeitzone  *string                    `json:"zeitzone,omitempty"`
+	Zimmer    *int                       `json:"zimmer,omitempty"`
 }
 
 // HaushaltAenderungWohnform defines model for HaushaltAenderung.Wohnform.
@@ -598,6 +815,11 @@ type Kategorie string
 
 // Mitglied defines model for Mitglied.
 type Mitglied struct {
+	// Betreuung Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
+	// hängt, welche Aufgaben der Haushalt überhaupt hat — ohne Kita-Kind
+	// keine Kita-Tasche.
+	Betreuung *MitgliedBetreuung `json:"betreuung,omitempty"`
+
 	// Geburtsjahr Fehlt bei Erwachsenen — dort ist „nicht gefragt" die richtige
 	// Antwort und nicht „unbekannt alt" (siehe Member.IsAdult im Planer).
 	Geburtsjahr *int `json:"geburtsjahr,omitempty"`
@@ -622,12 +844,21 @@ type Mitglied struct {
 	Rolle MitgliedRolle `json:"rolle"`
 }
 
+// MitgliedBetreuung Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
+// hängt, welche Aufgaben der Haushalt überhaupt hat — ohne Kita-Kind
+// keine Kita-Tasche.
+type MitgliedBetreuung string
+
 // MitgliedRolle `planend` plant und führt aus, `ausfuehrend` führt nur aus,
 // `betreut` erzeugt Arbeit ohne welche zu übernehmen.
 type MitgliedRolle string
 
 // MitgliedAenderung Jedes Feld ist freiwillig. Was fehlt, bleibt stehen.
 type MitgliedAenderung struct {
+	// Betreuung Ausdrücklich gesetzt gewinnt gegen geraten — auch wenn in derselben
+	// Anfrage ein neues Geburtsjahr steht.
+	Betreuung *MitgliedAenderungBetreuung `json:"betreuung,omitempty"`
+
 	// Geburtsjahr **0 heißt „kein Geburtsjahr"** und ist bei Erwachsenen die richtige
 	// Antwort — nicht „im Jahr null geboren". Die Betreuungsform wird
 	// daraus neu geraten.
@@ -645,6 +876,10 @@ type MitgliedAenderung struct {
 	Zeit *MitgliedAenderungZeit `json:"zeit,omitempty"`
 }
 
+// MitgliedAenderungBetreuung Ausdrücklich gesetzt gewinnt gegen geraten — auch wenn in derselben
+// Anfrage ein neues Geburtsjahr steht.
+type MitgliedAenderungBetreuung string
+
 // MitgliedAenderungRolle defines model for MitgliedAenderung.Rolle.
 type MitgliedAenderungRolle string
 
@@ -653,11 +888,60 @@ type MitgliedAenderungRolle string
 // zwei Vorstellungen davon gibt, was „mittel" bedeutet.
 type MitgliedAenderungZeit string
 
+// NeueVorlage defines model for NeueVorlage.
+type NeueVorlage struct {
+	// AlleTage Gewünschter Abstand — täglich, wöchentlich, zweiwöchentlich oder
+	// monatlich.
+	AlleTage NeueVorlageAlleTage `json:"alle_tage"`
+
+	// DauerMin Geschätzt — und die Schätzung trägt die Fairnessrechnung mit. Eine
+	// zu niedrige Zahl verschiebt die Bilanz des ganzen Haushalts, ohne
+	// dass es jemand merkt.
+	DauerMin int `json:"dauer_min"`
+
+	// Denken „Muss jemand daran denken, oder sieht man es?" Zählt einfach in die
+	// Kopflast.
+	Denken    *bool     `json:"denken,omitempty"`
+	Kategorie Kategorie `json:"kategorie"`
+
+	// Klaeren „Muss man erst etwas klären — Termin machen, nachsehen, jemanden
+	// fragen?" Zählt doppelt: Ein Termin, den man vereinbaren muss,
+	// kostet mehr Aufmerksamkeit als eine Aufgabe, an die man sich nur
+	// erinnert.
+	Klaeren       *bool `json:"klaeren,omitempty"`
+	NurErwachsene *bool `json:"nur_erwachsene,omitempty"`
+
+	// Titel Example: Medikamente für Oma sortieren
+	Titel string `json:"titel"`
+}
+
+// NeueVorlageAlleTage Gewünschter Abstand — täglich, wöchentlich, zweiwöchentlich oder
+// monatlich.
+type NeueVorlageAlleTage int
+
+// NeuerAnlass defines model for NeuerAnlass.
+type NeuerAnlass struct {
+	Art       NeuerAnlassArt `json:"art"`
+	Jaehrlich *bool          `json:"jaehrlich,omitempty"`
+	Tag       string         `json:"tag"`
+	Titel     string         `json:"titel"`
+}
+
+// NeuerAnlassArt defines model for NeuerAnlass.Art.
+type NeuerAnlassArt string
+
 // NeuerHaushalt defines model for NeuerHaushalt.
 type NeuerHaushalt struct {
 	// Auto Entscheidet über Aufgaben wie Reifenwechsel oder TÜV. Fehlt das
 	// Feld, gilt „kein Auto", und die Aufgaben entstehen gar nicht erst.
 	Auto *bool `json:"auto,omitempty"`
+
+	// Baeder Wie viele Bäder. „Bad putzen" ist pro Bad gerechnet — wer zwei hat,
+	// putzt zwei. Fehlt die Angabe, gilt eins.
+	//
+	//
+	// Example: 1
+	Baeder *int `json:"baeder,omitempty"`
 
 	// Garten Fehlt das Feld, gilt „kein Garten".
 	Garten     *bool           `json:"garten,omitempty"`
@@ -665,16 +949,36 @@ type NeuerHaushalt struct {
 	Mitglieder []NeuesMitglied `json:"mitglieder"`
 
 	// Name Example: Familie Bauer
-	Name     string                `json:"name"`
-	Wohnform NeuerHaushaltWohnform `json:"wohnform"`
+	Name string `json:"name"`
+
+	// Wohnform Wird zurzeit von keiner Vorlage ausgewertet und deshalb auch nicht
+	// abgefragt — eine Frage, die nichts bewirkt, gehört nicht ins
+	// Onboarding. Das Feld bleibt, weil Wohnform eine echte Eigenschaft
+	// eines Haushalts ist; sobald eine Vorlage daran hängt (Streupflicht,
+	// Dachrinne, Schornsteinfeger), kommt die Frage zurück. Fehlt es,
+	// gilt „wohnung".
+	Wohnform *NeuerHaushaltWohnform `json:"wohnform,omitempty"`
 
 	// Zeitzone Bestimmt, wann ein Tag beginnt und endet. Fehlt sie, wird es
 	// Europe/Berlin — ein Haushalt lebt in einer Zeitzone, nicht in der
 	// Serverzeit. Siehe ADR-0002.
 	Zeitzone *string `json:"zeitzone,omitempty"`
+
+	// Zimmer Wie viele Zimmer. Filtert nichts, sondern skaliert: Putzaufgaben
+	// dauern in fünf Zimmern länger als in zwei. Fehlt die Angabe, gilt
+	// drei — der Haushalt, für den die Bibliothek kuratiert ist.
+	//
+	//
+	// Example: 3
+	Zimmer *int `json:"zimmer,omitempty"`
 }
 
-// NeuerHaushaltWohnform defines model for NeuerHaushalt.Wohnform.
+// NeuerHaushaltWohnform Wird zurzeit von keiner Vorlage ausgewertet und deshalb auch nicht
+// abgefragt — eine Frage, die nichts bewirkt, gehört nicht ins
+// Onboarding. Das Feld bleibt, weil Wohnform eine echte Eigenschaft
+// eines Haushalts ist; sobald eine Vorlage daran hängt (Streupflicht,
+// Dachrinne, Schornsteinfeger), kommt die Frage zurück. Fehlt es,
+// gilt „wohnung".
 type NeuerHaushaltWohnform string
 
 // NeuesMitglied defines model for NeuesMitglied.
@@ -726,6 +1030,44 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+// VorlagenStand defines model for VorlagenStand.
+type VorlagenStand struct {
+	// Aktiv Ob sie in künftigen Plänen vorkommen kann.
+	Aktiv bool             `json:"aktiv"`
+	Art   VorlagenStandArt `json:"art"`
+
+	// Dann Was eine Antwort mit Ja bringt.
+	Dann     *string `json:"dann,omitempty"`
+	DauerMin int     `json:"dauer_min"`
+
+	// Eigene Vom Haushalt selbst angelegt. Ihre Zahlen sind geschätzt und tragen
+	// trotzdem die Fairnessrechnung mit — deshalb sind sie sichtbar
+	// gekennzeichnet.
+	Eigene *bool `json:"eigene,omitempty"`
+
+	// Faktum Bei `unbekannt` das Faktum, dessen Antwort fehlt.
+	Faktum *string `json:"faktum,omitempty"`
+
+	// Frage Die Frage zu diesem Faktum — mitgeliefert statt nachgeschlagen,
+	// damit die Zeile alles trägt, was sie zum Anzeigen braucht.
+	Frage *string `json:"frage,omitempty"`
+
+	// Grund Warum sie nicht gilt. Fehlt, wenn sie gilt.
+	Grund *VorlagenStandGrund `json:"grund,omitempty"`
+
+	// Id Example: t-pflanzen
+	Id        string    `json:"id"`
+	Kategorie Kategorie `json:"kategorie"`
+	Kopflast  int       `json:"kopflast"`
+	Titel     string    `json:"titel"`
+}
+
+// VorlagenStandArt defines model for VorlagenStand.Art.
+type VorlagenStandArt string
+
+// VorlagenStandGrund Warum sie nicht gilt. Fehlt, wenn sie gilt.
+type VorlagenStandGrund string
+
 // Wochenplan defines model for Wochenplan.
 type Wochenplan struct {
 	Aufgaben []Aufgabe `json:"aufgaben"`
@@ -737,8 +1079,14 @@ type Wochenplan struct {
 	// Fehlt das Feld, ist das kein Fehler: Der Aufrufer darf es nicht
 	// sehen. Demo-Haushalte liefern es mit, sie haben nichts zu
 	// verbergen.
-	Bilanz   *[]Bilanz `json:"bilanz,omitempty"`
-	Haushalt Haushalt  `json:"haushalt"`
+	Bilanz *[]Bilanz `json:"bilanz,omitempty"`
+
+	// Fragen Offene Fragen zum Haushalt — höchstens zwei. Was die App nicht
+	// weiß, plant sie nicht ein; sie fragt danach, und zwar mit dem
+	// Nutzen daneben. Eine Frage ohne erkennbaren Nutzen wird nicht
+	// beantwortet.
+	Fragen   *[]Frage `json:"fragen,omitempty"`
+	Haushalt Haushalt `json:"haushalt"`
 
 	// Ich Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
 	// die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
@@ -794,6 +1142,14 @@ type CreateEinladungJSONBody struct {
 // CreateEinladungJSONBodyRolle defines parameters for CreateEinladung.
 type CreateEinladungJSONBodyRolle string
 
+// SetFaktenJSONBody defines parameters for SetFakten.
+type SetFaktenJSONBody map[string]bool
+
+// SetVorlageJSONBody defines parameters for SetVorlage.
+type SetVorlageJSONBody struct {
+	Aktiv bool `json:"aktiv"`
+}
+
 // AufgabeAbgebenJSONRequestBody defines body for AufgabeAbgeben for application/json ContentType.
 type AufgabeAbgebenJSONRequestBody AufgabeAbgebenJSONBody
 
@@ -806,11 +1162,23 @@ type CreateHaushaltJSONRequestBody = NeuerHaushalt
 // UpdateHaushaltJSONRequestBody defines body for UpdateHaushalt for application/json ContentType.
 type UpdateHaushaltJSONRequestBody = HaushaltAenderung
 
+// CreateAnlassJSONRequestBody defines body for CreateAnlass for application/json ContentType.
+type CreateAnlassJSONRequestBody = NeuerAnlass
+
 // CreateEinladungJSONRequestBody defines body for CreateEinladung for application/json ContentType.
 type CreateEinladungJSONRequestBody CreateEinladungJSONBody
 
+// SetFaktenJSONRequestBody defines body for SetFakten for application/json ContentType.
+type SetFaktenJSONRequestBody SetFaktenJSONBody
+
 // UpdateMitgliedJSONRequestBody defines body for UpdateMitglied for application/json ContentType.
 type UpdateMitgliedJSONRequestBody = MitgliedAenderung
+
+// CreateEigeneVorlageJSONRequestBody defines body for CreateEigeneVorlage for application/json ContentType.
+type CreateEigeneVorlageJSONRequestBody = NeueVorlage
+
+// SetVorlageJSONRequestBody defines body for SetVorlage for application/json ContentType.
+type SetVorlageJSONRequestBody SetVorlageJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -832,9 +1200,21 @@ type ServerInterface interface {
 	// UpdateHaushalt Einstellungen des Haushalts ändern
 	// (PATCH /api/haushalte/{haushaltId})
 	UpdateHaushalt(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// ListAnlaesse Die eingetragenen Anlässe
+	// (GET /api/haushalte/{haushaltId}/anlaesse)
+	ListAnlaesse(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// CreateAnlass Einen Anlass eintragen
+	// (POST /api/haushalte/{haushaltId}/anlaesse)
+	CreateAnlass(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// DeleteAnlass Einen Anlass löschen
+	// (DELETE /api/haushalte/{haushaltId}/anlaesse/{anlassId})
+	DeleteAnlass(w http.ResponseWriter, r *http.Request, haushaltId string, anlassId string)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// SetFakten Eine Frage zum Haushalt beantworten
+	// (PATCH /api/haushalte/{haushaltId}/fakten)
+	SetFakten(w http.ResponseWriter, r *http.Request, haushaltId string)
 	// UpdateMitglied Eine Person ändern
 	// (PATCH /api/haushalte/{haushaltId}/mitglieder/{mitgliedId})
 	UpdateMitglied(w http.ResponseWriter, r *http.Request, haushaltId string, mitgliedId string)
@@ -844,6 +1224,15 @@ type ServerInterface interface {
 	// WocheNeuRechnen Woche neu rechnen
 	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
 	WocheNeuRechnen(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
+	// ListVorlagen Alles, was die App kennt — und was davon bei euch gilt
+	// (GET /api/haushalte/{haushaltId}/vorlagen)
+	ListVorlagen(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// CreateEigeneVorlage Eine eigene Aufgabe anlegen
+	// (POST /api/haushalte/{haushaltId}/vorlagen)
+	CreateEigeneVorlage(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// SetVorlage Eine Vorlage abbestellen oder wieder anbestellen
+	// (PATCH /api/haushalte/{haushaltId}/vorlagen/{vorlageId})
+	SetVorlage(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(w http.ResponseWriter, r *http.Request)
@@ -993,6 +1382,93 @@ func (siw *ServerInterfaceWrapper) UpdateHaushalt(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListAnlaesse operation middleware
+func (siw *ServerInterfaceWrapper) ListAnlaesse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAnlaesse(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAnlass operation middleware
+func (siw *ServerInterfaceWrapper) CreateAnlass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAnlass(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAnlass operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAnlass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "anlassId" -------------
+	var anlassId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "anlassId", r.PathValue("anlassId"), &anlassId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "anlassId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAnlass(w, r, haushaltId, anlassId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateEinladung operation middleware
 func (siw *ServerInterfaceWrapper) CreateEinladung(w http.ResponseWriter, r *http.Request) {
 
@@ -1010,6 +1486,32 @@ func (siw *ServerInterfaceWrapper) CreateEinladung(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateEinladung(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetFakten operation middleware
+func (siw *ServerInterfaceWrapper) SetFakten(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetFakten(w, r, haushaltId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1115,6 +1617,93 @@ func (siw *ServerInterfaceWrapper) WocheNeuRechnen(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.WocheNeuRechnen(w, r, haushaltId, woche)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListVorlagen operation middleware
+func (siw *ServerInterfaceWrapper) ListVorlagen(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListVorlagen(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateEigeneVorlage operation middleware
+func (siw *ServerInterfaceWrapper) CreateEigeneVorlage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEigeneVorlage(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetVorlage operation middleware
+func (siw *ServerInterfaceWrapper) SetVorlage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "vorlageId" -------------
+	var vorlageId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "vorlageId", r.PathValue("vorlageId"), &vorlageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "vorlageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetVorlage(w, r, haushaltId, vorlageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1280,6 +1869,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}/neu", wrapper.WocheNeuRechnen)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/plan/{woche}", wrapper.GetWochenplan)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}", wrapper.UpdateHaushalt)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen", wrapper.ListVorlagen)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen", wrapper.CreateEigeneVorlage)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen/{vorlageId}", wrapper.SetVorlage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse", wrapper.ListAnlaesse)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse", wrapper.CreateAnlass)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse/{anlassId}", wrapper.DeleteAnlass)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}/fakten", wrapper.SetFakten)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/erledigt", wrapper.SetErledigt)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/abgeben", wrapper.AufgabeAbgeben)
@@ -1570,6 +2166,152 @@ func (response UpdateHaushalt404JSONResponse) VisitUpdateHaushaltResponse(w http
 	return err
 }
 
+type ListAnlaesseRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+}
+
+type ListAnlaesseResponseObject interface {
+	VisitListAnlaesseResponse(w http.ResponseWriter) error
+}
+
+type ListAnlaesse200JSONResponse []Anlass
+
+func (response ListAnlaesse200JSONResponse) VisitListAnlaesseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAnlaesse404JSONResponse Fehler
+
+func (response ListAnlaesse404JSONResponse) VisitListAnlaesseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAnlassRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *CreateAnlassJSONRequestBody
+}
+
+type CreateAnlassResponseObject interface {
+	VisitCreateAnlassResponse(w http.ResponseWriter) error
+}
+
+type CreateAnlass201JSONResponse Anlass
+
+func (response CreateAnlass201JSONResponse) VisitCreateAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAnlass400JSONResponse Fehler
+
+func (response CreateAnlass400JSONResponse) VisitCreateAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAnlass403JSONResponse Fehler
+
+func (response CreateAnlass403JSONResponse) VisitCreateAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAnlass404JSONResponse Fehler
+
+func (response CreateAnlass404JSONResponse) VisitCreateAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnlassRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	AnlassId   string `json:"anlassId"`
+}
+
+type DeleteAnlassResponseObject interface {
+	VisitDeleteAnlassResponse(w http.ResponseWriter) error
+}
+
+type DeleteAnlass204Response struct {
+}
+
+func (response DeleteAnlass204Response) VisitDeleteAnlassResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAnlass403JSONResponse Fehler
+
+func (response DeleteAnlass403JSONResponse) VisitDeleteAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnlass404JSONResponse Fehler
+
+func (response DeleteAnlass404JSONResponse) VisitDeleteAnlassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateEinladungRequestObject struct {
 	HaushaltId string `json:"haushaltId"`
 	Body       *CreateEinladungJSONRequestBody
@@ -1610,6 +2352,71 @@ func (response CreateEinladung403JSONResponse) VisitCreateEinladungResponse(w ht
 type CreateEinladung404JSONResponse Fehler
 
 func (response CreateEinladung404JSONResponse) VisitCreateEinladungResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetFaktenRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *SetFaktenJSONRequestBody
+}
+
+type SetFaktenResponseObject interface {
+	VisitSetFaktenResponse(w http.ResponseWriter) error
+}
+
+type SetFakten200JSONResponse Haushalt
+
+func (response SetFakten200JSONResponse) VisitSetFaktenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetFakten400JSONResponse Fehler
+
+func (response SetFakten400JSONResponse) VisitSetFaktenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetFakten403JSONResponse Fehler
+
+func (response SetFakten403JSONResponse) VisitSetFaktenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetFakten404JSONResponse Fehler
+
+func (response SetFakten404JSONResponse) VisitSetFaktenResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1803,6 +2610,153 @@ func (response WocheNeuRechnen404JSONResponse) VisitWocheNeuRechnenResponse(w ht
 	return err
 }
 
+type ListVorlagenRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+}
+
+type ListVorlagenResponseObject interface {
+	VisitListVorlagenResponse(w http.ResponseWriter) error
+}
+
+type ListVorlagen200JSONResponse []VorlagenStand
+
+func (response ListVorlagen200JSONResponse) VisitListVorlagenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListVorlagen404JSONResponse Fehler
+
+func (response ListVorlagen404JSONResponse) VisitListVorlagenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEigeneVorlageRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *CreateEigeneVorlageJSONRequestBody
+}
+
+type CreateEigeneVorlageResponseObject interface {
+	VisitCreateEigeneVorlageResponse(w http.ResponseWriter) error
+}
+
+type CreateEigeneVorlage201JSONResponse VorlagenStand
+
+func (response CreateEigeneVorlage201JSONResponse) VisitCreateEigeneVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEigeneVorlage400JSONResponse Fehler
+
+func (response CreateEigeneVorlage400JSONResponse) VisitCreateEigeneVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEigeneVorlage403JSONResponse Fehler
+
+func (response CreateEigeneVorlage403JSONResponse) VisitCreateEigeneVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEigeneVorlage404JSONResponse Fehler
+
+func (response CreateEigeneVorlage404JSONResponse) VisitCreateEigeneVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVorlageRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	VorlageId  string `json:"vorlageId"`
+	Body       *SetVorlageJSONRequestBody
+}
+
+type SetVorlageResponseObject interface {
+	VisitSetVorlageResponse(w http.ResponseWriter) error
+}
+
+type SetVorlage204Response struct {
+}
+
+func (response SetVorlage204Response) VisitSetVorlageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetVorlage403JSONResponse Fehler
+
+func (response SetVorlage403JSONResponse) VisitSetVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVorlage404JSONResponse Fehler
+
+func (response SetVorlage404JSONResponse) VisitSetVorlageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetIchRequestObject struct {
 }
 
@@ -1865,9 +2819,21 @@ type StrictServerInterface interface {
 	// UpdateHaushalt Einstellungen des Haushalts ändern
 	// (PATCH /api/haushalte/{haushaltId})
 	UpdateHaushalt(ctx context.Context, request UpdateHaushaltRequestObject) (UpdateHaushaltResponseObject, error)
+	// ListAnlaesse Die eingetragenen Anlässe
+	// (GET /api/haushalte/{haushaltId}/anlaesse)
+	ListAnlaesse(ctx context.Context, request ListAnlaesseRequestObject) (ListAnlaesseResponseObject, error)
+	// CreateAnlass Einen Anlass eintragen
+	// (POST /api/haushalte/{haushaltId}/anlaesse)
+	CreateAnlass(ctx context.Context, request CreateAnlassRequestObject) (CreateAnlassResponseObject, error)
+	// DeleteAnlass Einen Anlass löschen
+	// (DELETE /api/haushalte/{haushaltId}/anlaesse/{anlassId})
+	DeleteAnlass(ctx context.Context, request DeleteAnlassRequestObject) (DeleteAnlassResponseObject, error)
 	// CreateEinladung Jemanden einladen
 	// (POST /api/haushalte/{haushaltId}/einladungen)
 	CreateEinladung(ctx context.Context, request CreateEinladungRequestObject) (CreateEinladungResponseObject, error)
+	// SetFakten Eine Frage zum Haushalt beantworten
+	// (PATCH /api/haushalte/{haushaltId}/fakten)
+	SetFakten(ctx context.Context, request SetFaktenRequestObject) (SetFaktenResponseObject, error)
 	// UpdateMitglied Eine Person ändern
 	// (PATCH /api/haushalte/{haushaltId}/mitglieder/{mitgliedId})
 	UpdateMitglied(ctx context.Context, request UpdateMitgliedRequestObject) (UpdateMitgliedResponseObject, error)
@@ -1877,6 +2843,15 @@ type StrictServerInterface interface {
 	// WocheNeuRechnen Woche neu rechnen
 	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
 	WocheNeuRechnen(ctx context.Context, request WocheNeuRechnenRequestObject) (WocheNeuRechnenResponseObject, error)
+	// ListVorlagen Alles, was die App kennt — und was davon bei euch gilt
+	// (GET /api/haushalte/{haushaltId}/vorlagen)
+	ListVorlagen(ctx context.Context, request ListVorlagenRequestObject) (ListVorlagenResponseObject, error)
+	// CreateEigeneVorlage Eine eigene Aufgabe anlegen
+	// (POST /api/haushalte/{haushaltId}/vorlagen)
+	CreateEigeneVorlage(ctx context.Context, request CreateEigeneVorlageRequestObject) (CreateEigeneVorlageResponseObject, error)
+	// SetVorlage Eine Vorlage abbestellen oder wieder anbestellen
+	// (PATCH /api/haushalte/{haushaltId}/vorlagen/{vorlageId})
+	SetVorlage(ctx context.Context, request SetVorlageRequestObject) (SetVorlageResponseObject, error)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(ctx context.Context, request GetIchRequestObject) (GetIchResponseObject, error)
@@ -2110,6 +3085,92 @@ func (sh *strictHandler) UpdateHaushalt(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// ListAnlaesse operation middleware
+func (sh *strictHandler) ListAnlaesse(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request ListAnlaesseRequestObject
+
+	request.HaushaltId = haushaltId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAnlaesse(ctx, request.(ListAnlaesseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAnlaesse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAnlaesseResponseObject); ok {
+		if err := validResponse.VisitListAnlaesseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAnlass operation middleware
+func (sh *strictHandler) CreateAnlass(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request CreateAnlassRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body CreateAnlassJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAnlass(ctx, request.(CreateAnlassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAnlass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAnlassResponseObject); ok {
+		if err := validResponse.VisitCreateAnlassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAnlass operation middleware
+func (sh *strictHandler) DeleteAnlass(w http.ResponseWriter, r *http.Request, haushaltId string, anlassId string) {
+	var request DeleteAnlassRequestObject
+
+	request.HaushaltId = haushaltId
+	request.AnlassId = anlassId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAnlass(ctx, request.(DeleteAnlassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAnlass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAnlassResponseObject); ok {
+		if err := validResponse.VisitDeleteAnlassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateEinladung operation middleware
 func (sh *strictHandler) CreateEinladung(w http.ResponseWriter, r *http.Request, haushaltId string) {
 	var request CreateEinladungRequestObject
@@ -2136,6 +3197,39 @@ func (sh *strictHandler) CreateEinladung(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateEinladungResponseObject); ok {
 		if err := validResponse.VisitCreateEinladungResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetFakten operation middleware
+func (sh *strictHandler) SetFakten(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request SetFaktenRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body SetFaktenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetFakten(ctx, request.(SetFaktenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetFakten")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetFaktenResponseObject); ok {
+		if err := validResponse.VisitSetFaktenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2224,6 +3318,99 @@ func (sh *strictHandler) WocheNeuRechnen(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(WocheNeuRechnenResponseObject); ok {
 		if err := validResponse.VisitWocheNeuRechnenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListVorlagen operation middleware
+func (sh *strictHandler) ListVorlagen(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request ListVorlagenRequestObject
+
+	request.HaushaltId = haushaltId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListVorlagen(ctx, request.(ListVorlagenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListVorlagen")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListVorlagenResponseObject); ok {
+		if err := validResponse.VisitListVorlagenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateEigeneVorlage operation middleware
+func (sh *strictHandler) CreateEigeneVorlage(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request CreateEigeneVorlageRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body CreateEigeneVorlageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateEigeneVorlage(ctx, request.(CreateEigeneVorlageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateEigeneVorlage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateEigeneVorlageResponseObject); ok {
+		if err := validResponse.VisitCreateEigeneVorlageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetVorlage operation middleware
+func (sh *strictHandler) SetVorlage(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string) {
+	var request SetVorlageRequestObject
+
+	request.HaushaltId = haushaltId
+	request.VorlageId = vorlageId
+
+	var body SetVorlageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetVorlage(ctx, request.(SetVorlageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetVorlage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetVorlageResponseObject); ok {
+		if err := validResponse.VisitSetVorlageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

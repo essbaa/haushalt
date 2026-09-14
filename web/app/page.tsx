@@ -106,6 +106,22 @@ export default async function Page({
             </Link>
             {plan.meine_rolle === "planend" && (
               <Link
+                href={`/vorlagen?haushalt=${plan.haushalt.id}`}
+                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
+              >
+                Eure Woche
+              </Link>
+            )}
+            {plan.meine_rolle === "planend" && (
+              <Link
+                href={`/termine?haushalt=${plan.haushalt.id}`}
+                className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
+              >
+                Anlässe
+              </Link>
+            )}
+            {plan.meine_rolle === "planend" && (
+              <Link
                 href={`/einladen?haushalt=${plan.haushalt.id}`}
                 className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
               >

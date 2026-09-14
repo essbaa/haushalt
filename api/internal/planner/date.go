@@ -107,3 +107,16 @@ func (w Week) Days() [7]Date {
 func (w Week) Contains(d Date) bool {
 	return WeekOf(d) == w
 }
+
+// ParseDate liest einen Kalendertag im Format 2026-09-19.
+//
+// Bewusst streng: Ein Datum, das der Browser in seiner Zeitzone geschrieben
+// hat, wäre hier schon falsch (ADR-0002). Über die Grenze geht die reine
+// Zeichenkette.
+func ParseDate(s string) (Date, error) {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return Date{}, fmt.Errorf("planner: %q ist kein Datum (erwartet 2026-09-19)", s)
+	}
+	return DateOf(t), nil
+}

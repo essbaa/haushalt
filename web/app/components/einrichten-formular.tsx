@@ -39,7 +39,8 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const [name, setName] = useState(meinName ? `Haushalt von ${meinName}` : "Mein Haushalt");
-  const [wohnform, setWohnform] = useState<"wohnung" | "haus">("wohnung");
+  const [zimmer, setZimmer] = useState("3");
+  const [baeder, setBaeder] = useState("1");
   const [garten, setGarten] = useState(false);
   const [auto, setAuto] = useState(false);
   const [haustiere, setHaustiere] = useState<string[]>([]);
@@ -79,7 +80,8 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
 
       const rumpf: NeuerHaushalt = {
         name: name.trim(),
-        wohnform,
+        zimmer: Number(zimmer) || 3,
+        baeder: Number(baeder) || 1,
         garten,
         auto,
         haustiere,
@@ -132,18 +134,35 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
             maxLength={80}
           />
 
-          <div className="space-y-2">
-            <p className="text-sm text-muted">Wohnt ihr in einer Wohnung oder in einem Haus?</p>
-            <Auswahl
-              name="Wohnform"
-              wert={wohnform}
-              auf={setWohnform}
-              optionen={[
-                { wert: "wohnung", text: "Wohnung" },
-                { wert: "haus", text: "Haus" },
-              ]}
+          {/* Zwei Zahlen, die etwas bewirken: Sie filtern keine Aufgaben,
+              sie skalieren die Dauern. Genau das unterschied sie von der
+              Frage nach der Wohnform, die hier stand und nichts tat. */}
+          <div className="flex flex-wrap gap-4">
+            <Feld
+              beschriftung="Wie viele Zimmer?"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={15}
+              value={zimmer}
+              onChange={(e) => setZimmer(e.target.value)}
+              className="w-28"
+            />
+            <Feld
+              beschriftung="Wie viele Bäder?"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={5}
+              value={baeder}
+              onChange={(e) => setBaeder(e.target.value)}
+              className="w-28"
             />
           </div>
+          <p className="text-xs leading-relaxed text-muted">
+            Danach richtet sich, wie lange Putzaufgaben dauern — in fünf Zimmern
+            länger als in zwei, und zwei Bäder sind doppelte Arbeit.
+          </p>
 
           <div className="space-y-2">
             <p className="text-sm text-muted">Gibt es …</p>

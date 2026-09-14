@@ -1,5 +1,5 @@
-import { AufgabeAktionen } from "@/app/components/aufgabe-aktionen";
-import { Zeichen } from "@/app/components/ui";
+import { AufgabeZeile } from "@/app/components/aufgabe-zeile";
+import { Fragen } from "@/app/components/fragen";
 import type { Aufgabe, Bilanz, Wochenplan as Plan } from "@/lib/api";
 import { heute } from "@/lib/woche";
 
@@ -14,7 +14,7 @@ import { heute } from "@/lib/woche";
  * Server Component; nur die Knöpfe an jeder Zeile brauchen den Browser.
  */
 export function Wochenplan({ plan }: { plan: Plan }) {
-  const namen = new Map(plan.haushalt.mitglieder.map((m) => [m.id, m.name]));
+  const namen = Object.fromEntries(plan.haushalt.mitglieder.map((m) => [m.id, m.name]));
   const ich = plan.ich ?? "";
   const planend = plan.meine_rolle === "planend";
   const heuteISO = heute();
@@ -35,6 +35,18 @@ export function Wochenplan({ plan }: { plan: Plan }) {
   // jetzt dran ist. Die Frage lautet „was ist heute", nicht „wie war die
   // Woche". Liegt die ganze Woche in der Vergangenheit — jemand sieht sich
   // eine alte an —, wird nichts eingeklappt; dann ist Rückschau der Zweck.
+  // Eine Vorlage kann mehrfach übersprungen werden — der Planer meldet je
+  // Fälligkeit, und eine Auslöser-Vorlage ist siebenmal fällig. Für die Frage
+  // „warum steht das nicht in meinem Plan" zählt die Antwort, nicht wie oft
+  // sie zutrifft.
+  const gesehen = new Set<string>();
+  const uebersprungen = plan.uebersprungen.filter((u) => {
+    const schluessel = `${u.vorlage_id}|${u.grund}`;
+    if (gesehen.has(schluessel)) return false;
+    gesehen.add(schluessel);
+    return true;
+  });
+
   const vergangen = tage.filter((t) => t < heuteISO);
   const ab_heute = tage.filter((t) => t >= heuteISO);
   const rueckschau = ab_heute.length === 0 ? [] : vergangen;
@@ -70,6 +82,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
               namen={namen}
               ich={ich}
               planend={planend}
+              haushaltId={plan.haushalt.id}
             />
           ))}
 
@@ -92,12 +105,17 @@ export function Wochenplan({ plan }: { plan: Plan }) {
                     namen={namen}
                     ich={ich}
                     planend={planend}
+                    haushaltId={plan.haushalt.id}
                   />
                 ))}
               </div>
             </details>
           )}
         </section>
+      )}
+
+      {plan.fragen && plan.fragen.length > 0 && (
+        <Fragen haushaltId={plan.haushalt.id} fragen={plan.fragen} />
       )}
 
       {plan.bilanz ? (
@@ -109,17 +127,17 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         </p>
       )}
 
-      {plan.uebersprungen.length > 0 && (
+      {uebersprungen.length > 0 && (
         <details className="group border-t border-line pt-4">
           <summary className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-fg">
-            Nicht im Plan ({plan.uebersprungen.length})
+            Nicht im Plan ({uebersprungen.length})
             <span aria-hidden="true" className="transition-transform group-open:rotate-90">
               ›
             </span>
           </summary>
           <ul className="mt-1 space-y-1">
-            {plan.uebersprungen.map((u) => (
-              <li key={u.vorlage_id} className="flex flex-wrap justify-between gap-x-4 py-1 text-sm">
+            {uebersprungen.map((u) => (
+              <li key={`${u.vorlage_id}-${u.grund}`} className="flex flex-wrap justify-between gap-x-4 py-1 text-sm">
                 <span>{u.titel}</span>
                 <span className="text-subtle">{grundText[u.grund] ?? u.grund}</span>
               </li>
@@ -140,13 +158,15 @@ function Tag({
   namen,
   ich,
   planend,
+  haushaltId,
 }: {
   tag: string;
   heute: boolean;
   aufgaben: Aufgabe[];
-  namen: Map<string, string>;
+  namen: Record<string, string>;
   ich: string;
   planend: boolean;
+  haushaltId: string;
 }) {
   const [, monat, nummer] = tag.split("-").map(Number);
   const d = new Date(Date.UTC(Number(tag.slice(0, 4)), monat - 1, nummer));
@@ -170,75 +190,15 @@ function Tag({
       <div className="min-w-0 flex-1 space-y-1 pb-7">
         {heute && <p className="pb-1 text-sm font-semibold text-primary">Heute</p>}
         {aufgaben.map((a, i) => (
-          <Zeile
+          <AufgabeZeile
             key={a.id ?? `${a.vorlage_id}-${i}`}
             aufgabe={a}
             namen={namen}
             ich={ich}
             planend={planend}
+            haushaltId={haushaltId}
           />
         ))}
-      </div>
-    </div>
-  );
-}
-
-function Zeile({
-  aufgabe: a,
-  namen,
-  ich,
-  planend,
-}: {
-  aufgabe: Aufgabe;
-  namen: Map<string, string>;
-  ich: string;
-  planend: boolean;
-}) {
-  const meine = ich !== "" && a.zustaendig === ich;
-  const offen = a.zustaendig === "";
-  const darf = a.id !== undefined && (meine || planend);
-  const name = offen ? "Offen" : (namen.get(a.zustaendig) ?? a.zustaendig);
-
-  // Nur die eigenen Aufgaben bekommen Fläche und Rahmen. Wenn jede Zeile
-  // gleich aussieht, trägt die Gestaltung keine Information mehr — und die
-  // eine Frage, die morgens zählt, ist „was ist meins".
-  return (
-    <div
-      className={`flex gap-3 rounded-lg px-3 py-2.5 ${
-        meine && !a.erledigt
-          ? "border border-primary/35 bg-primary-soft/60"
-          : "border border-transparent"
-      } ${a.erledigt ? "opacity-50" : ""}`}
-    >
-      <Zeichen name={offen ? "?" : name} eigen={meine} />
-
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className={`font-semibold ${a.erledigt ? "line-through" : ""}`}>{a.titel}</span>
-          <span className={`text-sm ${meine ? "font-semibold text-primary" : "text-muted"}`}>
-            {meine ? "du" : name}
-          </span>
-        </div>
-
-        {/* Dauer immer, Kopflast nur wenn sie hoch ist. Eine Marke, die an
-            jeder Zeile steht, sagt nichts mehr — die Farbe soll auffallen,
-            wenn etwas Kopfarbeit kostet, nicht als Grundrauschen. */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-subtle">
-          <span className="tabular-nums">{a.dauer_min} min</span>
-          {a.kopflast >= 2 && (
-            <span className="font-semibold text-clay">Kopflast {a.kopflast}</span>
-          )}
-          <span>{begruendungText(a, namen)}</span>
-        </div>
-
-        {darf && (
-          <AufgabeAktionen
-            aufgabeId={a.id!}
-            erledigt={a.erledigt ?? false}
-            abgebbar={meine}
-            eigene={meine}
-          />
-        )}
       </div>
     </div>
   );
@@ -258,7 +218,7 @@ function Bilanztafel({
   ich,
 }: {
   bilanz: Bilanz[];
-  namen: Map<string, string>;
+  namen: Record<string, string>;
   ich: string;
 }) {
   const spitze = Math.max(1, ...bilanz.map((b) => b.auslastung_prozent));
@@ -269,7 +229,7 @@ function Bilanztafel({
 
       <ul className="space-y-4">
         {bilanz.map((b) => {
-          const name = namen.get(b.mitglied_id) ?? b.mitglied_id;
+          const name = namen[b.mitglied_id] ?? b.mitglied_id;
           const eigen = b.mitglied_id === ich;
           return (
             <li key={b.mitglied_id} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
@@ -299,7 +259,7 @@ function Bilanztafel({
       <ul className="grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
         {bilanz.map((b) => (
           <li key={b.mitglied_id} className="flex justify-between gap-2">
-            <span>{namen.get(b.mitglied_id) ?? b.mitglied_id}</span>
+            <span>{namen[b.mitglied_id] ?? b.mitglied_id}</span>
             <span className="tabular-nums">
               {b.minuten} min, Kopflast {b.kopflast}, {b.aufgaben}{" "}
               {b.aufgaben === 1 ? "Aufgabe" : "Aufgaben"}
@@ -318,24 +278,6 @@ const grundText: Record<string, string> = {
   startdichte: "bewusst zurückgehalten",
   keine_kapazitaet: "niemand hat Zeit",
   niemand_geeignet: "niemand geeignet",
+  unbekannt: "noch ungeklärt",
+  braucht_termin: "braucht einen Termin",
 };
-
-function begruendungText(a: Aufgabe, namen: Map<string, string>): string {
-  const zuletzt = a.begruendung.zuletzt_bei;
-  switch (a.begruendung.code) {
-    case "rotation":
-      return zuletzt ? `zuletzt bei ${namen.get(zuletzt) ?? zuletzt}` : "Rotation";
-    case "ausgleich":
-      return "zum Ausgleich";
-    case "feste_person":
-      return "feste Zuständigkeit";
-    case "einzige_moeglichkeit":
-      return "einzige Möglichkeit";
-    case "frist":
-      return "wegen der Frist";
-    case "eigene_aufgabe":
-      return "eigene Aufgabe";
-    default:
-      return "";
-  }
-}

@@ -4,22 +4,39 @@
   "wohnform": "haus",
   "auto": true,
   "garten": true,
-  "haustiere": ["hund"],
-
+  "haustiere": [
+    "hund"
+  ],
   "mitglieder": [
     {
       "id": "m-nadja",
       "name": "Nadja",
       "rolle": "planend",
       "alter": 46,
-      "kapazitaet_minuten": [50, 50, 50, 50, 50, 150, 150]
+      "kapazitaet_minuten": [
+        50,
+        50,
+        50,
+        50,
+        50,
+        150,
+        150
+      ]
     },
     {
       "id": "m-tarek",
       "name": "Tarek",
       "rolle": "planend",
       "alter": 48,
-      "kapazitaet_minuten": [45, 45, 45, 45, 60, 180, 120]
+      "kapazitaet_minuten": [
+        45,
+        45,
+        45,
+        45,
+        60,
+        180,
+        120
+      ]
     },
     {
       "id": "m-jonas",
@@ -27,7 +44,15 @@
       "rolle": "ausfuehrend",
       "alter": 15,
       "betreuung": "schule",
-      "kapazitaet_minuten": [30, 30, 30, 30, 45, 90, 90]
+      "kapazitaet_minuten": [
+        30,
+        30,
+        30,
+        30,
+        45,
+        90,
+        90
+      ]
     },
     {
       "id": "m-mia",
@@ -35,10 +60,17 @@
       "rolle": "ausfuehrend",
       "alter": 13,
       "betreuung": "schule",
-      "kapazitaet_minuten": [25, 25, 25, 25, 40, 80, 80]
+      "kapazitaet_minuten": [
+        25,
+        25,
+        25,
+        25,
+        40,
+        80,
+        80
+      ]
     }
   ],
-
   "historie": {
     "zuletzt_erledigt": {
       "t-bad": "2026-09-07",
@@ -76,7 +108,27 @@
       "t-essensplan": "m-nadja",
       "t-gassi": "m-jonas"
     },
-    "abgewaehlt": ["t-fenster-putzen"],
+    "abgewaehlt": [
+      "t-fenster-putzen"
+    ],
     "feste_person": {}
-  }
+  },
+  "fakten": {
+    "spuelmaschine": true,
+    "waschmaschine": true,
+    "pflanzen": true,
+    "keller": true,
+    "treppenhaus": false,
+    "fahrrad": true,
+    "dunstabzug": true,
+    "gelber-sack": true,
+    "heizkoerper": true,
+    "rauchmelder": true,
+    "steuererklaerung": true,
+    "paarzeit": true,
+    "verabredung": true,
+    "kontakt-familie": true
+  },
+  "zimmer": 5,
+  "baeder": 2
 }

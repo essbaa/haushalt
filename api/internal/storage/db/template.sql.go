@@ -11,6 +11,36 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createOwnTemplate = `-- name: CreateOwnTemplate :one
+INSERT INTO task_template (id, household_id, source, version, definition)
+VALUES ($1, $2, 'haushalt', '', $3)
+RETURNING id, household_id, source, version, definition, created_at
+`
+
+type CreateOwnTemplateParams struct {
+	ID          string
+	HouseholdID pgtype.UUID
+	Definition  []byte
+}
+
+// Eine Aufgabe, die ein Haushalt selbst angelegt hat. household_id ist gesetzt
+// (kuratierte tragen dort NULL), source = 'haushalt'. Gelesen wird sie von
+// demselben Parser wie die kuratierten — ein eigenes Format wäre der sicherste
+// Weg, dass beide sich irgendwann verschieden verhalten.
+func (q *Queries) CreateOwnTemplate(ctx context.Context, arg CreateOwnTemplateParams) (TaskTemplate, error) {
+	row := q.db.QueryRow(ctx, createOwnTemplate, arg.ID, arg.HouseholdID, arg.Definition)
+	var i TaskTemplate
+	err := row.Scan(
+		&i.ID,
+		&i.HouseholdID,
+		&i.Source,
+		&i.Version,
+		&i.Definition,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listTemplatesForHousehold = `-- name: ListTemplatesForHousehold :many
 SELECT id, household_id, source, version, definition, created_at FROM task_template
 WHERE household_id IS NULL OR household_id = $1

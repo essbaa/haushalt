@@ -19,6 +19,8 @@ export function AufgabeAktionen({
   erledigt,
   abgebbar,
   eigene,
+  abschaltbar,
+  abschalten,
 }: {
   aufgabeId: string;
   erledigt: boolean;
@@ -26,6 +28,10 @@ export function AufgabeAktionen({
   /** Die eigene Aufgabe wird angefasst, fremde nur ausnahmsweise — deshalb
    *  steht dort ein leiser Knopf statt zweier auffälliger. */
   eigene: boolean;
+  /** „Brauchen wir nicht" — die Alternative zur Wischgeste. WCAG 2.2 verlangt
+   *  für jede Zieh-Bewegung einen Weg mit einem Zeiger. */
+  abschaltbar?: boolean;
+  abschalten?: () => void;
 }) {
   const router = useRouter();
   const [laeuft, setLaeuft] = useState(false);
@@ -92,6 +98,17 @@ export function AufgabeAktionen({
           {erledigt ? <Haken className="size-4" /> : <Kreis className="size-4" />}
           {erledigt ? "Erledigt" : "Abhaken"}
         </button>
+
+        {abschaltbar && abschalten && !fragt && (
+          <button
+            type="button"
+            onClick={abschalten}
+            disabled={laeuft}
+            className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
+          >
+            Brauchen wir nicht
+          </button>
+        )}
 
         {abgebbar && !erledigt && !fragt && (
           <button

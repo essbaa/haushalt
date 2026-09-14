@@ -44,8 +44,9 @@ jobs:
         # und nicht drei Tage später einen Client, der Felder erwartet, die
         # der Server nicht schickt.
         run: |
+          go tool sqlc generate
           go tool oapi-codegen -config oapi.yaml ../openapi.yaml
-          git diff --exit-code -- internal/httpapi/openapi
+          git diff --exit-code -- internal/httpapi/openapi internal/storage/db
 
       - name: Formatierung
         # gofmt -l listet unformatierte Dateien. Gibt es welche, soll der Lauf

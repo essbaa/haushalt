@@ -1,0 +1,75 @@
+{
+  "hinweis": "Dinge, die ein Haushalt hat oder nicht hat. Die App fragt sie nicht beim Einrichten ab, sondern einzeln und nur dann, wenn eine Antwort den Plan verbessern würde. Jede Frage nennt deshalb, was sie bringt — wer nicht weiß, wofür er antwortet, antwortet nicht.",
+  "fakten": [
+    {
+      "id": "spuelmaschine",
+      "frage": "Habt ihr eine Spülmaschine?",
+      "dann": "Dann plane ich das Ausräumen als Routine ein — die Aufgabe, die am häufigsten liegen bleibt."
+    },
+    {
+      "id": "waschmaschine",
+      "frage": "Habt ihr eine eigene Waschmaschine?",
+      "dann": "Dann plane ich Waschen, Aufhängen und Zusammenlegen als Kette."
+    },
+    {
+      "id": "pflanzen",
+      "frage": "Habt ihr Pflanzen, die gegossen werden müssen?",
+      "dann": "Dann erinnere ich alle paar Tage ans Gießen."
+    },
+    {
+      "id": "keller",
+      "frage": "Gehört ein Keller oder Abstellraum dazu?",
+      "dann": "Dann schlage ich zweimal im Jahr Aufräumen vor."
+    },
+    {
+      "id": "treppenhaus",
+      "frage": "Seid ihr fürs Treppenhaus zuständig?",
+      "dann": "Dann kommt die Kehrwoche in den Plan."
+    },
+    {
+      "id": "fahrrad",
+      "frage": "Fahrt ihr Fahrrad?",
+      "dann": "Dann erinnere ich im Frühjahr an die Wartung."
+    },
+    {
+      "id": "dunstabzug",
+      "frage": "Habt ihr eine Dunstabzugshaube?",
+      "dann": "Dann kommt der Filter regelmäßig dran — etwas, an das fast niemand von selbst denkt."
+    },
+    {
+      "id": "gelber-sack",
+      "frage": "Gibt es bei euch den Gelben Sack?",
+      "dann": "Dann erinnere ich rechtzeitig ans Rausstellen."
+    },
+    {
+      "id": "heizkoerper",
+      "frage": "Habt ihr Heizkörper zum Entlüften?",
+      "dann": "Dann kommt das Entlüften vor der Heizsaison in den Plan."
+    },
+    {
+      "id": "rauchmelder",
+      "frage": "Seid ihr für die Rauchmelder zuständig?",
+      "dann": "Dann erinnere ich einmal im Jahr an die Prüfung. In vielen Mietwohnungen macht das der Vermieter."
+    },
+    {
+      "id": "steuererklaerung",
+      "frage": "Macht ihr eine Steuererklärung?",
+      "dann": "Dann sammle ich die Unterlagen rechtzeitig vor der Frist ein."
+    },
+    {
+      "id": "paarzeit",
+      "frage": "Soll ich regelmäßig Zeit zu zweit einplanen?",
+      "dann": "Dann steht sie im Plan wie jede andere Aufgabe — das ist der Sinn."
+    },
+    {
+      "id": "verabredung",
+      "frage": "Soll ich ans Verabreden mit Freunden erinnern?",
+      "dann": "Dann kommt es alle paar Wochen auf den Plan."
+    },
+    {
+      "id": "kontakt-familie",
+      "frage": "Soll ich daran erinnern, dich bei deinen Eltern zu melden?",
+      "dann": "Dann steht es regelmäßig im Plan."
+    }
+  ]
+}

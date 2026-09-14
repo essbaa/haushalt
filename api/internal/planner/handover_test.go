@@ -83,3 +83,62 @@ func TestHandover(t *testing.T) {
 		}
 	})
 }
+
+func TestKinderBekommenKeineLangenBloecke(t *testing.T) {
+	lang := TaskTemplate{
+		ID: "t-grossputz", Title: "Großputz",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 70, MinAge: 12,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		Distribution: DistRotate,
+		Failure:      FailureSoft, Source: SourceCurated,
+	}
+
+	h := haushaltZuDritt()
+	got, err := Plan(Input{
+		Household: h,
+		Templates: []TaskTemplate{lang},
+		Week:      Week{Year: 2026, Week: 38},
+		History:   History{},
+		Limits:    DefaultLimits(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tasks) != 1 {
+		t.Fatalf("%d Aufgaben, erwartet 1", len(got.Tasks))
+	}
+	// Mia ist 13 und dürfte die Aufgabe nach dem Alter übernehmen. 70 Minuten
+	// am Stück sind trotzdem kein Block für ein Kind, solange Erwachsene da
+	// sind.
+	if got.Tasks[0].AssigneeID == "c" {
+		t.Error("eine Aufgabe von 70 Minuten ging an die Dreizehnjährige")
+	}
+}
+
+func TestOhneErwachsenenBekommtEsDasKindTrotzdem(t *testing.T) {
+	lang := TaskTemplate{
+		ID: "t-grossputz", Title: "Großputz",
+		Category: CatCleaning, Kind: KindDo,
+		DurationMin: 70, MinAge: 12,
+		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: 7},
+		Distribution: DistChildrenOnly,
+		Failure:      FailureSoft, Source: SourceCurated,
+	}
+
+	got, err := Plan(Input{
+		Household: haushaltZuDritt(),
+		Templates: []TaskTemplate{lang},
+		Week:      Week{Year: 2026, Week: 38},
+		History:   History{},
+		Limits:    DefaultLimits(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Die Grenze ist eine Vorliebe, keine Bedingung: Eine Aufgabe, die
+	// deshalb ganz wegfiele, wäre schlimmer als eine, die zu lang ist.
+	if len(got.Tasks) != 1 {
+		t.Fatalf("%d Aufgaben, erwartet 1 (übersprungen: %+v)", len(got.Tasks), got.Skipped)
+	}
+}

@@ -42,6 +42,11 @@ func (p *Plans) Create(ctx context.Context, subject string, eingabe planner.Setu
 		HasYard:  eingabe.Context.HasYard,
 		Pets:     eingabe.Context.Pets,
 		Timezone: eingabe.Timezone,
+		// Leer heißt: nichts bekannt. Die App fragt später, eins nach dem
+		// anderen, und nur wenn eine Antwort den Plan verbessert.
+		Facts: []byte("{}"),
+		Rooms: int32(eingabe.Context.Rooms),
+		Baths: int32(eingabe.Context.Baths),
 		// Kein Slug: Der gehört den Beispielhaushalten aus dem Repo. Dieser
 		// hier ist echt und wird über seine Kennung angesprochen.
 	})

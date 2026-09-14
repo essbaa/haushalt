@@ -152,3 +152,31 @@ func (c *Catalog) UpdateMember(context.Context, string, string, string, planner.
 func (c *Catalog) Recompute(context.Context, string, string, planner.Week) (planner.Result, planner.Household, error) {
 	return planner.Result{}, planner.Household{}, planner.ErrNotAllowed
 }
+
+func (c *Catalog) SetFacts(context.Context, string, string, map[string]bool) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (c *Catalog) TemplatesFor(context.Context, string, string) ([]planner.TemplateState, planner.Household, error) {
+	return nil, planner.Household{}, planner.ErrUnknownHousehold
+}
+
+func (c *Catalog) SetTemplateActive(context.Context, string, string, string, bool) error {
+	return planner.ErrNotAllowed
+}
+
+func (c *Catalog) Occasions(context.Context, string, string) ([]planner.Occasion, error) {
+	return nil, planner.ErrUnknownHousehold
+}
+
+func (c *Catalog) AddOccasion(context.Context, string, string, planner.Occasion) (planner.Occasion, error) {
+	return planner.Occasion{}, planner.ErrNotAllowed
+}
+
+func (c *Catalog) RemoveOccasion(context.Context, string, string, string) error {
+	return planner.ErrNotAllowed
+}
+
+func (c *Catalog) AddOwnTemplate(context.Context, string, string, planner.OwnTask) (planner.TaskTemplate, error) {
+	return planner.TaskTemplate{}, planner.ErrNotAllowed
+}

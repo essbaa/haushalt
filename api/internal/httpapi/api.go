@@ -7,6 +7,7 @@ import (
 
 	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
+	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/planner"
 )
 
@@ -50,6 +51,21 @@ type Plans interface {
 	// Recompute rechnet eine festgeschriebene Woche neu — ohne anzufassen,
 	// was schon Spuren hinterlassen hat.
 	Recompute(ctx context.Context, subject, id string, week planner.Week) (planner.Result, planner.Household, error)
+	// SetFacts trägt ein, was der Haushalt hat und was nicht.
+	SetFacts(ctx context.Context, subject, id string, facts map[string]bool) (planner.Household, error)
+	// TemplatesFor ist die ganze Bibliothek mit dem Stand dieses Haushalts.
+	// Nicht "Templates": Der Katalog hat schon eine Methode dieses Namens für
+	// die Bibliothek an sich, und die beiden sind verschiedene Fragen.
+	TemplatesFor(ctx context.Context, subject, id string) ([]planner.TemplateState, planner.Household, error)
+	// AddOwnTemplate legt eine Aufgabe an, die es in der Bibliothek nicht gibt.
+	AddOwnTemplate(ctx context.Context, subject, id string, o planner.OwnTask) (planner.TaskTemplate, error)
+	// SetTemplateActive bestellt eine Vorlage ab oder wieder an.
+	SetTemplateActive(ctx context.Context, subject, id, templateID string, active bool) error
+	// Occasions sind die eingetragenen Anlässe des Haushalts.
+	Occasions(ctx context.Context, subject, id string) ([]planner.Occasion, error)
+	// AddOccasion trägt einen Anlass ein, RemoveOccasion löscht ihn.
+	AddOccasion(ctx context.Context, subject, id string, o planner.Occasion) (planner.Occasion, error)
+	RemoveOccasion(ctx context.Context, subject, id, occasionID string) error
 }
 
 // api erfüllt openapi.StrictServerInterface.
@@ -61,6 +77,7 @@ type Plans interface {
 type api struct {
 	plans   Plans
 	version string
+	facts   *library.Facts
 }
 
 func (a api) GetVersion(context.Context, openapi.GetVersionRequestObject) (openapi.GetVersionResponseObject, error) {
@@ -160,11 +177,12 @@ func (a api) CreateHaushalt(ctx context.Context, r openapi.CreateHaushaltRequest
 // setupNachInnen übersetzt die Anfrage in die Fachsprache. Geprüft wird hier
 // nichts: Das tut planner.Setup, und zwar an einer Stelle statt an zweien.
 func setupNachInnen(b openapi.NeuerHaushalt) planner.Setup {
-	s := planner.Setup{
-		Name: b.Name,
-		Context: planner.Context{
-			Home: planner.Home(b.Wohnform),
-		},
+	s := planner.Setup{Name: b.Name}
+	// Fehlt die Wohnform, setzt Normalized() sie auf "wohnung". Das Onboarding
+	// fragt nicht mehr danach: Keine Vorlage hängt daran, und eine Frage, die
+	// nichts bewirkt, gehört nicht in die ersten neunzig Sekunden.
+	if b.Wohnform != nil {
+		s.Context.Home = planner.Home(*b.Wohnform)
 	}
 	if b.Zeitzone != nil {
 		s.Timezone = *b.Zeitzone
@@ -177,6 +195,12 @@ func setupNachInnen(b openapi.NeuerHaushalt) planner.Setup {
 	}
 	if b.Haustiere != nil {
 		s.Context.Pets = *b.Haustiere
+	}
+	if b.Zimmer != nil {
+		s.Context.Rooms = *b.Zimmer
+	}
+	if b.Baeder != nil {
+		s.Context.Baths = *b.Baeder
 	}
 	for _, m := range b.Mitglieder {
 		person := planner.SetupMember{Name: m.Name, Role: planner.Role(m.Rolle)}
@@ -228,7 +252,7 @@ func (a api) GetWochenplan(ctx context.Context, r openapi.GetWochenplanRequestOb
 	}
 	mitBilanz := rolle == planner.RolePlanner || rolle == ""
 
-	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result, ich, rolle, mitBilanz)), nil
+	return openapi.GetWochenplan200JSONResponse(planNachAussen(household, result, ich, rolle, mitBilanz, a.facts)), nil
 }
 
 // CreateEinladung erzeugt einen Code, mit dem jemand in den Haushalt kommt.
@@ -309,7 +333,7 @@ func (a api) AcceptEinladung(ctx context.Context, r openapi.AcceptEinladungReque
 // Kern nichts zu suchen haben. Der Preis ist diese Übersetzung; sie steht an
 // einer Stelle und ist langweilig, und das ist genau richtig.
 
-func planNachAussen(h planner.Household, r planner.Result, ich string, rolle planner.Role, mitBilanz bool) openapi.Wochenplan {
+func planNachAussen(h planner.Household, r planner.Result, ich string, rolle planner.Role, mitBilanz bool, katalog *library.Facts) openapi.Wochenplan {
 	plan := openapi.Wochenplan{
 		Woche:    r.Week.String(),
 		Haushalt: haushaltNachAussen(h),
@@ -327,6 +351,25 @@ func planNachAussen(h planner.Household, r planner.Result, ich string, rolle pla
 	}
 	if mitBilanz {
 		plan.Bilanz = &[]openapi.Bilanz{}
+	}
+
+	// Fragen nur für Mitglieder — und nur zwei. Wer beim Öffnen vierzehn
+	// Fragen sieht, beantwortet keine; zwei mit sichtbarem Nutzen werden
+	// beantwortet. Dieselbe Überlegung wie bei der Startdichte.
+	if rolle == planner.RolePlanner {
+		fragen := []openapi.Frage{}
+		for _, id := range planner.OpenQuestions(r.Skipped, 2) {
+			f, ok := katalog.Get(id)
+			if !ok {
+				// Ein Faktum ohne Frage wird nicht gefragt. Es bleibt
+				// unbekannt, und die Vorlage bleibt draußen — richtig herum.
+				continue
+			}
+			fragen = append(fragen, openapi.Frage{Faktum: f.ID, Frage: f.Question, Dann: f.Benefit})
+		}
+		if len(fragen) > 0 {
+			plan.Fragen = &fragen
+		}
 	}
 
 	for _, t := range r.Tasks {
@@ -387,6 +430,7 @@ func planNachAussen(h planner.Household, r planner.Result, ich string, rolle pla
 
 func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 	garten, auto := h.Context.HasYard, h.Context.HasCar
+	zimmer, baeder := h.Context.Rooms, h.Context.Baths
 	haustiere := h.Context.Pets
 	if haustiere == nil {
 		haustiere = []string{}
@@ -401,6 +445,8 @@ func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 		Garten:     &garten,
 		Auto:       &auto,
 		Haustiere:  &haustiere,
+		Zimmer:     &zimmer,
+		Baeder:     &baeder,
 	}
 	for _, m := range h.Members {
 		zugang := m.HasAccess
@@ -418,6 +464,10 @@ func haushaltNachAussen(h planner.Household) openapi.Haushalt {
 		if m.BirthYear != 0 {
 			jahr := m.BirthYear
 			mitglied.Geburtsjahr = &jahr
+		}
+		if m.Care != "" {
+			betreuung := openapi.MitgliedBetreuung(m.Care)
+			mitglied.Betreuung = &betreuung
 		}
 		out.Mitglieder = append(out.Mitglieder, mitglied)
 	}
@@ -494,6 +544,8 @@ func (a api) UpdateHaushalt(ctx context.Context, r openapi.UpdateHaushaltRequest
 		HasYard:  r.Body.Garten,
 		Pets:     r.Body.Haustiere,
 		Timezone: r.Body.Zeitzone,
+		Rooms:    r.Body.Zimmer,
+		Baths:    r.Body.Baeder,
 	}
 	if r.Body.Wohnform != nil {
 		wohnform := planner.Home(*r.Body.Wohnform)
@@ -527,6 +579,10 @@ func (a api) UpdateMitglied(ctx context.Context, r openapi.UpdateMitgliedRequest
 	}
 
 	c := planner.MemberChange{Name: r.Body.Name, BirthYear: r.Body.Geburtsjahr}
+	if r.Body.Betreuung != nil {
+		betreuung := planner.Care(*r.Body.Betreuung)
+		c.Care = &betreuung
+	}
 	if r.Body.Rolle != nil {
 		rolle := planner.Role(*r.Body.Rolle)
 		c.Role = &rolle
@@ -592,6 +648,245 @@ func (a api) WocheNeuRechnen(ctx context.Context, r openapi.WocheNeuRechnenReque
 		return nil, err
 	}
 	return openapi.WocheNeuRechnen200JSONResponse(
-		planNachAussen(haushalt, result, ich, rolle, rolle == planner.RolePlanner),
+		planNachAussen(haushalt, result, ich, rolle, rolle == planner.RolePlanner, a.facts),
 	), nil
+}
+
+// SetFakten beantwortet eine Frage zum Haushalt.
+func (a api) SetFakten(ctx context.Context, r openapi.SetFaktenRequestObject) (openapi.SetFaktenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.SetFakten403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil || len(*r.Body) == 0 {
+		return openapi.SetFakten400JSONResponse{Fehler: "keine Antwort dabei"}, nil
+	}
+
+	haushalt, err := a.plans.SetFacts(ctx, id.Subject, r.HaushaltId, *r.Body)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.SetFakten404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.SetFakten403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.SetFakten200JSONResponse(haushaltNachAussen(haushalt)), nil
+}
+
+// ListVorlagen zeigt die ganze Bibliothek mit dem Stand dieses Haushalts.
+func (a api) ListVorlagen(ctx context.Context, r openapi.ListVorlagenRequestObject) (openapi.ListVorlagenResponseObject, error) {
+	var subject string
+	if id, ok := auth.From(ctx); ok {
+		subject = id.Subject
+	}
+
+	stand, _, err := a.plans.TemplatesFor(ctx, subject, r.HaushaltId)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.ListVorlagen404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	out := openapi.ListVorlagen200JSONResponse{}
+	for _, v := range stand {
+		eintrag := openapi.VorlagenStand{
+			Id:        v.Template.ID,
+			Titel:     v.Template.Title,
+			Kategorie: openapi.Kategorie(v.Template.Category),
+			Art:       openapi.VorlagenStandArt(v.Template.Kind),
+			DauerMin:  v.Template.DurationMin,
+			Kopflast:  int(v.Template.HeadLoad),
+			Aktiv:     v.Active,
+		}
+		if v.Template.Source == planner.SourceHousehold {
+			eigene := true
+			eintrag.Eigene = &eigene
+		}
+		if v.Reason != "" {
+			grund := openapi.VorlagenStandGrund(v.Reason)
+			eintrag.Grund = &grund
+		}
+		if v.Fact != "" {
+			faktum := v.Fact
+			eintrag.Faktum = &faktum
+			if f, ok := a.facts.Get(v.Fact); ok {
+				eintrag.Frage = &f.Question
+				eintrag.Dann = &f.Benefit
+			}
+		}
+		out = append(out, eintrag)
+	}
+	return out, nil
+}
+
+// SetVorlage bestellt eine Vorlage ab oder wieder an.
+func (a api) SetVorlage(ctx context.Context, r openapi.SetVorlageRequestObject) (openapi.SetVorlageResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.SetVorlage403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.SetVorlage403JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	switch err := a.plans.SetTemplateActive(ctx, id.Subject, r.HaushaltId, r.VorlageId, r.Body.Aktiv); {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.SetVorlage404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.SetVorlage403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.SetVorlage204Response{}, nil
+}
+
+func anlassNachAussen(o planner.Occasion) openapi.Anlass {
+	return openapi.Anlass{
+		Id:        o.ID,
+		Titel:     o.Title,
+		Tag:       o.Date.String(),
+		Art:       openapi.AnlassArt(o.Kind),
+		Jaehrlich: o.Yearly,
+	}
+}
+
+// ListAnlaesse zeigt die eingetragenen Anlässe.
+func (a api) ListAnlaesse(ctx context.Context, r openapi.ListAnlaesseRequestObject) (openapi.ListAnlaesseResponseObject, error) {
+	var subject string
+	if id, ok := auth.From(ctx); ok {
+		subject = id.Subject
+	}
+
+	anlaesse, err := a.plans.Occasions(ctx, subject, r.HaushaltId)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.ListAnlaesse404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	out := openapi.ListAnlaesse200JSONResponse{}
+	for _, o := range anlaesse {
+		out = append(out, anlassNachAussen(o))
+	}
+	return out, nil
+}
+
+// CreateAnlass trägt einen Anlass ein.
+func (a api) CreateAnlass(ctx context.Context, r openapi.CreateAnlassRequestObject) (openapi.CreateAnlassResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.CreateAnlass403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.CreateAnlass400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	tag, err := planner.ParseDate(r.Body.Tag)
+	if err != nil {
+		return openapi.CreateAnlass400JSONResponse{Fehler: err.Error()}, nil
+	}
+
+	o := planner.Occasion{Title: r.Body.Titel, Date: tag, Kind: string(r.Body.Art)}
+	if r.Body.Jaehrlich != nil {
+		o.Yearly = *r.Body.Jaehrlich
+	}
+
+	neu, err := a.plans.AddOccasion(ctx, id.Subject, r.HaushaltId, o)
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.CreateAnlass400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.CreateAnlass404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.CreateAnlass403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.CreateAnlass201JSONResponse(anlassNachAussen(neu)), nil
+}
+
+// DeleteAnlass löscht einen Anlass.
+func (a api) DeleteAnlass(ctx context.Context, r openapi.DeleteAnlassRequestObject) (openapi.DeleteAnlassResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.DeleteAnlass403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	switch err := a.plans.RemoveOccasion(ctx, id.Subject, r.HaushaltId, r.AnlassId); {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.DeleteAnlass404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.DeleteAnlass403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.DeleteAnlass204Response{}, nil
+}
+
+// CreateEigeneVorlage legt eine Aufgabe an, die es in der Bibliothek nicht gibt.
+func (a api) CreateEigeneVorlage(ctx context.Context, r openapi.CreateEigeneVorlageRequestObject) (openapi.CreateEigeneVorlageResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.CreateEigeneVorlage403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.CreateEigeneVorlage400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	o := planner.OwnTask{
+		Title:       r.Body.Titel,
+		Category:    planner.Category(r.Body.Kategorie),
+		DurationMin: r.Body.DauerMin,
+		EveryDays:   int(r.Body.AlleTage),
+	}
+	if r.Body.Denken != nil {
+		o.Remember = *r.Body.Denken
+	}
+	if r.Body.Klaeren != nil {
+		o.Arrange = *r.Body.Klaeren
+	}
+	if r.Body.NurErwachsene != nil {
+		o.AdultsOnly = *r.Body.NurErwachsene
+	}
+
+	vorlage, err := a.plans.AddOwnTemplate(ctx, id.Subject, r.HaushaltId, o)
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.CreateEigeneVorlage400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.CreateEigeneVorlage404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.CreateEigeneVorlage403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	eigene := true
+	return openapi.CreateEigeneVorlage201JSONResponse{
+		Id:        vorlage.ID,
+		Titel:     vorlage.Title,
+		Kategorie: openapi.Kategorie(vorlage.Category),
+		Art:       openapi.VorlagenStandArt(vorlage.Kind),
+		DauerMin:  vorlage.DurationMin,
+		Kopflast:  int(vorlage.HeadLoad),
+		Aktiv:     true,
+		Eigene:    &eigene,
+	}, nil
 }

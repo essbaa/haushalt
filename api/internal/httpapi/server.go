@@ -13,6 +13,7 @@ import (
 	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/config"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
+	"github.com/zakaria/haushalt/api/internal/library"
 )
 
 // Pinger ist alles, was sagen kann, ob es erreichbar ist.
@@ -40,10 +41,13 @@ type Server struct {
 	// verifier darf nil sein: Ohne AUTH_JWKS_URL kennt der Dienst keine
 	// Anmeldung und behandelt jede Anfrage als anonym.
 	verifier *auth.Verifier
+	// facts ist der Fragenkatalog aus dem Repo. Darf nil sein — dann stellt
+	// die App keine Fragen, plant aber auch nichts Unbekanntes ein.
+	facts *library.Facts
 }
 
-func New(cfg config.Config, log *slog.Logger, db Pinger, version string, plans Plans, verifier *auth.Verifier) *Server {
-	return &Server{cfg: cfg, log: log, db: db, version: version, plans: plans, verifier: verifier}
+func New(cfg config.Config, log *slog.Logger, db Pinger, version string, plans Plans, verifier *auth.Verifier, facts *library.Facts) *Server {
+	return &Server{cfg: cfg, log: log, db: db, version: version, plans: plans, verifier: verifier, facts: facts}
 }
 
 // Handler baut den Router und legt die Middleware darum.
@@ -65,7 +69,7 @@ func (s *Server) Handler() http.Handler {
 	// die Vorgabe des Generators schreibt reinen Text und würde den Vertrag
 	// brechen.
 	strict := openapi.NewStrictHandlerWithOptions(
-		api{plans: s.plans, version: s.version},
+		api{plans: s.plans, version: s.version, facts: s.facts},
 		nil,
 		openapi.StrictHTTPServerOptions{
 			RequestErrorHandlerFunc:  s.badRequest,

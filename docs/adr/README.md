@@ -16,6 +16,7 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0007](0007-onboarding-fragt-drei-dinge.md) | Das Onboarding fragt drei Dinge und rät den Rest | angenommen |
 | [0008](0008-woche-festschreiben.md) | Die Woche wird beim ersten Ansehen festgeschrieben | angenommen |
 | [0009](0009-gestaltung-muss-unterscheiden.md) | Ein Token-System, und Gestaltung, die unterscheidet | angenommen |
+| [0010](0010-unbekannt-ist-nicht-nein.md) | Unbekannt ist nicht nein | angenommen |
 
 ## Aufbau eines Eintrags
 

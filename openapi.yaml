@@ -322,6 +322,305 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/haushalte/{haushaltId}/vorlagen:
+    get:
+      tags: [haushalt]
+      summary: Alles, was die App kennt — und was davon bei euch gilt
+      description: |
+        Die ganze Bibliothek mit dem Stand dieses Haushalts. Jede Zeile sagt,
+        ob sie gilt, und wenn nicht, warum: nicht zuständig, noch ungeklärt,
+        braucht einen Termin, abgewählt.
+
+        Der Grund für diese Liste: Ein Plan, dem man nicht widersprechen kann,
+        ist eine Behauptung. Hier lässt sich jede Zeile umdrehen.
+      operationId: listVorlagen
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: die Bibliothek, auf diesen Haushalt bezogen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VorlagenStand"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+    post:
+      tags: [haushalt]
+      summary: Eine eigene Aufgabe anlegen
+      description: |
+        Für alles, was in der Bibliothek fehlt — die Medikamente der
+        Großmutter, der Putzplan der WG, das Vereinstraining.
+
+        Bewusst wenige Felder: Eine eigene Aufgabe anzulegen ist Dateneingabe,
+        und Dateneingabe ist das, wogegen das Produkt antritt. Sie ist der
+        Ausweg für das Fehlende, nicht der Weg.
+
+        Die Kopflast wird nicht als Zahl abgefragt, sondern aus zwei Fragen
+        abgeleitet, die man ohne Kenntnis des Modells beantworten kann.
+      operationId: createEigeneVorlage
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NeueVorlage"
+      responses:
+        "201":
+          description: die angelegte Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VorlagenStand"
+        "400":
+          description: das ergibt keine Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/vorlagen/{vorlageId}:
+    patch:
+      tags: [haushalt]
+      summary: Eine Vorlage abbestellen oder wieder anbestellen
+      description: |
+        „Das machen wir nicht" — dauerhaft. Die Vorlage verschwindet aus allen
+        künftigen Plänen, bis jemand sie wieder anbestellt.
+
+        Das ist die einfachste Form der Lernschleife und die wichtigste: Ohne
+        sie kann der Haushalt dem Vorschlag nur folgen oder ihn jede Woche neu
+        wegklicken.
+
+        Nur planende Personen — es gilt für alle.
+      operationId: setVorlage
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vorlageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [aktiv]
+              properties:
+                aktiv:
+                  type: boolean
+      responses:
+        "204":
+          description: eingetragen
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/anlaesse:
+    get:
+      tags: [haushalt]
+      summary: Die eingetragenen Anlässe
+      operationId: listAnlaesse
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: alle Anlässe des Haushalts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Anlass"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+    post:
+      tags: [haushalt]
+      summary: Einen Anlass eintragen
+      description: |
+        Ein Geburtstag, ein Elternabend, ein Termin. Daran hängen die Aufgaben
+        mit Vorlauf — „Geschenk besorgen, sieben Tage vorher".
+
+        Ohne Anlass entsteht keine solche Aufgabe. Die App erfindet keinen
+        Geburtstag (ADR-0010).
+      operationId: createAnlass
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NeuerAnlass"
+      responses:
+        "201":
+          description: der eingetragene Anlass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Anlass"
+        "400":
+          description: das ergibt keinen Anlass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/anlaesse/{anlassId}:
+    delete:
+      tags: [haushalt]
+      summary: Einen Anlass löschen
+      operationId: deleteAnlass
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: anlassId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: gelöscht
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/fakten:
+    patch:
+      tags: [haushalt]
+      summary: Eine Frage zum Haushalt beantworten
+      description: |
+        Trägt ein, was der Haushalt hat und was nicht — Pflanzen, Spülmaschine,
+        Keller. Was hier fehlt, bleibt **unbekannt**, und unbekannt ist nicht
+        dasselbe wie nein: Unbekanntes wird nicht eingeplant, sondern gefragt.
+
+        Zusammengeführt, nicht ersetzt: Eine Antwort löscht die übrigen nicht.
+
+        Nur planende Personen. Ein Nein nimmt Aufgaben aus dem Plan aller.
+      operationId: setFakten
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: boolean
+              example:
+                pflanzen: false
+                spuelmaschine: true
+      responses:
+        "200":
+          description: der Haushalt, wie er jetzt aussieht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Haushalt"
+        "400":
+          description: das ergibt keine Antwort
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diesen Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/haushalte/{haushaltId}/einladungen:
     post:
       tags: [haushalt]
@@ -574,7 +873,7 @@ components:
 
     NeuerHaushalt:
       type: object
-      required: [name, wohnform, mitglieder]
+      required: [name, mitglieder]
       properties:
         name:
           type: string
@@ -584,6 +883,30 @@ components:
         wohnform:
           type: string
           enum: [wohnung, haus]
+          description: |
+            Wird zurzeit von keiner Vorlage ausgewertet und deshalb auch nicht
+            abgefragt — eine Frage, die nichts bewirkt, gehört nicht ins
+            Onboarding. Das Feld bleibt, weil Wohnform eine echte Eigenschaft
+            eines Haushalts ist; sobald eine Vorlage daran hängt (Streupflicht,
+            Dachrinne, Schornsteinfeger), kommt die Frage zurück. Fehlt es,
+            gilt „wohnung".
+        zimmer:
+          type: integer
+          minimum: 1
+          maximum: 15
+          example: 3
+          description: |
+            Wie viele Zimmer. Filtert nichts, sondern skaliert: Putzaufgaben
+            dauern in fünf Zimmern länger als in zwei. Fehlt die Angabe, gilt
+            drei — der Haushalt, für den die Bibliothek kuratiert ist.
+        baeder:
+          type: integer
+          minimum: 0
+          maximum: 5
+          example: 1
+          description: |
+            Wie viele Bäder. „Bad putzen" ist pro Bad gerechnet — wer zwei hat,
+            putzt zwei. Fehlt die Angabe, gilt eins.
         garten:
           type: boolean
           description: Fehlt das Feld, gilt „kein Garten".
@@ -666,6 +989,14 @@ components:
         wohnform:
           type: string
           enum: [wohnung, haus]
+        zimmer:
+          type: integer
+          minimum: 1
+          maximum: 15
+        baeder:
+          type: integer
+          minimum: 0
+          maximum: 5
         garten:
           type: boolean
         auto:
@@ -705,6 +1036,12 @@ components:
             Die grobe Stufe aus dem Onboarding. Der Dienst rechnet sie in
             Minuten um; die Minutenwerte stehen nur im Planer, damit es nicht
             zwei Vorstellungen davon gibt, was „mittel" bedeutet.
+        betreuung:
+          type: string
+          enum: [keine, kita, schule]
+          description: |
+            Ausdrücklich gesetzt gewinnt gegen geraten — auch wenn in derselben
+            Anfrage ein neues Geburtsjahr steht.
         minuten:
           type: array
           minItems: 7
@@ -716,6 +1053,158 @@ components:
           description: |
             Minuten je Wochentag, Index 0 = Montag. Für alle, denen die drei
             Stufen zu grob sind. Zusammen mit `zeit` gewinnt diese Angabe.
+
+    VorlagenStand:
+      type: object
+      required: [id, titel, kategorie, art, dauer_min, kopflast, aktiv]
+      properties:
+        id:
+          type: string
+          example: t-pflanzen
+        titel:
+          type: string
+        kategorie:
+          $ref: "#/components/schemas/Kategorie"
+        art:
+          type: string
+          enum: [ausfuehrung, organisation]
+        dauer_min:
+          type: integer
+        kopflast:
+          type: integer
+        aktiv:
+          type: boolean
+          description: Ob sie in künftigen Plänen vorkommen kann.
+        eigene:
+          type: boolean
+          description: |
+            Vom Haushalt selbst angelegt. Ihre Zahlen sind geschätzt und tragen
+            trotzdem die Fairnessrechnung mit — deshalb sind sie sichtbar
+            gekennzeichnet.
+        grund:
+          type: string
+          enum:
+            [
+              gilt_nicht,
+              abgewaehlt,
+              nicht_faellig,
+              startdichte,
+              keine_kapazitaet,
+              niemand_geeignet,
+              unbekannt,
+              braucht_termin,
+            ]
+          description: Warum sie nicht gilt. Fehlt, wenn sie gilt.
+        faktum:
+          type: string
+          description: Bei `unbekannt` das Faktum, dessen Antwort fehlt.
+        frage:
+          type: string
+          description: |
+            Die Frage zu diesem Faktum — mitgeliefert statt nachgeschlagen,
+            damit die Zeile alles trägt, was sie zum Anzeigen braucht.
+        dann:
+          type: string
+          description: Was eine Antwort mit Ja bringt.
+
+    Anlass:
+      type: object
+      required: [id, titel, tag, art, jaehrlich]
+      properties:
+        id:
+          type: string
+        titel:
+          type: string
+          example: Geburtstag von Mia
+        tag:
+          type: string
+          format: date
+          x-go-type: string
+          description: Kalendertag ohne Uhrzeit (ADR-0002).
+          example: "2026-11-08"
+        art:
+          type: string
+          enum: [kindergeburtstag, geburtstag, elternabend, arzttermin, sonstiges]
+          description: |
+            Verbindet den Anlass mit den Vorlagen, die daran hängen. Eine feste
+            Liste, weil ein freier Text nie zu einer Vorlage passen würde — man
+            hätte etwas eingetragen und nie erfahren, warum nichts passiert.
+        jaehrlich:
+          type: boolean
+          description: Geburtstage wiederholen sich, Termine nicht.
+
+    NeuerAnlass:
+      type: object
+      required: [titel, tag, art]
+      properties:
+        titel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        tag:
+          type: string
+          format: date
+          x-go-type: string
+        art:
+          type: string
+          enum: [kindergeburtstag, geburtstag, elternabend, arzttermin, sonstiges]
+        jaehrlich:
+          type: boolean
+
+    NeueVorlage:
+      type: object
+      required: [titel, kategorie, dauer_min, alle_tage]
+      properties:
+        titel:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Medikamente für Oma sortieren
+        kategorie:
+          $ref: "#/components/schemas/Kategorie"
+        dauer_min:
+          type: integer
+          minimum: 1
+          maximum: 480
+          description: |
+            Geschätzt — und die Schätzung trägt die Fairnessrechnung mit. Eine
+            zu niedrige Zahl verschiebt die Bilanz des ganzen Haushalts, ohne
+            dass es jemand merkt.
+        alle_tage:
+          type: integer
+          enum: [1, 7, 14, 30]
+          description: |
+            Gewünschter Abstand — täglich, wöchentlich, zweiwöchentlich oder
+            monatlich.
+        denken:
+          type: boolean
+          description: |
+            „Muss jemand daran denken, oder sieht man es?" Zählt einfach in die
+            Kopflast.
+        klaeren:
+          type: boolean
+          description: |
+            „Muss man erst etwas klären — Termin machen, nachsehen, jemanden
+            fragen?" Zählt doppelt: Ein Termin, den man vereinbaren muss,
+            kostet mehr Aufmerksamkeit als eine Aufgabe, an die man sich nur
+            erinnert.
+        nur_erwachsene:
+          type: boolean
+
+    Frage:
+      type: object
+      required: [faktum, frage, dann]
+      properties:
+        faktum:
+          type: string
+          example: pflanzen
+        frage:
+          type: string
+          example: Habt ihr Pflanzen, die gegossen werden müssen?
+        dann:
+          type: string
+          description: Was eine Antwort mit Ja bringt.
+          example: Dann erinnere ich alle paar Tage ans Gießen.
 
     Haushalt:
       type: object
@@ -756,10 +1245,14 @@ components:
           items:
             type: string
           description: |
-            Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
-            entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
-            Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
-            könnten die Einstellungen nicht zeigen, was angenommen wurde.
+            Garten, Auto und Haustiere entscheiden, welche Aufgaben es im
+            Haushalt überhaupt gibt — ohne Garten kein Rasen, ohne Auto kein
+            TÜV. Ohne diese Felder könnten die Einstellungen nicht zeigen, was
+            angenommen wurde.
+        zimmer:
+          type: integer
+        baeder:
+          type: integer
 
     Mitglied:
       type: object
@@ -797,6 +1290,13 @@ components:
             Verfügbare Minuten je Wochentag, Index 0 = Montag. Beim Einrichten
             aus einer der drei Stufen geraten und hier korrigierbar. Die Zahlen
             tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
+        betreuung:
+          type: string
+          enum: [keine, kita, schule]
+          description: |
+            Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
+            hängt, welche Aufgaben der Haushalt überhaupt hat — ohne Kita-Kind
+            keine Kita-Tasche.
 
     Wochenplan:
       type: object
@@ -824,6 +1324,15 @@ components:
             Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
             die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
             abgeben darf. Fehlt bei Demo-Haushalten und ohne Anmeldung.
+        fragen:
+          type: array
+          items:
+            $ref: "#/components/schemas/Frage"
+          description: |
+            Offene Fragen zum Haushalt — höchstens zwei. Was die App nicht
+            weiß, plant sie nicht ein; sie fragt danach, und zwar mit dem
+            Nutzen daneben. Eine Frage ohne erkennbaren Nutzen wird nicht
+            beantwortet.
         bilanz:
           type: array
           description: |

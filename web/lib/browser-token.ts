@@ -31,6 +31,11 @@ export function patchMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
   return sendeMitToken<T>("PATCH", pfad, rumpf);
 }
 
+/** Ein DELETE. */
+export function deleteMitToken<T>(pfad: string): Promise<T> {
+  return sendeMitToken<T>("DELETE", pfad);
+}
+
 async function sendeMitToken<T>(methode: string, pfad: string, rumpf?: unknown): Promise<T> {
   const t = await token();
 

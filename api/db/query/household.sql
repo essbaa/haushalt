@@ -1,6 +1,6 @@
 -- name: CreateHousehold :one
-INSERT INTO household (name, home, has_car, has_yard, pets, timezone)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO household (name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetHousehold :one
@@ -19,15 +19,18 @@ ORDER BY h.created_at;
 -- name: UpsertDemoHousehold :one
 -- Haushalte aus dem Repo. Der Slug ist der Schlüssel, damit ein zweiter
 -- Import dieselbe Zeile trifft statt eine neue anzulegen.
-INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (slug) DO UPDATE
     SET name     = EXCLUDED.name,
         home     = EXCLUDED.home,
         has_car  = EXCLUDED.has_car,
         has_yard = EXCLUDED.has_yard,
         pets     = EXCLUDED.pets,
-        timezone = EXCLUDED.timezone
+        timezone = EXCLUDED.timezone,
+        facts    = EXCLUDED.facts,
+        rooms    = EXCLUDED.rooms,
+        baths    = EXCLUDED.baths
 RETURNING *;
 
 -- name: GetHouseholdBySlug :one
@@ -55,6 +58,17 @@ UPDATE household SET
     has_car  = COALESCE(sqlc.narg('has_car'), has_car),
     has_yard = COALESCE(sqlc.narg('has_yard'), has_yard),
     pets     = COALESCE(sqlc.narg('pets'), pets),
-    timezone = COALESCE(sqlc.narg('timezone'), timezone)
+    timezone = COALESCE(sqlc.narg('timezone'), timezone),
+    rooms    = COALESCE(sqlc.narg('rooms'), rooms),
+    baths    = COALESCE(sqlc.narg('baths'), baths)
 WHERE id = sqlc.arg('id')
+RETURNING *;
+
+-- name: SetFacts :one
+-- Fakten zusammenführen, nicht ersetzen: || vereinigt zwei JSONB-Objekte,
+-- rechts gewinnt. Ein Formular, das nur eine Antwort schickt, soll die
+-- übrigen nicht löschen.
+UPDATE household
+SET facts = facts || $2::jsonb
+WHERE id = $1
 RETURNING *;

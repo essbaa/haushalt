@@ -74,6 +74,30 @@ type Limits struct {
 	// die Minuten rechnerisch passen.
 	MaxTasksPerMemberDay int
 
+	// MaxMinutesForChild ist die längste Einzelaufgabe, die jemand unter 18
+	// bekommt.
+	//
+	// Keine Rechenkorrektur, sondern eine Produktaussage. Das Alter in den
+	// Vorlagen sagt, ob ein Kind eine Aufgabe *kann* — nicht, wie groß ein
+	// einzelner Block sein darf. Bad putzen gilt ab 12; zwei Bäder am Stück
+	// sind etwas anderes als eines, und ein Plan, in dem das Kind den längsten
+	// Block trägt, wird gelöscht, egal was die Prozentzahl sagt.
+	//
+	// Eine Vorliebe, keine Bedingung: Bleibt sonst niemand übrig, bekommt das
+	// Kind die Aufgabe trotzdem — sie ganz wegfallen zu lassen wäre schlimmer.
+	MaxMinutesForChild int
+
+	// MaxHeadLoadPerDay begrenzt die Kopflast einer Person an einem Tag.
+	//
+	// Die Startdichte begrenzt die Kopfarbeit je Woche und sagt nichts
+	// darüber, wie sie über die Woche liegt. Ohne diese zweite Grenze landet
+	// alles am Montag: Organisationsaufgaben sind am dringendsten, bekommen
+	// also den frühesten Tag — und der Montag trägt die halbe Woche.
+	//
+	// Vier heißt in der Praxis: ein Termin mit viel Kopflast, oder zwei mit
+	// wenig. Harte Fristen sind ausgenommen.
+	MaxHeadLoadPerDay int
+
 	// HeadLoadMinutes ist der Preis eines Kopflast-Punktes in Minuten für die
 	// Lastrechnung. Der Kern der Zwei-Achsen-Idee: Wer Termine koordiniert,
 	// verbringt wenig Zeit und trägt viel. Ein Planer, der nur Minuten zählt,
@@ -87,6 +111,8 @@ func DefaultLimits() Limits {
 	return Limits{
 		MaxOrgTasks:          3,
 		MaxTasksPerMemberDay: 4,
+		MaxHeadLoadPerDay:    4,
+		MaxMinutesForChild:   45,
 		HeadLoadMinutes:      15,
 	}
 }
@@ -200,12 +226,19 @@ const (
 	SkipDensity       SkipCode = "startdichte"      // bewusst zurückgehalten
 	SkipNoCapacity    SkipCode = "keine_kapazitaet" // niemand hat Zeit
 	SkipNoOneEligible SkipCode = "niemand_geeignet" // Alters- oder Rollenregel
+	SkipUnknown       SkipCode = "unbekannt"        // eine Voraussetzung ist ungeklärt
+	SkipNeedsEvent    SkipCode = "braucht_termin"   // entsteht nur aus einem Anlass
 )
 
 type Skipped struct {
 	TemplateID string
 	Title      string
 	Code       SkipCode
+
+	// Fact ist bei SkipUnknown das Faktum, das fehlt. Daraus entstehen die
+	// Fragen, die die App stellt — höchstens zwei pro Woche, jede mit dem
+	// Nutzen daneben.
+	Fact string
 }
 
 // Plan berechnet den Wochenplan.
@@ -225,6 +258,11 @@ func Plan(in Input) (Result, error) {
 	if err := in.validate(); err != nil {
 		return Result{}, err
 	}
+
+	// Die Dauern werden einmal auf diesen Haushalt umgerechnet, bevor
+	// irgendetwas damit rechnet: Zuteilung, Kapazitätsprüfung und Anzeige
+	// sollen dieselbe Zahl sehen (siehe ScaleTemplates).
+	in.Templates = ScaleTemplates(in.Templates, in.Household)
 
 	var skipped []Skipped
 

@@ -22,11 +22,11 @@ export default async function Einrichten() {
   const name = ich.name?.trim() || "";
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-16">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">
+    <main className="mx-auto w-full max-w-lg px-5 py-10">
+      <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-balance">
         Kurz einrichten
       </h1>
-      <p className="mb-8 text-sm leading-relaxed text-muted">
+      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
         Drei Fragen, keine Minute. Danach steht dein erster Wochenplan — und du
         kannst alles daran ändern. Was die App nicht weiß, schlägt sie auch
         nicht vor: Ohne Garten kein Rasen, ohne Auto kein TÜV.

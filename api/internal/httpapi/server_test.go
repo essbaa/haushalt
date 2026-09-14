@@ -94,7 +94,9 @@ func testServer(db Pinger) *Server {
 	}
 	// Logs im Test ins Nichts schreiben, sonst rauscht die Ausgabe voll.
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(cfg, log, db, "test", fakePlans{}, nil)
+	// Ohne Fragenkatalog: Der Dienst stellt dann keine Fragen und plant
+	// nichts Unbekanntes ein — genau das soll auch ohne Datei gelten.
+	return New(cfg, log, db, "test", fakePlans{}, nil, nil)
 }
 
 func TestHealth(t *testing.T) {
@@ -329,4 +331,32 @@ func (fakePlans) UpdateMember(context.Context, string, string, string, planner.M
 
 func (fakePlans) Recompute(context.Context, string, string, planner.Week) (planner.Result, planner.Household, error) {
 	return planner.Result{}, planner.Household{}, planner.ErrNotAllowed
+}
+
+func (fakePlans) SetFacts(context.Context, string, string, map[string]bool) (planner.Household, error) {
+	return planner.Household{}, planner.ErrNotAllowed
+}
+
+func (fakePlans) TemplatesFor(context.Context, string, string) ([]planner.TemplateState, planner.Household, error) {
+	return nil, planner.Household{}, planner.ErrUnknownHousehold
+}
+
+func (fakePlans) SetTemplateActive(context.Context, string, string, string, bool) error {
+	return planner.ErrNotAllowed
+}
+
+func (fakePlans) Occasions(context.Context, string, string) ([]planner.Occasion, error) {
+	return nil, planner.ErrUnknownHousehold
+}
+
+func (fakePlans) AddOccasion(context.Context, string, string, planner.Occasion) (planner.Occasion, error) {
+	return planner.Occasion{}, planner.ErrNotAllowed
+}
+
+func (fakePlans) RemoveOccasion(context.Context, string, string, string) error {
+	return planner.ErrNotAllowed
+}
+
+func (fakePlans) AddOwnTemplate(context.Context, string, string, planner.OwnTask) (planner.TaskTemplate, error) {
+	return planner.TaskTemplate{}, planner.ErrNotAllowed
 }

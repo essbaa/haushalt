@@ -3,6 +3,7 @@ package planner
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -67,6 +68,12 @@ func (s Setup) Normalized() Setup {
 	if s.Context.Pets == nil {
 		s.Context.Pets = []string{}
 	}
+	if s.Context.Rooms == 0 {
+		s.Context.Rooms = ReferenceRooms
+	}
+	if s.Context.Baths == 0 {
+		s.Context.Baths = ReferenceBaths
+	}
 
 	out := make([]SetupMember, 0, len(s.Members))
 	for _, m := range s.Members {
@@ -99,6 +106,9 @@ func (s Setup) Validate() error {
 	}
 
 	if err := ValidTimezone(s.Timezone); err != nil {
+		return err
+	}
+	if err := ValidSize(s.Context.Rooms, s.Context.Baths); err != nil {
 		return err
 	}
 
@@ -141,21 +151,22 @@ func (s Setup) Validate() error {
 
 // CareForAge rät die Betreuungsform aus dem Alter, statt sie abzufragen.
 //
-// Eine Frage weniger im Onboarding, und in Deutschland trifft die Regel
-// meistens: Krippe bleibt außen vor, Kindergarten ab drei, Schule ab sechs.
-// Sie ist ein Vorschlag, keine Vorschrift — sobald es die Einstellungen gibt,
-// gehört die Betreuungsform dorthin, denn an ihr hängen die
-// Organisationsaufgaben.
+// Eine Frage weniger im Onboarding — und ein Rateschluss, der danebenliegen
+// darf, weil die Einstellungen ihn korrigieren. Ohne diese Korrekturmöglichkeit
+// wäre er eine Behauptung.
+//
+// Die Grenzen folgen dem deutschen Alltag: Der Rechtsanspruch auf Betreuung
+// gilt ab dem vollendeten ersten Lebensjahr, Krippe ab eins ist der Normalfall.
+// Die erste Fassung begann bei drei ("Kindergarten") und übersah damit jedes
+// Krippenkind — aufgefallen an einer Zweijährigen, die längst in die Kita geht.
 func CareForAge(age int) Care {
 	switch {
 	case age >= 18 || age <= 0:
 		return CareNone
 	case age >= 6:
 		return CareSchool
-	case age >= 3:
-		return CareKita
 	default:
-		return CareNone
+		return CareKita
 	}
 }
 
@@ -166,8 +177,8 @@ func CareForAge(age int) Care {
 
 // ValidName prüft einen Namen, wie ein Mensch ihn prüfen würde.
 //
-// was benennt, wessen Name gemeint ist („der Haushalt", „die Person"). Das
-// ist kein Schmuck: Die Meldung landet unverändert im Formular, und „der Name
+// was benennt, wessen Name gemeint ist („der Haushalt", „die Person"). Das ist
+// kein Schmuck: Die Meldung landet unverändert im Formular, und „der Name
 // fehlt" hilft niemandem, der zwei Namensfelder vor sich hat.
 func ValidName(was, s string, max int) error {
 	switch {
@@ -179,8 +190,8 @@ func ValidName(was, s string, max int) error {
 	return nil
 }
 
-// ValidBirthYear lässt 0 zu — das heißt „nicht gefragt" und bei Erwachsenen
-// ist es die richtige Antwort (siehe Member.IsAdult).
+// ValidBirthYear lässt 0 zu — das heißt „nicht gefragt" und ist bei
+// Erwachsenen die richtige Antwort (siehe Member.IsAdult).
 func ValidBirthYear(y int) error {
 	if y == 0 {
 		return nil
@@ -196,6 +207,21 @@ func ValidBirthYear(y int) error {
 func ValidTimezone(name string) error {
 	if _, err := time.LoadLocation(name); err != nil {
 		return fmt.Errorf("%w: %q ist keine Zeitzone", ErrInvalidSetup, name)
+	}
+	return nil
+}
+
+// ValidSize prüft Zimmer und Bäder.
+//
+// Die Obergrenzen sind großzügig und trotzdem da: Eine 40 im Zimmerfeld ist
+// ein Tippfehler, und ohne Grenze verschöbe er stillschweigend jede Dauer im
+// Haushalt an den Deckel.
+func ValidSize(zimmer, baeder int) error {
+	if zimmer < 1 || zimmer > 15 {
+		return fmt.Errorf("%w: %d Zimmer sind keine Wohnung", ErrInvalidSetup, zimmer)
+	}
+	if baeder < 0 || baeder > 5 {
+		return fmt.Errorf("%w: %d Bäder sind zu viele", ErrInvalidSetup, baeder)
 	}
 	return nil
 }
@@ -226,4 +252,37 @@ func ValidMinutes(m [7]int) error {
 		}
 	}
 	return nil
+}
+
+// OpenQuestions sind die Fakten, deren Antwort den Plan am meisten verändern
+// würde — höchstens so viele, wie angefragt.
+//
+// Die Reihenfolge entscheidet, was gefragt wird: erst das Faktum, an dem die
+// meisten Vorlagen hängen, bei Gleichstand alphabetisch, damit zwei Aufrufe
+// dasselbe ergeben.
+//
+// Die Obergrenze ist derselbe Gedanke wie die Startdichte: Wer beim ersten
+// Öffnen vierzehn Fragen sieht, beantwortet keine. Zwei mit sichtbarem Nutzen
+// werden beantwortet.
+func OpenQuestions(skipped []Skipped, max int) []string {
+	zaehler := map[string]int{}
+	for _, s := range skipped {
+		if s.Code == SkipUnknown && s.Fact != "" {
+			zaehler[s.Fact]++
+		}
+	}
+	fakten := make([]string, 0, len(zaehler))
+	for f := range zaehler {
+		fakten = append(fakten, f)
+	}
+	sort.Slice(fakten, func(i, j int) bool {
+		if zaehler[fakten[i]] != zaehler[fakten[j]] {
+			return zaehler[fakten[i]] > zaehler[fakten[j]]
+		}
+		return fakten[i] < fakten[j]
+	})
+	if max > 0 && len(fakten) > max {
+		fakten = fakten[:max]
+	}
+	return fakten
 }

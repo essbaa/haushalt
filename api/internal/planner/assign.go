@@ -7,6 +7,7 @@ type state struct {
 	member    Member
 	remaining [7]int // freie Minuten je Wochentag, Index 0 = Montag
 	count     [7]int // bereits zugeteilte Aufgaben je Wochentag
+	head      [7]int // bereits zugeteilte Kopflast je Wochentag
 	weighted  int    // Minuten + Kopflast × HeadLoadMinutes
 	capacity  int    // verfügbare Minuten der ganzen Woche
 }
@@ -62,9 +63,10 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 			eligible = onlyMember(eligible, c.pinned)
 		}
 		if len(eligible) == 0 {
-			skipped = append(skipped, Skipped{c.tmpl.ID, c.tmpl.Title, SkipNoOneEligible})
+			skipped = append(skipped, Skipped{TemplateID: c.tmpl.ID, Title: c.tmpl.Title, Code: SkipNoOneEligible})
 			continue
 		}
+		eligible = nichtZuLangFuerKinder(eligible, c.tmpl.DurationMin, in.Limits)
 
 		previous := in.History.lastAssignee(c.tmpl.ID)
 		if who, ok := recent[c.tmpl.ID]; ok {
@@ -106,7 +108,7 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 			break
 		}
 		if !placed {
-			skipped = append(skipped, Skipped{c.tmpl.ID, c.tmpl.Title, SkipNoCapacity})
+			skipped = append(skipped, Skipped{TemplateID: c.tmpl.ID, Title: c.tmpl.Title, Code: SkipNoCapacity})
 		}
 	}
 	return tasks, skipped
@@ -144,6 +146,29 @@ func rankMembers(eligible []Member, states map[string]*state, previous string) [
 	return out
 }
 
+// nichtZuLangFuerKinder nimmt Kinder aus der Auswahl, wenn die Aufgabe für
+// einen einzelnen Block zu lang ist.
+//
+// Eine Vorliebe, keine Bedingung: Bleibt sonst niemand übrig, bleibt die Liste
+// wie sie war. Eine Aufgabe, die deshalb ganz wegfiele, wäre schlimmer als
+// eine, die zu lang ist — und in einem Haushalt, in dem nur Kinder sie
+// übernehmen dürfen, gibt es keine Alternative.
+func nichtZuLangFuerKinder(members []Member, dauer int, l Limits) []Member {
+	if l.MaxMinutesForChild <= 0 || dauer <= l.MaxMinutesForChild {
+		return members
+	}
+	var erwachsene []Member
+	for _, m := range members {
+		if m.IsAdult() {
+			erwachsene = append(erwachsene, m)
+		}
+	}
+	if len(erwachsene) == 0 {
+		return members
+	}
+	return erwachsene
+}
+
 // onlyMember reduziert die Liste auf genau eine Person, falls sie dabei ist.
 func onlyMember(members []Member, id string) []Member {
 	for _, m := range members {
@@ -163,16 +188,40 @@ func loadOf(states map[string]*state, id string) int {
 
 // earliestFreeDay sucht den ersten der erlaubten Tage, an dem die Person noch
 // genug Minuten und noch nicht zu viele Aufgaben hat.
+// earliestFreeDay sucht den frühesten Tag, an dem diese Person die Aufgabe
+// noch tragen kann.
+//
+// Drei Grenzen, und die dritte ist die jüngste: Kopflast je Tag. Ohne sie
+// landete alles Fällige am Montag — Organisationsaufgaben haben die höchste
+// Dringlichkeit, bekamen also den frühesten Tag, und ein Montag mit vier
+// Terminsachen ist genau der Plan, der erschlägt. Die Wochengrenze
+// (MaxOrgTasks) sagt nichts darüber, wie die Kopfarbeit über die Woche liegt.
+//
+// Zwei Durchgänge: erst alle Tage mit Kopflastgrenze, dann alle ohne. Die
+// Grenze ist damit eine Vorliebe, keine Bedingung — eine Aufgabe bekommt
+// lieber einen vollen Tag als gar keinen.
+//
+// Vorher war die harte Frist von der Grenze ausgenommen, und das war falsch
+// herum: Ausgerechnet Vorsorgetermin, Elternbeitrag und Post sind als „hart"
+// markiert, also griff die Regel genau bei der Gruppe nicht, für die es sie
+// gibt. Ein Rückfall für alle ist richtiger als eine Ausnahme für die
+// Wichtigsten.
 func earliestFreeDay(st *state, c candidate, l Limits) (Date, bool) {
-	for _, d := range c.days {
-		i := weekdayIndex(d)
-		if st.count[i] >= l.MaxTasksPerMemberDay {
-			continue
+	for _, mitGrenze := range []bool{true, false} {
+		for _, d := range c.days {
+			i := weekdayIndex(d)
+			if st.count[i] >= l.MaxTasksPerMemberDay {
+				continue
+			}
+			if st.remaining[i] < c.tmpl.DurationMin {
+				continue
+			}
+			if mitGrenze && l.MaxHeadLoadPerDay > 0 &&
+				st.head[i]+int(c.tmpl.HeadLoad) > l.MaxHeadLoadPerDay {
+				continue
+			}
+			return d, true
 		}
-		if st.remaining[i] < c.tmpl.DurationMin {
-			continue
-		}
-		return d, true
 	}
 	return Date{}, false
 }
@@ -181,6 +230,7 @@ func charge(st *state, d Date, t PlannedTask, l Limits) {
 	i := weekdayIndex(d)
 	st.remaining[i] -= t.DurationMin
 	st.count[i]++
+	st.head[i] += int(t.HeadLoad)
 	st.weighted += t.Weight(l)
 }
 

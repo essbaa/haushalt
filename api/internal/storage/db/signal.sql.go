@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteSignal = `-- name: DeleteSignal :exec
+DELETE FROM signal
+WHERE household_id = $1 AND template_id = $2 AND kind = $3
+`
+
+type DeleteSignalParams struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	Kind        string
+}
+
+// Ein zurückgenommenes Abwählen löscht die Zeile, statt sie auf 0 zu setzen.
+// „Nie etwas gesagt" und „ausdrücklich wieder erlaubt" sollen im Protokoll
+// gleich aussehen — der Unterschied steht in den Ereignissen, nicht hier.
+func (q *Queries) DeleteSignal(ctx context.Context, arg DeleteSignalParams) error {
+	_, err := q.db.Exec(ctx, deleteSignal, arg.HouseholdID, arg.TemplateID, arg.Kind)
+	return err
+}
+
 const listSignals = `-- name: ListSignals :many
 SELECT household_id, template_id, kind, value, updated_at FROM signal WHERE household_id = $1 ORDER BY template_id, kind
 `

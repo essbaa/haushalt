@@ -174,6 +174,138 @@ export interface paths {
         patch: operations["updateHaushalt"];
         trace?: never;
     };
+    "/api/haushalte/{haushaltId}/vorlagen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alles, was die App kennt — und was davon bei euch gilt
+         * @description Die ganze Bibliothek mit dem Stand dieses Haushalts. Jede Zeile sagt,
+         *     ob sie gilt, und wenn nicht, warum: nicht zuständig, noch ungeklärt,
+         *     braucht einen Termin, abgewählt.
+         *
+         *     Der Grund für diese Liste: Ein Plan, dem man nicht widersprechen kann,
+         *     ist eine Behauptung. Hier lässt sich jede Zeile umdrehen.
+         */
+        get: operations["listVorlagen"];
+        put?: never;
+        /**
+         * Eine eigene Aufgabe anlegen
+         * @description Für alles, was in der Bibliothek fehlt — die Medikamente der
+         *     Großmutter, der Putzplan der WG, das Vereinstraining.
+         *
+         *     Bewusst wenige Felder: Eine eigene Aufgabe anzulegen ist Dateneingabe,
+         *     und Dateneingabe ist das, wogegen das Produkt antritt. Sie ist der
+         *     Ausweg für das Fehlende, nicht der Weg.
+         *
+         *     Die Kopflast wird nicht als Zahl abgefragt, sondern aus zwei Fragen
+         *     abgeleitet, die man ohne Kenntnis des Modells beantworten kann.
+         */
+        post: operations["createEigeneVorlage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/vorlagen/{vorlageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Eine Vorlage abbestellen oder wieder anbestellen
+         * @description „Das machen wir nicht" — dauerhaft. Die Vorlage verschwindet aus allen
+         *     künftigen Plänen, bis jemand sie wieder anbestellt.
+         *
+         *     Das ist die einfachste Form der Lernschleife und die wichtigste: Ohne
+         *     sie kann der Haushalt dem Vorschlag nur folgen oder ihn jede Woche neu
+         *     wegklicken.
+         *
+         *     Nur planende Personen — es gilt für alle.
+         */
+        patch: operations["setVorlage"];
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/anlaesse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Die eingetragenen Anlässe */
+        get: operations["listAnlaesse"];
+        put?: never;
+        /**
+         * Einen Anlass eintragen
+         * @description Ein Geburtstag, ein Elternabend, ein Termin. Daran hängen die Aufgaben
+         *     mit Vorlauf — „Geschenk besorgen, sieben Tage vorher".
+         *
+         *     Ohne Anlass entsteht keine solche Aufgabe. Die App erfindet keinen
+         *     Geburtstag (ADR-0010).
+         */
+        post: operations["createAnlass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/anlaesse/{anlassId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Einen Anlass löschen */
+        delete: operations["deleteAnlass"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/fakten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Eine Frage zum Haushalt beantworten
+         * @description Trägt ein, was der Haushalt hat und was nicht — Pflanzen, Spülmaschine,
+         *     Keller. Was hier fehlt, bleibt **unbekannt**, und unbekannt ist nicht
+         *     dasselbe wie nein: Unbekanntes wird nicht eingeplant, sondern gefragt.
+         *
+         *     Zusammengeführt, nicht ersetzt: Eine Antwort löscht die übrigen nicht.
+         *
+         *     Nur planende Personen. Ein Nein nimmt Aufgaben aus dem Plan aller.
+         */
+        patch: operations["setFakten"];
+        trace?: never;
+    };
     "/api/haushalte/{haushaltId}/einladungen": {
         parameters: {
             query?: never;
@@ -314,8 +446,29 @@ export interface components {
         NeuerHaushalt: {
             /** @example Familie Bauer */
             name: string;
-            /** @enum {string} */
-            wohnform: "wohnung" | "haus";
+            /**
+             * @description Wird zurzeit von keiner Vorlage ausgewertet und deshalb auch nicht
+             *     abgefragt — eine Frage, die nichts bewirkt, gehört nicht ins
+             *     Onboarding. Das Feld bleibt, weil Wohnform eine echte Eigenschaft
+             *     eines Haushalts ist; sobald eine Vorlage daran hängt (Streupflicht,
+             *     Dachrinne, Schornsteinfeger), kommt die Frage zurück. Fehlt es,
+             *     gilt „wohnung".
+             * @enum {string}
+             */
+            wohnform?: "wohnung" | "haus";
+            /**
+             * @description Wie viele Zimmer. Filtert nichts, sondern skaliert: Putzaufgaben
+             *     dauern in fünf Zimmern länger als in zwei. Fehlt die Angabe, gilt
+             *     drei — der Haushalt, für den die Bibliothek kuratiert ist.
+             * @example 3
+             */
+            zimmer?: number;
+            /**
+             * @description Wie viele Bäder. „Bad putzen" ist pro Bad gerechnet — wer zwei hat,
+             *     putzt zwei. Fehlt die Angabe, gilt eins.
+             * @example 1
+             */
+            baeder?: number;
             /** @description Fehlt das Feld, gilt „kein Garten". */
             garten?: boolean;
             /**
@@ -371,6 +524,8 @@ export interface components {
             name?: string;
             /** @enum {string} */
             wohnform?: "wohnung" | "haus";
+            zimmer?: number;
+            baeder?: number;
             garten?: boolean;
             auto?: boolean;
             /** @description Vollständige Liste. Leer heißt „keine mehr". */
@@ -396,10 +551,117 @@ export interface components {
              */
             zeit?: "keine" | "wenig" | "mittel" | "viel";
             /**
+             * @description Ausdrücklich gesetzt gewinnt gegen geraten — auch wenn in derselben
+             *     Anfrage ein neues Geburtsjahr steht.
+             * @enum {string}
+             */
+            betreuung?: "keine" | "kita" | "schule";
+            /**
              * @description Minuten je Wochentag, Index 0 = Montag. Für alle, denen die drei
              *     Stufen zu grob sind. Zusammen mit `zeit` gewinnt diese Angabe.
              */
             minuten?: number[];
+        };
+        VorlagenStand: {
+            /** @example t-pflanzen */
+            id: string;
+            titel: string;
+            kategorie: components["schemas"]["Kategorie"];
+            /** @enum {string} */
+            art: "ausfuehrung" | "organisation";
+            dauer_min: number;
+            kopflast: number;
+            /** @description Ob sie in künftigen Plänen vorkommen kann. */
+            aktiv: boolean;
+            /**
+             * @description Vom Haushalt selbst angelegt. Ihre Zahlen sind geschätzt und tragen
+             *     trotzdem die Fairnessrechnung mit — deshalb sind sie sichtbar
+             *     gekennzeichnet.
+             */
+            eigene?: boolean;
+            /**
+             * @description Warum sie nicht gilt. Fehlt, wenn sie gilt.
+             * @enum {string}
+             */
+            grund?: "gilt_nicht" | "abgewaehlt" | "nicht_faellig" | "startdichte" | "keine_kapazitaet" | "niemand_geeignet" | "unbekannt" | "braucht_termin";
+            /** @description Bei `unbekannt` das Faktum, dessen Antwort fehlt. */
+            faktum?: string;
+            /**
+             * @description Die Frage zu diesem Faktum — mitgeliefert statt nachgeschlagen,
+             *     damit die Zeile alles trägt, was sie zum Anzeigen braucht.
+             */
+            frage?: string;
+            /** @description Was eine Antwort mit Ja bringt. */
+            dann?: string;
+        };
+        Anlass: {
+            id: string;
+            /** @example Geburtstag von Mia */
+            titel: string;
+            /**
+             * Format: date
+             * @description Kalendertag ohne Uhrzeit (ADR-0002).
+             * @example 2026-11-08
+             */
+            tag: string;
+            /**
+             * @description Verbindet den Anlass mit den Vorlagen, die daran hängen. Eine feste
+             *     Liste, weil ein freier Text nie zu einer Vorlage passen würde — man
+             *     hätte etwas eingetragen und nie erfahren, warum nichts passiert.
+             * @enum {string}
+             */
+            art: "kindergeburtstag" | "geburtstag" | "elternabend" | "arzttermin" | "sonstiges";
+            /** @description Geburtstage wiederholen sich, Termine nicht. */
+            jaehrlich: boolean;
+        };
+        NeuerAnlass: {
+            titel: string;
+            /** Format: date */
+            tag: string;
+            /** @enum {string} */
+            art: "kindergeburtstag" | "geburtstag" | "elternabend" | "arzttermin" | "sonstiges";
+            jaehrlich?: boolean;
+        };
+        NeueVorlage: {
+            /** @example Medikamente für Oma sortieren */
+            titel: string;
+            kategorie: components["schemas"]["Kategorie"];
+            /**
+             * @description Geschätzt — und die Schätzung trägt die Fairnessrechnung mit. Eine
+             *     zu niedrige Zahl verschiebt die Bilanz des ganzen Haushalts, ohne
+             *     dass es jemand merkt.
+             */
+            dauer_min: number;
+            /**
+             * @description Gewünschter Abstand — täglich, wöchentlich, zweiwöchentlich oder
+             *     monatlich.
+             * @enum {integer}
+             */
+            alle_tage: 1 | 7 | 14 | 30;
+            /**
+             * @description „Muss jemand daran denken, oder sieht man es?" Zählt einfach in die
+             *     Kopflast.
+             */
+            denken?: boolean;
+            /**
+             * @description „Muss man erst etwas klären — Termin machen, nachsehen, jemanden
+             *     fragen?" Zählt doppelt: Ein Termin, den man vereinbaren muss,
+             *     kostet mehr Aufmerksamkeit als eine Aufgabe, an die man sich nur
+             *     erinnert.
+             */
+            klaeren?: boolean;
+            nur_erwachsene?: boolean;
+        };
+        Frage: {
+            /** @example pflanzen */
+            faktum: string;
+            /** @example Habt ihr Pflanzen, die gegossen werden müssen? */
+            frage: string;
+            /**
+             * @description Was eine Antwort mit Ja bringt.
+             * @example Dann erinnere ich alle paar Tage ans Gießen.
+             */
+            dann: string;
         };
         Haushalt: {
             /** @example familie-a */
@@ -425,12 +687,14 @@ export interface components {
             garten?: boolean;
             auto?: boolean;
             /**
-             * @description Wohnform, Garten, Auto und Haustiere stehen hier, weil sie
-             *     entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Ohne
-             *     Garten kein Rasen, ohne Auto kein TÜV — und ohne diese Felder
-             *     könnten die Einstellungen nicht zeigen, was angenommen wurde.
+             * @description Garten, Auto und Haustiere entscheiden, welche Aufgaben es im
+             *     Haushalt überhaupt gibt — ohne Garten kein Rasen, ohne Auto kein
+             *     TÜV. Ohne diese Felder könnten die Einstellungen nicht zeigen, was
+             *     angenommen wurde.
              */
             haustiere?: string[];
+            zimmer?: number;
+            baeder?: number;
         };
         Mitglied: {
             /** @example m-anna */
@@ -459,6 +723,13 @@ export interface components {
              *     tragen die gesamte Verteilung — deshalb stehen sie sichtbar da.
              */
             minuten?: number[];
+            /**
+             * @description Beim Einrichten aus dem Alter geraten und hier korrigierbar. An ihr
+             *     hängt, welche Aufgaben der Haushalt überhaupt hat — ohne Kita-Kind
+             *     keine Kita-Tasche.
+             * @enum {string}
+             */
+            betreuung?: "keine" | "kita" | "schule";
         };
         Wochenplan: {
             /** @example 2026-W38 */
@@ -477,6 +748,13 @@ export interface components {
              *     abgeben darf. Fehlt bei Demo-Haushalten und ohne Anmeldung.
              */
             ich?: string;
+            /**
+             * @description Offene Fragen zum Haushalt — höchstens zwei. Was die App nicht
+             *     weiß, plant sie nicht ein; sie fragt danach, und zwar mit dem
+             *     Nutzen daneben. Eine Frage ohne erkennbaren Nutzen wird nicht
+             *     beantwortet.
+             */
+            fragen?: components["schemas"]["Frage"][];
             /**
              * @description Eine Zeile je Person, die Aufgaben übernehmen kann — **nur für
              *     planende Personen**. Wer ausführt, sieht den ganzen Plan, aber
@@ -856,6 +1134,313 @@ export interface operations {
                 };
             };
             /** @description die Änderung ergibt keinen Haushalt */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    listVorlagen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description die Bibliothek, auf diesen Haushalt bezogen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VorlagenStand"][];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    createEigeneVorlage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeueVorlage"];
+            };
+        };
+        responses: {
+            /** @description die angelegte Aufgabe */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VorlagenStand"];
+                };
+            };
+            /** @description das ergibt keine Aufgabe */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    setVorlage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                vorlageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    aktiv: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description eingetragen */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    listAnlaesse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description alle Anlässe des Haushalts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Anlass"][];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    createAnlass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeuerAnlass"];
+            };
+        };
+        responses: {
+            /** @description der eingetragene Anlass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Anlass"];
+                };
+            };
+            /** @description das ergibt keinen Anlass */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    deleteAnlass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                anlassId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description gelöscht */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diesen Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    setFakten: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description der Haushalt, wie er jetzt aussieht */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Haushalt"];
+                };
+            };
+            /** @description das ergibt keine Antwort */
             400: {
                 headers: {
                     [name: string]: unknown;

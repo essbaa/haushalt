@@ -29,15 +29,16 @@ export default async function Einstellungen({
   const gewaehlt = eigene.find((h) => h.id === haushalt) ?? eigene[0];
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-16">
-      <Link href={`/?haushalt=${gewaehlt.id}`} className="text-sm text-muted underline">
+    <main className="mx-auto w-full max-w-lg px-5 py-10">
+      <Link href={`/?haushalt=${gewaehlt.id}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
+        <span aria-hidden="true">←</span>
         Zurück zum Wochenplan
       </Link>
 
-      <h1 className="mt-6 mb-1 text-2xl font-semibold tracking-tight">
+      <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
         Einstellungen
       </h1>
-      <p className="mb-8 text-sm leading-relaxed text-muted">
+      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
         Beim Einrichten hat die App einiges geraten — Kapazität, Betreuungsform,
         Wohnform. Hier steht, was sie angenommen hat, und hier änderst du es.
       </p>

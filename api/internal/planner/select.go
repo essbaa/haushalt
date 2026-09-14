@@ -11,18 +11,54 @@ func selectApplicable(in Input) ([]TaskTemplate, []Skipped) {
 	var skipped []Skipped
 
 	for _, t := range in.Templates {
+		gilt, fehlt := applies(t.AppliesTo, in.Household)
 		switch {
 		case in.History.isMuted(t.ID):
-			skipped = append(skipped, Skipped{t.ID, t.Title, SkipMuted})
-		case !conditionsMet(t.AppliesTo, in.Household):
-			skipped = append(skipped, Skipped{t.ID, t.Title, SkipNotApplicable})
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipMuted})
+		case gilt == unklar:
+			// Nicht einplanen, aber auch nicht vergessen: Daraus wird eine
+			// Frage. Der Unterschied zu „gilt nicht" ist der ganze Punkt.
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipUnknown, Fact: fehlt})
+		case gilt == giltNicht:
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipNotApplicable})
 		case len(eligibleMembers(t, in)) == 0:
-			skipped = append(skipped, Skipped{t.ID, t.Title, SkipNoOneEligible})
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipNoOneEligible})
 		default:
 			kept = append(kept, t)
 		}
 	}
 	return kept, skipped
+}
+
+// geltung ist das Ergebnis der Bedingungsprüfung.
+//
+// Drei Antworten statt zwei, und das ist die eigentliche Korrektur: Vorher gab
+// es nur „gilt" und „gilt nicht", und alles Ungefragte galt als vorhanden.
+// Deshalb stand Pflanzen gießen im Plan eines Haushalts ohne Pflanzen.
+type geltung int
+
+const (
+	gilt geltung = iota
+	giltNicht
+	unklar
+)
+
+// applies prüft die Bedingungen einer Vorlage. Der zweite Rückgabewert nennt
+// bei unklar das Faktum, das fehlt.
+func applies(c Conditions, h Household) (geltung, string) {
+	if !conditionsMet(c, h) {
+		return giltNicht, ""
+	}
+	for _, f := range c.RequiresFacts {
+		wert, bekannt := h.Context.Fact(f)
+		if !bekannt {
+			return unklar, f
+		}
+		if !wert {
+			return giltNicht, ""
+		}
+	}
+	return gilt, ""
 }
 
 func conditionsMet(c Conditions, h Household) bool {
@@ -108,4 +144,50 @@ func eligibleMembers(t TaskTemplate, in Input) []Member {
 		out = append(out, m)
 	}
 	return out
+}
+
+// TemplateState ist eine Vorlage samt der Frage, ob sie für diesen Haushalt
+// gilt — und wenn nicht, warum.
+//
+// Im Planer und nicht im Speicher: „Vorlage plus Grund" ist Fachsprache. Läge
+// der Typ bei der Datenbank, müsste die Bibliothek sie importieren, um
+// dieselbe Schnittstelle zu erfüllen — und die Datenbank importiert schon die
+// Bibliothek.
+type TemplateState struct {
+	Template TaskTemplate
+	Active   bool
+	Reason   SkipCode
+	Fact     string
+}
+
+// Status sagt, warum eine Vorlage im Plan steht oder nicht — leer heißt: sie
+// gilt.
+//
+// Dieselbe Prüfung wie in selectApplicable, nur für eine einzelne Vorlage und
+// ohne Fälligkeit. Die Seite „Eure Woche" zeigt damit die ganze Bibliothek und
+// daneben, warum etwas fehlt: nicht zuständig, noch ungeklärt, abgewählt.
+//
+// Es ist derselbe Code und nicht ein zweiter: Eine Liste, die andere Gründe
+// nennt als der Planer, ist schlimmer als gar keine.
+func Status(t TaskTemplate, h Household, hist History) (SkipCode, string) {
+	if hist.isMuted(t.ID) {
+		return SkipMuted, ""
+	}
+	// Für die Übersicht zählt „braucht einen Anlass" als eigener Zustand. Im
+	// Planer entscheidet dagegen die Fälligkeit: Gibt es einen passenden
+	// Anlass, entsteht die Aufgabe ganz normal.
+	if t.AppliesTo.RequiresEvent && len(h.Occasions) == 0 {
+		return SkipNeedsEvent, ""
+	}
+	gilt, fehlt := applies(t.AppliesTo, h)
+	switch gilt {
+	case unklar:
+		return SkipUnknown, fehlt
+	case giltNicht:
+		return SkipNotApplicable, ""
+	}
+	if len(eligibleMembers(t, Input{Household: h, History: hist})) == 0 {
+		return SkipNoOneEligible, ""
+	}
+	return "", ""
 }

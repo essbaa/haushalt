@@ -50,6 +50,18 @@ func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
 		last := in.History.lastDone(t.ID)
 		var cs []candidate
 
+		// Anlassgebundene Vorlagen gehen ihren eigenen Weg: Ihr Rhythmus ist
+		// kein Zeitraum, sondern ein Datum im Haushalt.
+		if t.AppliesTo.RequiresEvent {
+			cs = dueFromOccasions(t, in.Household.Occasions, monday, sunday)
+			if len(cs) == 0 {
+				skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipNeedsEvent})
+				continue
+			}
+			out = append(out, cs...)
+			continue
+		}
+
 		switch t.Rhythm.Type {
 		case RhythmFixed:
 			cs = dueFixed(t, days)
@@ -60,11 +72,17 @@ func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
 		}
 
 		if len(cs) == 0 {
-			skipped = append(skipped, Skipped{t.ID, t.Title, SkipNotDue})
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipNotDue})
 			continue
 		}
 		if t.PerPerson {
 			cs = perPerson(cs, eligibleMembers(t, in))
+		}
+		// Zwei Bäder ergeben zwei Aufgaben, nicht eine doppelt so lange.
+		cs = vervielfachen(cs, t.TimesIn(in.Household.Context))
+		if len(cs) == 0 {
+			skipped = append(skipped, Skipped{TemplateID: t.ID, Title: t.Title, Code: SkipNotApplicable})
+			continue
 		}
 		out = append(out, cs...)
 	}
@@ -77,6 +95,28 @@ func selectDue(in Input, templates []TaskTemplate) ([]candidate, []Skipped) {
 		return out[i].tmpl.ID < out[j].tmpl.ID
 	})
 	return out, skipped
+}
+
+// vervielfachen macht aus jedem Kandidaten n Stück.
+//
+// Gebraucht für alles, was es mehrfach gibt: zwei Bäder, zwei Autos, zwei
+// Katzenklos. Die Kopien sind gleichwertig — der Planer verteilt sie
+// unabhängig, und die Rotation innerhalb der Woche sorgt dafür, dass nicht
+// beide bei derselben Person landen.
+func vervielfachen(cs []candidate, mal int) []candidate {
+	if mal == 1 {
+		return cs
+	}
+	if mal <= 0 {
+		return nil
+	}
+	out := make([]candidate, 0, len(cs)*mal)
+	for _, c := range cs {
+		for range mal {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // perPerson macht aus jedem Termin eine Aufgabe je Person, fest an sie

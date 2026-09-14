@@ -13,3 +13,12 @@ ON CONFLICT (id) DO UPDATE
 SELECT * FROM task_template
 WHERE household_id IS NULL OR household_id = $1
 ORDER BY id;
+
+-- name: CreateOwnTemplate :one
+-- Eine Aufgabe, die ein Haushalt selbst angelegt hat. household_id ist gesetzt
+-- (kuratierte tragen dort NULL), source = 'haushalt'. Gelesen wird sie von
+-- demselben Parser wie die kuratierten — ein eigenes Format wäre der sicherste
+-- Weg, dass beide sich irgendwann verschieden verhalten.
+INSERT INTO task_template (id, household_id, source, version, definition)
+VALUES ($1, $2, 'haushalt', '', $3)
+RETURNING *;

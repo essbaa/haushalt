@@ -8,3 +8,10 @@ DO UPDATE SET value = EXCLUDED.value, updated_at = now();
 
 -- name: ListSignals :many
 SELECT * FROM signal WHERE household_id = $1 ORDER BY template_id, kind;
+
+-- name: DeleteSignal :exec
+-- Ein zurückgenommenes Abwählen löscht die Zeile, statt sie auf 0 zu setzen.
+-- „Nie etwas gesagt" und „ausdrücklich wieder erlaubt" sollen im Protokoll
+-- gleich aussehen — der Unterschied steht in den Ereignissen, nicht hier.
+DELETE FROM signal
+WHERE household_id = $1 AND template_id = $2 AND kind = $3;

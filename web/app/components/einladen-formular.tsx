@@ -49,14 +49,15 @@ export function EinladenFormular({
         ? ""
         : `${window.location.origin}/beitreten?code=${einladung.code}`;
     return (
-      <div className="space-y-4 rounded-lg border border-line bg-surface p-6">
-        <div>
-          <p className="mb-1 text-sm text-muted">Der Code</p>
-          <p className="font-mono text-2xl tracking-[0.2em]">{einladung.code}</p>
+      <div className="space-y-5 rounded-lg border border-line bg-surface p-6">
+        <div className="rounded-md bg-primary-soft px-4 py-5 text-center">
+          <p className="text-3xl font-extrabold tracking-[0.25em] text-primary">
+            {einladung.code}
+          </p>
         </div>
-        <div>
-          <p className="mb-1 text-sm text-muted">Oder dieser Link</p>
-          <p className="break-all font-mono text-xs">{link}</p>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold">Oder dieser Link</p>
+          <p className="break-all text-xs text-muted">{link}</p>
         </div>
         <p className="text-sm leading-relaxed text-muted">
           {einladung.fuer
@@ -73,7 +74,7 @@ export function EinladenFormular({
         <button
           type="button"
           onClick={() => setEinladung(null)}
-          className="text-sm text-primary underline"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2"
         >
           Noch jemanden einladen
         </button>
@@ -85,7 +86,7 @@ export function EinladenFormular({
     <div className="space-y-6">
       {offene.length > 0 && (
         <fieldset className="space-y-3">
-          <legend className="mb-2 text-sm font-medium">Wen lädst du ein?</legend>
+          <legend className="mb-2 text-sm font-semibold">Wen lädst du ein?</legend>
           {offene.map((o) => (
             <Wahl
               key={o.id}
@@ -109,7 +110,7 @@ export function EinladenFormular({
       )}
 
       <fieldset className="space-y-3" hidden={wen !== "neu"}>
-        <legend className="mb-2 text-sm font-medium">Welche Rolle?</legend>
+        <legend className="mb-2 text-sm font-semibold">Welche Rolle?</legend>
         <Wahl
           gewaehlt={rolle === "ausfuehrend"}
           waehlen={() => setRolle("ausfuehrend")}
@@ -125,7 +126,7 @@ export function EinladenFormular({
       </fieldset>
 
       {fehler && (
-        <p role="alert" className="text-sm text-clay">
+        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
           {fehler}
         </p>
       )}
@@ -134,9 +135,9 @@ export function EinladenFormular({
         type="button"
         onClick={erzeugen}
         disabled={laeuft}
-        className="w-full rounded-md bg-primary px-4 py-2.5 font-medium text-on-primary disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
       >
-        {laeuft ? "…" : "Code erzeugen"}
+        {laeuft ? "Einen Moment …" : "Code erzeugen"}
       </button>
     </div>
   );
@@ -158,7 +159,9 @@ function Wahl({
   return (
     <label
       className={`block cursor-pointer rounded-lg border p-4 transition-colors ${
-        gewaehlt ? "border-primary bg-primary-soft" : "border-line"
+        gewaehlt
+          ? "border-primary bg-primary-soft"
+          : "border-line hover:border-line-strong"
       }`}
     >
       <span className="flex items-baseline gap-2">
@@ -169,7 +172,7 @@ function Wahl({
           onChange={waehlen}
           className="accent-[var(--primary)]"
         />
-        <span className="font-medium">{titel}</span>
+        <span className="font-semibold">{titel}</span>
       </span>
       <span className="mt-1 block pl-6 text-sm leading-relaxed text-muted">
         {erklaerung}

@@ -5,21 +5,36 @@
   "auto": true,
   "garten": false,
   "haustiere": [],
-
   "mitglieder": [
     {
       "id": "m-anna",
       "name": "Anna",
       "rolle": "planend",
       "alter": 36,
-      "kapazitaet_minuten": [60, 60, 60, 60, 60, 180, 180]
+      "kapazitaet_minuten": [
+        60,
+        60,
+        60,
+        60,
+        60,
+        180,
+        180
+      ]
     },
     {
       "id": "m-ben",
       "name": "Ben",
       "rolle": "planend",
       "alter": 38,
-      "kapazitaet_minuten": [45, 45, 45, 45, 90, 180, 180]
+      "kapazitaet_minuten": [
+        45,
+        45,
+        45,
+        45,
+        90,
+        180,
+        180
+      ]
     },
     {
       "id": "m-lina",
@@ -29,7 +44,6 @@
       "betreuung": "kita"
     }
   ],
-
   "historie": {
     "zuletzt_erledigt": {
       "t-bad": "2026-09-06",
@@ -51,5 +65,23 @@
     },
     "abgewaehlt": [],
     "feste_person": {}
-  }
+  },
+  "fakten": {
+    "spuelmaschine": true,
+    "waschmaschine": true,
+    "pflanzen": true,
+    "keller": false,
+    "treppenhaus": true,
+    "fahrrad": true,
+    "dunstabzug": true,
+    "gelber-sack": true,
+    "heizkoerper": true,
+    "rauchmelder": false,
+    "steuererklaerung": true,
+    "paarzeit": true,
+    "verabredung": false,
+    "kontakt-familie": false
+  },
+  "zimmer": 3,
+  "baeder": 1
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Haushalt, Mitglied } from "@/lib/api";
+import { Auswahl, Marke } from "@/app/components/ui";
 import { patchMitToken, postMitToken } from "@/lib/browser-token";
 
 const TAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -81,7 +82,7 @@ export function EinstellungenFormular({
       )}
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium">Personen</h2>
+        <h2 className="text-lg font-bold tracking-tight">Personen</h2>
         {stand.mitglieder.map((m) => (
           <PersonTeil
             key={m.id}
@@ -101,7 +102,7 @@ export function EinstellungenFormular({
         ))}
       </section>
 
-      {fehler && <p className="text-sm text-clay">{fehler}</p>}
+      {fehler && <p className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">{fehler}</p>}
 
       {gerechnet && (
         <p className="rounded-lg border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
@@ -111,7 +112,7 @@ export function EinstellungenFormular({
       )}
 
       {geaendert && (
-        <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
+        <div className="space-y-3 rounded-lg border border-line bg-surface p-4 sm:p-5">
           <p className="text-sm leading-relaxed text-muted">
             Gespeichert. Wirksam wird es ab der nächsten Woche: Der laufende
             Plan steht fest, damit er sich niemandem unter den Händen ändert.
@@ -159,98 +160,95 @@ function HaushaltTeil({
 
   return (
     <section className="space-y-5">
-      <h2 className="text-sm font-medium">Der Haushalt</h2>
+      <h2 className="text-lg font-bold tracking-tight">Der Haushalt</h2>
 
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={80}
-          className="min-w-0 flex-1 rounded-md border border-line bg-surface px-3 py-2"
+          className="min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-3 text-base"
         />
         <button
           type="button"
           onClick={() => speichern({ name })}
           disabled={laeuft || name.trim() === "" || name === stand.name}
-          className="rounded-md border border-line px-3 py-2 text-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+          className="inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
         >
           Namen speichern
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(["wohnung", "haus"] as const).map((w) => (
-          <Knopf
-            key={w}
-            an={stand.wohnform === w}
-            text={w === "wohnung" ? "Wohnung" : "Haus"}
-            laeuft={laeuft}
-            klick={() => speichern({ wohnform: w })}
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="block space-y-1.5">
+          <span className="text-sm font-semibold">Zimmer</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={15}
+            defaultValue={stand.zimmer ?? 3}
+            onBlur={(e) => {
+              const wert = Number(e.target.value);
+              if (wert && wert !== stand.zimmer) speichern({ zimmer: wert });
+            }}
+            className="min-h-11 w-24 rounded-md border border-line-strong bg-surface px-3 text-base"
           />
-        ))}
-        <Knopf
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-semibold">Bäder</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={5}
+            defaultValue={stand.baeder ?? 1}
+            onBlur={(e) => {
+              const wert = Number(e.target.value);
+              if (wert !== stand.baeder) speichern({ baeder: wert });
+            }}
+            className="min-h-11 w-24 rounded-md border border-line-strong bg-surface px-3 text-base"
+          />
+        </label>
+      </div>
+      <p className="text-xs leading-relaxed text-muted">
+        Danach richtet sich, wie lange Putzaufgaben dauern. Ändert ihr das, gilt
+        es ab der nächsten Woche.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <Marke
           an={stand.garten === true}
           text="Garten"
-          laeuft={laeuft}
+          aus={laeuft}
           klick={() => speichern({ garten: !stand.garten })}
         />
-        <Knopf
+        <Marke
           an={stand.auto === true}
           text="Auto"
-          laeuft={laeuft}
+          aus={laeuft}
           klick={() => speichern({ auto: !stand.auto })}
         />
-        <Knopf
+        <Marke
           an={haustiere.includes("hund")}
           text="Hund"
-          laeuft={laeuft}
+          aus={laeuft}
           klick={() => tier("hund")}
         />
-        <Knopf
+        <Marke
           an={haustiere.includes("katze")}
           text="Katze"
-          laeuft={laeuft}
+          aus={laeuft}
           klick={() => tier("katze")}
         />
       </div>
 
       <p className="text-xs leading-relaxed text-muted">
-        Diese fünf entscheiden, welche Aufgaben es im Haushalt überhaupt gibt.
+        Diese vier entscheiden, welche Aufgaben es im Haushalt überhaupt gibt.
         Jedes Nein spart Aufgaben, jedes Ja bringt welche mit — ohne Garten kein
         Rasen, ohne Auto kein TÜV.
       </p>
     </section>
-  );
-}
-
-/** Ein Schalter, der sofort speichert. Kein „Übernehmen", kein Zustand, der
- *  im Formular auf den Server wartet: Was hier steht, ist immer das, was der
- *  Dienst zuletzt bestätigt hat. */
-function Knopf({
-  an,
-  text,
-  laeuft,
-  klick,
-}: {
-  an: boolean;
-  text: string;
-  laeuft: boolean;
-  klick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={klick}
-      disabled={laeuft}
-      aria-pressed={an}
-      className={`rounded-md border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
-        an
-          ? "border-primary bg-primary-soft text-primary"
-          : "border-line text-muted hover:text-fg"
-      }`}
-    >
-      {text}
-    </button>
   );
 }
 
@@ -284,22 +282,30 @@ function PersonTeil({
   const summe = minuten.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
+    <div
+      className={`space-y-3 rounded-lg border p-4 sm:p-5 ${
+        ichSelbst ? "border-primary/35 bg-primary-soft/40" : "border-line bg-surface"
+      }`}
+    >
+      {ichSelbst && <p className="text-sm font-semibold text-primary">Du</p>}
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={!darfNamen}
           maxLength={40}
-          className="min-w-0 flex-1 rounded-md border border-line bg-transparent px-3 py-2 disabled:opacity-60"
+          aria-label={ichSelbst ? "Dein Name" : `Name von ${person.name}`}
+          className="min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-transparent px-3 text-base disabled:opacity-60"
         />
-        <span className="font-mono text-xs text-muted">{person.rolle}</span>
+        <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">
+          {rollenText[person.rolle] ?? person.rolle}
+        </span>
         {darfNamen && name !== person.name && name.trim() !== "" && (
           <button
             type="button"
             onClick={() => speichern({ name })}
             disabled={laeuft}
-            className="text-xs text-primary underline"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2"
           >
             Namen speichern
           </button>
@@ -316,14 +322,14 @@ function PersonTeil({
             max={new Date().getFullYear()}
             value={jahr}
             onChange={(e) => setJahr(e.target.value)}
-            className="w-24 rounded-md border border-line bg-transparent px-2 py-1"
+            className="min-h-11 w-24 rounded-md border border-line-strong bg-transparent px-3 text-base"
           />
           {jahr !== (person.geburtsjahr?.toString() ?? "") && (
             <button
               type="button"
               onClick={() => speichern({ geburtsjahr: Number(jahr) || 0 })}
               disabled={laeuft}
-              className="text-xs text-primary underline"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2"
             >
               speichern
             </button>
@@ -332,24 +338,51 @@ function PersonTeil({
         </label>
       )}
 
+      {/* Betreuung: beim Einrichten aus dem Alter geraten, hier korrigierbar.
+          Genau hier lag der Fehler — ein Zweijähriges Kita-Kind galt als
+          „keine Betreuung", und damit fielen alle Kita-Aufgaben weg. */}
+      {planend && person.rolle !== "planend" && (
+        <div className="space-y-2">
+          <p className="text-sm text-muted">Betreuung</p>
+          <Auswahl
+            name={`Betreuung von ${person.name}`}
+            wert={person.betreuung ?? "keine"}
+            aus={laeuft}
+            auf={(b) => speichern({ betreuung: b })}
+            optionen={[
+              { wert: "keine", text: "keine" },
+              { wert: "kita", text: "Kita" },
+              { wert: "schule", text: "Schule" },
+            ]}
+          />
+        </div>
+      )}
+
       {darfZeit && person.rolle !== "betreut" && (
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted">Zeit</span>
-            {["wenig", "mittel", "viel"].map((w) => (
-              <button
-                key={w}
-                type="button"
-                onClick={() => stufe(w)}
-                disabled={laeuft}
-                className="rounded-md border border-line px-3 py-1 text-sm text-muted transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
-              >
-                {w}
-              </button>
-            ))}
-            <span className="font-mono text-xs text-muted">
-              zurzeit {Math.round(summe / 60)} h in der Woche
-            </span>
+          <div className="space-y-2">
+            <p className="text-sm">
+              <span className="font-semibold">{stunden(summe)}</span>{" "}
+              <span className="text-muted">Zeit in der Woche</span>
+            </p>
+            {/* Die Knöpfe setzen eine Stufe, sie zeigen keine an. Welche Stufe
+                zu welchen Minuten gehört, weiß der Planer — das hier
+                nachzubauen wäre eine zweite Wahrheit, und sie wäre die, die
+                niemand pflegt. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted">Ändern auf</span>
+              {["wenig", "mittel", "viel"].map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => stufe(w)}
+                  disabled={laeuft}
+                  className="inline-flex min-h-10 items-center rounded-md border border-line-strong px-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button
@@ -376,7 +409,7 @@ function PersonTeil({
                           alt.map((v, k) => (k === i ? Number(e.target.value) : v)),
                         )
                       }
-                      className="w-16 rounded-md border border-line bg-transparent px-2 py-1"
+                      className="min-h-11 w-16 rounded-md border border-line-strong bg-transparent px-2 text-center text-base tabular-nums"
                     />
                   </label>
                 ))}
@@ -385,7 +418,7 @@ function PersonTeil({
                 type="button"
                 onClick={() => speichern({ minuten })}
                 disabled={laeuft}
-                className="rounded-md border border-line px-3 py-1 text-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                className="inline-flex min-h-10 items-center rounded-md border border-line-strong px-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-45"
               >
                 Minuten speichern
               </button>
@@ -400,4 +433,18 @@ function PersonTeil({
       )}
     </div>
   );
+}
+
+const rollenText: Record<string, string> = {
+  planend: "plant mit",
+  ausfuehrend: "führt aus",
+  betreut: "wird betreut",
+};
+
+/** „9 Stunden" oder „8,5 Stunden" — halbe Stunden werden nicht gerundet, sonst
+ *  stimmt die Zahl nicht mit dem überein, was jemand gerade eingestellt hat. */
+function stunden(minuten: number): string {
+  const wert = minuten / 60;
+  const text = Number.isInteger(wert) ? String(wert) : wert.toFixed(1).replace(".", ",");
+  return `${text} ${wert === 1 ? "Stunde" : "Stunden"}`;
 }

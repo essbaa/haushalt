@@ -118,6 +118,12 @@ type Household struct {
 	Name    string
 	Members []Member
 	Context Context
+
+	// Occasions sind die eingetragenen Anlässe: Geburtstage, Elternabend,
+	// Arzttermine. Sie gehören zum Haushalt wie seine Mitglieder — und ohne
+	// sie entstehen anlassgebundene Aufgaben nicht. Die App erfindet keinen
+	// Geburtstag (ADR-0010).
+	Occasions []Occasion
 }
 
 // Context sind die Bedingungen, an denen Vorlagen hängen — Wohnform, Auto,
@@ -127,6 +133,33 @@ type Context struct {
 	HasCar  bool
 	HasYard bool
 	Pets    []string // "hund", "katze", …
+
+	// Rooms und Baths sind die Größe des Haushalts. Sie filtern nichts, sie
+	// skalieren: Putzaufgaben dauern in fünf Zimmern länger als in zwei, und
+	// wer zwei Bäder hat, putzt zwei.
+	//
+	// Anders als die Wohnform, die abgefragt wurde und nichts bewirkte, ändern
+	// diese beiden Zahlen die Dauern — und die Dauer trägt die Verteilung.
+	Rooms int
+	Baths int
+
+	// Facts ist alles, was ein Haushalt haben kann und wonach beim Einrichten
+	// niemand gefragt hat: Pflanzen, Spülmaschine, Keller, Fahrrad.
+	//
+	// Drei Zustände, nicht zwei. Nicht enthalten heißt **unbekannt**, und
+	// unbekannt ist nicht dasselbe wie nein: Eine Aufgabe, die ein unbekanntes
+	// Faktum voraussetzt, wird nicht eingeplant — aber sie wird zur Frage.
+	//
+	// Genau diese Unterscheidung fehlte. Vorher galt jede Bedingung als
+	// erfüllt, und die App plante Pflanzen gießen in einen Haushalt ohne
+	// Pflanzen. Was die App nicht weiß, darf sie nicht behaupten.
+	Facts map[string]bool
+}
+
+// Fact liefert den Wert eines Faktums und ob es überhaupt bekannt ist.
+func (c Context) Fact(name string) (wert bool, bekannt bool) {
+	v, ok := c.Facts[name]
+	return v, ok
 }
 
 type Home string
@@ -186,6 +219,14 @@ const (
 	CatSocial      Category = "sozial"
 	CatOutdoor     Category = "aussen"
 )
+
+// AllCategories ist die vollständige Liste. Sie steht hier und nicht in der
+// Oberfläche: Eine zweite Liste in TypeScript wäre beim ersten neuen Bereich
+// unvollständig — genau das ist auf der Seite „Eure Woche" schon passiert.
+var AllCategories = []Category{
+	CatKitchen, CatLaundry, CatCleaning, CatChild, CatSupplies,
+	CatAppointment, CatAdmin, CatMaintain, CatSocial, CatOutdoor,
+}
 
 // Slot ist das bevorzugte Zeitfenster innerhalb eines Tages.
 type Slot string
@@ -296,6 +337,24 @@ type Conditions struct {
 	RequiresPetKind string
 	// RequiresHome ist leer, wenn die Wohnform egal ist.
 	RequiresHome Home
+
+	// RequiresFacts sind Fakten, die wahr sein müssen. Ist eines davon
+	// unbekannt, wird die Vorlage nicht eingeplant und stattdessen zur Frage.
+	RequiresFacts []string
+
+	// RequiresOccasion nennt die Art des Anlasses, an dem diese Aufgabe hängt
+	// — "kindergeburtstag", "elternabend". Leer bei allen anderen.
+	RequiresOccasion string
+
+	// RequiresEvent heißt: Diese Aufgabe entsteht aus einem Anlass, nicht aus
+	// einem Zeitraum — ein Geburtstag, ein Elternabend, ein Termin.
+	//
+	// Solange es in der App keine Termine gibt, wird sie nie eingeplant. Das
+	// ist Absicht und die Lehre aus „Geschenk für Kindergeburtstag besorgen":
+	// Die Vorlage trug den Rhythmus „Auslöser, alle 45 Tage" und erfand damit
+	// alle anderthalb Monate einen Geburtstag. Eine Aufgabe ohne Anlass ist
+	// keine Erinnerung, sondern eine Behauptung.
+	RequiresEvent bool
 }
 
 // TaskTemplate ist eine Vorlage aus der Bibliothek — die vierzehn Felder aus
@@ -319,6 +378,11 @@ type TaskTemplate struct {
 	// MinAge gilt für Aufgaben, die auch Kinder übernehmen dürfen.
 	MinAge       int
 	Distribution Distribution
+
+	// ScalesWith sagt, ob die Dauer mit der Größe des Haushalts wächst.
+	// Leer heißt: feste Dauer. Müll rausbringen dauert in zwei wie in fünf
+	// Zimmern gleich lang.
+	ScalesWith Scale
 
 	// PerPerson macht aus einem Termin eine Aufgabe je berechtigter Person,
 	// fest an sie gebunden. Für alles, was jedem selbst gehört: das eigene

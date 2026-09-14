@@ -52,6 +52,14 @@ func (p *Plans) UpdateHousehold(ctx context.Context, subject, id string, c plann
 	if c.Timezone != nil {
 		params.Timezone = c.Timezone
 	}
+	if c.Rooms != nil {
+		zimmer := int32(*c.Rooms)
+		params.Rooms = &zimmer
+	}
+	if c.Baths != nil {
+		baeder := int32(*c.Baths)
+		params.Baths = &baeder
+	}
 
 	neu, err := p.db.UpdateHousehold(ctx, params)
 	if err != nil {
@@ -114,6 +122,16 @@ func (p *Plans) UpdateMember(ctx context.Context, subject, id, mitgliedID string
 		minuten := *c.Minutes
 		params.CapacityMinutes = int32Felder(minuten[:])
 	}
+	// Ausdrücklich gesetzte Betreuungsform gewinnt gegen die geratene. Steht
+	// sie in derselben Anfrage wie ein neues Geburtsjahr, gilt trotzdem die
+	// Angabe — geraten wird nur, wo niemand etwas gesagt hat.
+	if c.Care != nil {
+		params.SetCare = true
+		if *c.Care != planner.CareNone {
+			wert := string(*c.Care)
+			params.Care = &wert
+		}
+	}
 	if c.BirthYear != nil {
 		params.SetBirthYear = true
 		if *c.BirthYear != 0 {
@@ -121,16 +139,19 @@ func (p *Plans) UpdateMember(ctx context.Context, subject, id, mitgliedID string
 			params.BirthYear = &jahr
 		}
 
-		// Die Betreuungsform hängt am Alter und wird mitgezogen. Sie bleibt
-		// geraten (siehe ADR-0007) — nur eben nach dem neuen Jahr.
-		params.SetCare = true
-		alter := 0
-		if *c.BirthYear != 0 {
-			alter = time.Now().Year() - *c.BirthYear
-		}
-		if betreuung := planner.CareForAge(alter); betreuung != planner.CareNone {
-			wert := string(betreuung)
-			params.Care = &wert
+		// Die Betreuungsform hängt am Alter und wird mitgezogen — außer
+		// jemand hat sie ausdrücklich gesetzt. Sie bleibt geraten (ADR-0007),
+		// nur eben nach dem neuen Jahr.
+		if c.Care == nil {
+			params.SetCare = true
+			alter := 0
+			if *c.BirthYear != 0 {
+				alter = time.Now().Year() - *c.BirthYear
+			}
+			if betreuung := planner.CareForAge(alter); betreuung != planner.CareNone {
+				wert := string(betreuung)
+				params.Care = &wert
+			}
 		}
 	}
 
@@ -270,4 +291,31 @@ func int32Felder(in []int) []int32 {
 		out[i] = int32(v)
 	}
 	return out
+}
+
+// SetFacts trägt Antworten auf die Fragen zum Haushalt ein.
+//
+// Zusammengeführt, nicht ersetzt — die Abfrage benutzt dafür den
+// JSONB-Operator ||. Ein Formular schickt eine Antwort, nicht den ganzen
+// Wissensstand.
+//
+// Nur planende Personen: Ein Nein nimmt Aufgaben aus dem Plan aller.
+func (p *Plans) SetFacts(ctx context.Context, subject, id string, fakten map[string]bool) (planner.Household, error) {
+	zeile, err := p.alsPlanende(ctx, subject, id)
+	if err != nil {
+		return planner.Household{}, err
+	}
+	if len(fakten) == 0 {
+		return p.household(ctx, zeile)
+	}
+
+	roh, err := json.Marshal(fakten)
+	if err != nil {
+		return planner.Household{}, err
+	}
+	neu, err := p.db.SetFacts(ctx, db.SetFactsParams{ID: zeile.ID, Column2: roh})
+	if err != nil {
+		return planner.Household{}, err
+	}
+	return p.household(ctx, neu)
 }

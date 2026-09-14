@@ -15,7 +15,10 @@
       "ab_alter": 8,
       "verteilung": "rotiert",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "spuelmaschine"
+      ]
     },
     {
       "id": "t-muell",
@@ -74,7 +77,11 @@
         "t-waesche-legen"
       ],
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "waschmaschine"
+      ],
+      "skaliert": "personen"
     },
     {
       "id": "t-betten",
@@ -90,7 +97,8 @@
       "ab_alter": 11,
       "verteilung": "rotiert",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "personen"
     },
     {
       "id": "t-staubsaugen",
@@ -106,7 +114,8 @@
       "ab_alter": 10,
       "verteilung": "rotiert",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "zimmer"
     },
     {
       "id": "t-bad",
@@ -122,7 +131,8 @@
       "ab_alter": 12,
       "verteilung": "rotiert",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "baeder"
     },
     {
       "id": "t-wocheneinkauf",
@@ -219,17 +229,19 @@
       "dauer_min": 30,
       "kopflast": 3,
       "rhythmus": {
-        "typ": "ausloeser",
-        "alle_tage": 45
+        "typ": "fenster",
+        "alle_tage": 7
       },
       "vorlauf_tage": 7,
       "verteilung": "nur_erwachsene",
       "gilt_fuer": {
         "kind_alter_min": 2,
-        "kind_alter_max": 12
+        "kind_alter_max": 12,
+        "anlass": "kindergeburtstag"
       },
       "ausfall": "hart",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "benoetigt_termin": true
     },
     {
       "id": "t-kleidergroessen",
@@ -292,7 +304,8 @@
       "verteilung": "nur_erwachsene",
       "gilt_fuer": {
         "kind_alter_min": 3,
-        "kind_alter_max": 14
+        "kind_alter_max": 14,
+        "betreuung": "schule"
       },
       "ausfall": "hart",
       "quelle": "kuratiert"
@@ -314,7 +327,10 @@
       "ab_alter": 14,
       "verteilung": "rotiert",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "rauchmelder"
+      ]
     },
     {
       "id": "t-rasen",
@@ -418,7 +434,11 @@
       },
       "ab_alter": 8,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "waschmaschine"
+      ],
+      "skaliert": "personen"
     },
     {
       "id": "t-bettwaesche",
@@ -433,7 +453,11 @@
       },
       "ab_alter": 12,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "waschmaschine"
+      ],
+      "skaliert": "personen"
     },
     {
       "id": "t-boden-wischen",
@@ -448,7 +472,8 @@
       },
       "ab_alter": 12,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "zimmer"
     },
     {
       "id": "t-staubwischen",
@@ -463,7 +488,8 @@
       },
       "ab_alter": 10,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "zimmer"
     },
     {
       "id": "t-fenster-putzen",
@@ -478,7 +504,8 @@
       },
       "ab_alter": 14,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "skaliert": "zimmer"
     },
     {
       "id": "t-treppenhaus",
@@ -492,11 +519,11 @@
         "alle_tage": 14
       },
       "ab_alter": 12,
-      "gilt_fuer": {
-        "wohnform": "haus"
-      },
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "treppenhaus"
+      ]
     },
     {
       "id": "t-keller",
@@ -515,7 +542,10 @@
       "vorlauf_tage": 14,
       "ab_alter": 14,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "keller"
+      ]
     },
     {
       "id": "t-drogerie",
@@ -567,7 +597,8 @@
       "zeitfenster": "morgens",
       "gilt_fuer": {
         "kind_alter_min": 2,
-        "kind_alter_max": 14
+        "kind_alter_max": 14,
+        "betreuung": "schule"
       },
       "ausfall": "weich",
       "quelle": "kuratiert"
@@ -626,7 +657,8 @@
       "verteilung": "nur_erwachsene",
       "gilt_fuer": {
         "kind_alter_min": 1,
-        "kind_alter_max": 18
+        "kind_alter_max": 18,
+        "betreuung": "schule"
       },
       "ausfall": "weich",
       "quelle": "kuratiert"
@@ -802,7 +834,10 @@
       "vorlauf_tage": 45,
       "verteilung": "nur_erwachsene",
       "ausfall": "hart",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "steuererklaerung"
+      ]
     },
     {
       "id": "t-versicherungen",
@@ -838,7 +873,10 @@
       "vorlauf_tage": 14,
       "ab_alter": 16,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "heizkoerper"
+      ]
     },
     {
       "id": "t-dunstabzug",
@@ -853,7 +891,10 @@
       },
       "ab_alter": 14,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "dunstabzug"
+      ]
     },
     {
       "id": "t-inspektion",
@@ -889,7 +930,10 @@
       "vorlauf_tage": 14,
       "ab_alter": 14,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "fahrrad"
+      ]
     },
     {
       "id": "t-gelber-sack",
@@ -904,7 +948,10 @@
       },
       "ab_alter": 10,
       "ausfall": "hart",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "gelber-sack"
+      ]
     },
     {
       "id": "t-pflanzen",
@@ -919,7 +966,10 @@
       },
       "ab_alter": 6,
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "pflanzen"
+      ]
     },
     {
       "id": "t-laub",
@@ -1053,7 +1103,10 @@
       },
       "verteilung": "nur_erwachsene",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "kontakt-familie"
+      ]
     },
     {
       "id": "t-verabredung",
@@ -1068,7 +1121,10 @@
       },
       "verteilung": "nur_erwachsene",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "verabredung"
+      ]
     },
     {
       "id": "t-paarzeit",
@@ -1083,7 +1139,10 @@
       },
       "verteilung": "nur_erwachsene",
       "ausfall": "weich",
-      "quelle": "kuratiert"
+      "quelle": "kuratiert",
+      "braucht": [
+        "paarzeit"
+      ]
     },
     {
       "id": "t-zimmer",

@@ -45,6 +45,18 @@ type templateDTO struct {
 	ChainNext   []string     `json:"kette" yaml:"kette"`
 	Failure     string       `json:"ausfall" yaml:"ausfall"`
 	Source      string       `json:"quelle" yaml:"quelle"`
+
+	// Braucht sind Fakten, die der Haushalt haben muss — Pflanzen,
+	// Spülmaschine, Keller. Unbekannt heißt: nicht einplanen, sondern fragen.
+	Braucht []string `json:"braucht" yaml:"braucht"`
+
+	// BenoetigtTermin heißt: entsteht nur aus einem echten Anlass und niemals
+	// aus einem Zeitraum.
+	BenoetigtTermin bool `json:"benoetigt_termin" yaml:"benoetigt_termin"`
+
+	// Skaliert sagt, ob die Dauer mit der Größe des Haushalts wächst —
+	// "zimmer" oder "baeder". Leer heißt: feste Dauer.
+	Skaliert string `json:"skaliert" yaml:"skaliert"`
 }
 
 type rhythmDTO struct {
@@ -63,6 +75,8 @@ type conditionDTO struct {
 	Pet         bool   `json:"haustier" yaml:"haustier"`
 	PetKind     string `json:"haustier_art" yaml:"haustier_art"`
 	Home        string `json:"wohnform" yaml:"wohnform"`
+	// Anlass verbindet die Vorlage mit einer Art von Termin im Haushalt.
+	Occasion string `json:"anlass" yaml:"anlass"`
 }
 
 // LoadTemplates liest die Bibliothek. Fehler nennen immer die betroffene
@@ -141,6 +155,9 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 		return t, err
 	}
 
+	cond.RequiresFacts = d.Braucht
+	cond.RequiresEvent = d.BenoetigtTermin
+
 	return planner.TaskTemplate{
 		ID:           d.ID,
 		Title:        d.Title,
@@ -156,6 +173,7 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 		PerPerson:    d.PerPerson,
 		AppliesTo:    cond,
 		ChainNext:    d.ChainNext,
+		ScalesWith:   planner.Scale(d.Skaliert),
 		Failure:      parseFailure(d.Failure),
 		Source:       parseSource(d.Source),
 	}, nil
@@ -163,10 +181,11 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 
 func (c conditionDTO) toConditions() (planner.Conditions, error) {
 	out := planner.Conditions{
-		RequiresCar:     c.Car,
-		RequiresYard:    c.Yard,
-		RequiresPet:     c.Pet,
-		RequiresPetKind: c.PetKind,
+		RequiresCar:      c.Car,
+		RequiresYard:     c.Yard,
+		RequiresPet:      c.Pet,
+		RequiresPetKind:  c.PetKind,
+		RequiresOccasion: c.Occasion,
 	}
 	if c.Care != "" {
 		care, err := parseCare(c.Care)
@@ -209,6 +228,12 @@ type householdDoc struct {
 	Pets    []string    `json:"haustiere" yaml:"haustiere"`
 	Members []memberDTO `json:"mitglieder" yaml:"mitglieder"`
 	History historyDTO  `json:"historie" yaml:"historie"`
+	Rooms   int         `json:"zimmer" yaml:"zimmer"`
+	Baths   int         `json:"baeder" yaml:"baeder"`
+
+	// Fakten sind die Dinge, nach denen das Onboarding nicht fragt. Was hier
+	// fehlt, gilt als unbekannt und wird nicht geplant, sondern gefragt.
+	Facts map[string]bool `json:"fakten" yaml:"fakten"`
 }
 
 type memberDTO struct {
@@ -249,6 +274,9 @@ func LoadHousehold(path string) (planner.Household, planner.History, error) {
 		Name: doc.Name,
 		Context: planner.Context{
 			Home:    planner.Home(doc.Home),
+			Facts:   doc.Facts,
+			Rooms:   doc.Rooms,
+			Baths:   doc.Baths,
 			HasCar:  doc.Car,
 			HasYard: doc.Yard,
 			Pets:    doc.Pets,
@@ -466,4 +494,47 @@ func parseSource(s string) planner.Source {
 		return planner.SourceLearned
 	}
 	return planner.SourceCurated
+}
+
+// MarshalTemplate schreibt eine Vorlage in dasselbe Format, aus dem
+// ParseTemplate sie liest.
+//
+// Gebraucht für die eigenen Aufgaben eines Haushalts: Sie landen als jsonb in
+// derselben Spalte wie die kuratierten und werden von demselben Parser wieder
+// gelesen. Ein eigenes Format wäre bequemer zu schreiben und der sicherste Weg,
+// dass eigene und kuratierte Vorlagen sich irgendwann verschieden verhalten.
+//
+// Direkt neben ParseTemplate, damit beide Richtungen zusammen geändert werden.
+func MarshalTemplate(t planner.TaskTemplate) ([]byte, error) {
+	d := templateDTO{
+		ID:          t.ID,
+		Title:       t.Title,
+		Category:    string(t.Category),
+		Kind:        string(t.Kind),
+		DurationMin: t.DurationMin,
+		HeadLoad:    int(t.HeadLoad),
+		Rhythm: rhythmDTO{
+			Type:      string(t.Rhythm.Type),
+			EveryDays: t.Rhythm.EveryDays,
+		},
+		MinAge:   t.MinAge,
+		Dist:     string(t.Distribution),
+		Skaliert: string(t.ScalesWith),
+		Failure:  string(t.Failure),
+		Source:   string(t.Source),
+	}
+	for _, w := range t.Rhythm.Weekdays {
+		d.Rhythm.Weekdays = append(d.Rhythm.Weekdays, wochentagName(w))
+	}
+	return json.Marshal(d)
+}
+
+// wochentagName ist die Rückrichtung zu parseWeekday.
+func wochentagName(w time.Weekday) string {
+	namen := map[time.Weekday]string{
+		time.Monday: "mo", time.Tuesday: "di", time.Wednesday: "mi",
+		time.Thursday: "do", time.Friday: "fr",
+		time.Saturday: "sa", time.Sunday: "so",
+	}
+	return namen[w]
 }

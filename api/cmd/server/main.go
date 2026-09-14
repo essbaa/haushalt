@@ -94,6 +94,14 @@ func run() error {
 	// Der Rückfall auf die Dateien ist kein Notbehelf, sondern praktisch: Er
 	// hält den Dienst ohne Datenbank lauffähig, und die Bibliothek im Repo
 	// bleibt die Quelle, aus der importiert wird.
+	// Der Fragenkatalog kommt immer aus dem Repo — auch mit Datenbank. Die
+	// Fragen sind Inhalt, kein Zustand.
+	fakten, err := library.LoadFacts(cfg.LibraryDir + "/fakten.json")
+	if err != nil {
+		return err
+	}
+	log.Info("fragenkatalog geladen", "fakten", fakten.Known())
+
 	var plans httpapi.Plans
 	if pool != nil {
 		plans = pool.AsPlans()
@@ -126,7 +134,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: httpapi.New(cfg, log, db, version, plans, verifier).Handler(),
+		Handler: httpapi.New(cfg, log, db, version, plans, verifier, fakten).Handler(),
 
 		// Ohne Zeitgrenzen kann ein einziger langsamer Client eine Verbindung
 		// dauerhaft belegen. http.ListenAndServe ohne diese Werte ist der

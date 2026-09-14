@@ -146,6 +146,9 @@ func importHousehold(ctx context.Context, store *storage.DB, pfad string, templa
 		HasCar:   h.Context.HasCar,
 		HasYard:  h.Context.HasYard,
 		Pets:     h.Context.Pets,
+		Facts:    fakten(h.Context.Facts),
+		Rooms:    int32(zahlOder(h.Context.Rooms, planner.ReferenceRooms)),
+		Baths:    int32(zahlOder(h.Context.Baths, planner.ReferenceBaths)),
 		Timezone: "Europe/Berlin",
 	})
 	if err != nil {
@@ -348,4 +351,25 @@ func slotOrDefault(s planner.Slot) planner.Slot {
 		return planner.SlotAny
 	}
 	return s
+}
+
+// fakten macht aus der Faktenkarte JSONB. Leer ist "{}" und nicht null — die
+// Spalte ist NOT NULL, und "nichts bekannt" ist ein gültiger Zustand.
+func fakten(m map[string]bool) []byte {
+	if len(m) == 0 {
+		return []byte("{}")
+	}
+	roh, err := json.Marshal(m)
+	if err != nil {
+		return []byte("{}")
+	}
+	return roh
+}
+
+// zahlOder nimmt die Vorgabe, wenn die Datei nichts sagt.
+func zahlOder(wert, vorgabe int) int {
+	if wert <= 0 {
+		return vorgabe
+	}
+	return wert
 }

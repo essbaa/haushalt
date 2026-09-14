@@ -12,9 +12,9 @@ import (
 )
 
 const createHousehold = `-- name: CreateHousehold :one
-INSERT INTO household (name, home, has_car, has_yard, pets, timezone)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
+INSERT INTO household (name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths
 `
 
 type CreateHouseholdParams struct {
@@ -24,6 +24,9 @@ type CreateHouseholdParams struct {
 	HasYard  bool
 	Pets     []string
 	Timezone string
+	Facts    []byte
+	Rooms    int32
+	Baths    int32
 }
 
 func (q *Queries) CreateHousehold(ctx context.Context, arg CreateHouseholdParams) (Household, error) {
@@ -34,6 +37,9 @@ func (q *Queries) CreateHousehold(ctx context.Context, arg CreateHouseholdParams
 		arg.HasYard,
 		arg.Pets,
 		arg.Timezone,
+		arg.Facts,
+		arg.Rooms,
+		arg.Baths,
 	)
 	var i Household
 	err := row.Scan(
@@ -46,12 +52,15 @@ func (q *Queries) CreateHousehold(ctx context.Context, arg CreateHouseholdParams
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
 	)
 	return i, err
 }
 
 const getHousehold = `-- name: GetHousehold :one
-SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE id = $1
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths FROM household WHERE id = $1
 `
 
 func (q *Queries) GetHousehold(ctx context.Context, id pgtype.UUID) (Household, error) {
@@ -67,12 +76,15 @@ func (q *Queries) GetHousehold(ctx context.Context, id pgtype.UUID) (Household, 
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
 	)
 	return i, err
 }
 
 const getHouseholdBySlug = `-- name: GetHouseholdBySlug :one
-SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE slug = $1
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths FROM household WHERE slug = $1
 `
 
 func (q *Queries) GetHouseholdBySlug(ctx context.Context, slug *string) (Household, error) {
@@ -88,12 +100,15 @@ func (q *Queries) GetHouseholdBySlug(ctx context.Context, slug *string) (Househo
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
 	)
 	return i, err
 }
 
 const listDemoHouseholds = `-- name: ListDemoHouseholds :many
-SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household WHERE slug IS NOT NULL ORDER BY created_at
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths FROM household WHERE slug IS NOT NULL ORDER BY created_at
 `
 
 // Haushalte mit Slug sind die aus dem Repo: öffentlich sichtbar, ohne
@@ -117,6 +132,9 @@ func (q *Queries) ListDemoHouseholds(ctx context.Context) ([]Household, error) {
 			&i.Timezone,
 			&i.CreatedAt,
 			&i.Slug,
+			&i.Facts,
+			&i.Rooms,
+			&i.Baths,
 		); err != nil {
 			return nil, err
 		}
@@ -129,7 +147,7 @@ func (q *Queries) ListDemoHouseholds(ctx context.Context) ([]Household, error) {
 }
 
 const listHouseholds = `-- name: ListHouseholds :many
-SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug FROM household ORDER BY created_at
+SELECT id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths FROM household ORDER BY created_at
 `
 
 // Alle Haushalte. Ab der Anmeldung tritt ListHouseholdsForAuthUser an diese
@@ -153,6 +171,9 @@ func (q *Queries) ListHouseholds(ctx context.Context) ([]Household, error) {
 			&i.Timezone,
 			&i.CreatedAt,
 			&i.Slug,
+			&i.Facts,
+			&i.Rooms,
+			&i.Baths,
 		); err != nil {
 			return nil, err
 		}
@@ -165,7 +186,7 @@ func (q *Queries) ListHouseholds(ctx context.Context) ([]Household, error) {
 }
 
 const listHouseholdsForAuthUser = `-- name: ListHouseholdsForAuthUser :many
-SELECT h.id, h.name, h.home, h.has_car, h.has_yard, h.pets, h.timezone, h.created_at, h.slug
+SELECT h.id, h.name, h.home, h.has_car, h.has_yard, h.pets, h.timezone, h.created_at, h.slug, h.facts, h.rooms, h.baths
 FROM household h
 JOIN member m ON m.household_id = h.id
 WHERE m.auth_user_id = $1
@@ -194,6 +215,9 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 			&i.Timezone,
 			&i.CreatedAt,
 			&i.Slug,
+			&i.Facts,
+			&i.Rooms,
+			&i.Baths,
 		); err != nil {
 			return nil, err
 		}
@@ -205,6 +229,41 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 	return items, nil
 }
 
+const setFacts = `-- name: SetFacts :one
+UPDATE household
+SET facts = facts || $2::jsonb
+WHERE id = $1
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths
+`
+
+type SetFactsParams struct {
+	ID      pgtype.UUID
+	Column2 []byte
+}
+
+// Fakten zusammenführen, nicht ersetzen: || vereinigt zwei JSONB-Objekte,
+// rechts gewinnt. Ein Formular, das nur eine Antwort schickt, soll die
+// übrigen nicht löschen.
+func (q *Queries) SetFacts(ctx context.Context, arg SetFactsParams) (Household, error) {
+	row := q.db.QueryRow(ctx, setFacts, arg.ID, arg.Column2)
+	var i Household
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Home,
+		&i.HasCar,
+		&i.HasYard,
+		&i.Pets,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
+	)
+	return i, err
+}
+
 const updateHousehold = `-- name: UpdateHousehold :one
 UPDATE household SET
     name     = COALESCE($1, name),
@@ -212,9 +271,11 @@ UPDATE household SET
     has_car  = COALESCE($3, has_car),
     has_yard = COALESCE($4, has_yard),
     pets     = COALESCE($5, pets),
-    timezone = COALESCE($6, timezone)
-WHERE id = $7
-RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
+    timezone = COALESCE($6, timezone),
+    rooms    = COALESCE($7, rooms),
+    baths    = COALESCE($8, baths)
+WHERE id = $9
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths
 `
 
 type UpdateHouseholdParams struct {
@@ -224,6 +285,8 @@ type UpdateHouseholdParams struct {
 	HasYard  *bool
 	Pets     []string
 	Timezone *string
+	Rooms    *int32
+	Baths    *int32
 	ID       pgtype.UUID
 }
 
@@ -240,6 +303,8 @@ func (q *Queries) UpdateHousehold(ctx context.Context, arg UpdateHouseholdParams
 		arg.HasYard,
 		arg.Pets,
 		arg.Timezone,
+		arg.Rooms,
+		arg.Baths,
 		arg.ID,
 	)
 	var i Household
@@ -253,21 +318,27 @@ func (q *Queries) UpdateHousehold(ctx context.Context, arg UpdateHouseholdParams
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
 	)
 	return i, err
 }
 
 const upsertDemoHousehold = `-- name: UpsertDemoHousehold :one
-INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO household (slug, name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (slug) DO UPDATE
     SET name     = EXCLUDED.name,
         home     = EXCLUDED.home,
         has_car  = EXCLUDED.has_car,
         has_yard = EXCLUDED.has_yard,
         pets     = EXCLUDED.pets,
-        timezone = EXCLUDED.timezone
-RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug
+        timezone = EXCLUDED.timezone,
+        facts    = EXCLUDED.facts,
+        rooms    = EXCLUDED.rooms,
+        baths    = EXCLUDED.baths
+RETURNING id, name, home, has_car, has_yard, pets, timezone, created_at, slug, facts, rooms, baths
 `
 
 type UpsertDemoHouseholdParams struct {
@@ -278,6 +349,9 @@ type UpsertDemoHouseholdParams struct {
 	HasYard  bool
 	Pets     []string
 	Timezone string
+	Facts    []byte
+	Rooms    int32
+	Baths    int32
 }
 
 // Haushalte aus dem Repo. Der Slug ist der Schlüssel, damit ein zweiter
@@ -291,6 +365,9 @@ func (q *Queries) UpsertDemoHousehold(ctx context.Context, arg UpsertDemoHouseho
 		arg.HasYard,
 		arg.Pets,
 		arg.Timezone,
+		arg.Facts,
+		arg.Rooms,
+		arg.Baths,
 	)
 	var i Household
 	err := row.Scan(
@@ -303,6 +380,9 @@ func (q *Queries) UpsertDemoHousehold(ctx context.Context, arg UpsertDemoHouseho
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.Slug,
+		&i.Facts,
+		&i.Rooms,
+		&i.Baths,
 	)
 	return i, err
 }

@@ -25,7 +25,7 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
         </p>
         <Link
           href={`/anmelden?weiter=${encodeURIComponent(`/beitreten?code=${code}`)}`}
-          className="text-primary underline"
+          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover"
         >
           Anmelden oder Konto anlegen
         </Link>
@@ -52,20 +52,21 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
   return (
     <form onSubmit={absenden} className="space-y-4">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Code</span>
+        <span className="text-sm font-semibold">Code</span>
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
           autoCapitalize="characters"
+          autoComplete="off"
           spellCheck={false}
           placeholder="K7MQ2XPD"
-          className="w-full rounded-md border border-line bg-bg px-3 py-2 font-mono text-lg tracking-[0.2em] uppercase outline-none focus-visible:border-primary"
+          className="block min-h-14 w-full rounded-md border border-line-strong bg-surface px-4 text-center text-2xl font-bold tracking-[0.3em] uppercase placeholder:font-normal placeholder:text-subtle focus:border-primary"
         />
       </label>
 
       {fehler && (
-        <p role="alert" className="text-sm text-clay">
+        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
           {fehler}
         </p>
       )}
@@ -73,9 +74,9 @@ export function BeitretenFormular({ vorgabe }: { vorgabe: string }) {
       <button
         type="submit"
         disabled={laeuft}
-        className="w-full rounded-md bg-primary px-4 py-2.5 font-medium text-on-primary disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-45"
       >
-        {laeuft ? "…" : "Beitreten"}
+        {laeuft ? "Einen Moment …" : "Beitreten"}
       </button>
     </form>
   );

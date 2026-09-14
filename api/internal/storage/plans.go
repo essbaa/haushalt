@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -225,8 +226,25 @@ func (p *Plans) household(ctx context.Context, z db.Household) (planner.Househol
 			HasCar:  z.HasCar,
 			HasYard: z.HasYard,
 			Pets:    z.Pets,
+			Facts:   fakten(z.Facts),
+			Rooms:   int(z.Rooms),
+			Baths:   int(z.Baths),
 		},
 	}
+	anlaesse, err := p.db.ListOccasions(ctx, z.ID)
+	if err != nil {
+		return planner.Household{}, err
+	}
+	for _, a := range anlaesse {
+		h.Occasions = append(h.Occasions, planner.Occasion{
+			ID:     formatUUID(a.ID),
+			Title:  a.Title,
+			Date:   datum(a.Day),
+			Kind:   a.Kind,
+			Yearly: a.Yearly,
+		})
+	}
+
 	jahr := time.Now().Year()
 	for _, m := range mitglieder {
 		person := planner.Member{
@@ -315,6 +333,19 @@ func (p *Plans) history(ctx context.Context, haushalt pgtype.UUID) (planner.Hist
 		}
 	}
 	return hist, nil
+}
+
+// fakten liest die JSONB-Spalte. Ein kaputter Inhalt ergibt „nichts bekannt"
+// statt eines Fehlers: Der Plan soll dann vorsichtig sein, nicht ausfallen.
+func fakten(roh []byte) map[string]bool {
+	if len(roh) == 0 {
+		return nil
+	}
+	var out map[string]bool
+	if err := json.Unmarshal(roh, &out); err != nil {
+		return nil
+	}
+	return out
 }
 
 func zeitpunkt(t time.Time) pgtype.Timestamptz {

@@ -179,6 +179,19 @@ func feasible(in Input, tasks []PlannedTask) bool {
 		if st.remaining[i] < t.DurationMin {
 			return false
 		}
+		// MaxHeadLoadPerDay wird hier bewusst NICHT geprüft.
+		//
+		// Die Grenze gehört in die Zuteilung, die den Tag wählen kann. Der
+		// Ausgleich tauscht nur Zuständige und lässt den Tag stehen (siehe
+		// ADR-0003, offener Punkt „verschiebt keine Tage"). Eine
+		// Tagesgrenze in einem Durchgang zu prüfen, der den Tag nicht ändern
+		// kann, nimmt Möglichkeiten weg, ohne je eine bessere zu finden — und
+		// der Preis dafür ist eine unfaire Woche.
+		//
+		// Zwischen „eine Person trägt das Dreifache" und „ein voller Montag"
+		// ist die Antwort nicht offen: Fairness ist das Versprechen, der
+		// ruhige Montag ist die Kür. Sobald der Ausgleich Tage verschieben
+		// kann, gehört die Prüfung hierher zurück.
 		charge(st, t.Day, t, in.Limits)
 	}
 	return true

@@ -28,6 +28,9 @@ export type Aufgabe = components["schemas"]["Aufgabe"];
 export type Bilanz = components["schemas"]["Bilanz"];
 export type Uebersprungen = components["schemas"]["Uebersprungen"];
 export type Ich = components["schemas"]["Ich"];
+export type Frage = components["schemas"]["Frage"];
+export type VorlagenStand = components["schemas"]["VorlagenStand"];
+export type Anlass = components["schemas"]["Anlass"];
 export type NeuerHaushalt = components["schemas"]["NeuerHaushalt"];
 export type NeuesMitglied = components["schemas"]["NeuesMitglied"];
 export type Mitglied = components["schemas"]["Mitglied"];
@@ -145,6 +148,19 @@ export function ladeIch(token?: string | null): Promise<Ich> {
 
 export function ladeHaushalte(token?: string | null): Promise<Haushalt[]> {
   return hole<Haushalt[]>("/api/haushalte", token);
+}
+
+/** Die ganze Bibliothek mit dem Stand dieses Haushalts. */
+export function ladeVorlagen(haushaltId: string, token?: string | null): Promise<VorlagenStand[]> {
+  return hole<VorlagenStand[]>(
+    `/api/haushalte/${encodeURIComponent(haushaltId)}/vorlagen`,
+    token,
+  );
+}
+
+/** Die eingetragenen Anlässe eines Haushalts. */
+export function ladeAnlaesse(haushaltId: string, token?: string | null): Promise<Anlass[]> {
+  return hole<Anlass[]>(`/api/haushalte/${encodeURIComponent(haushaltId)}/anlaesse`, token);
 }
 
 export function ladePlan(

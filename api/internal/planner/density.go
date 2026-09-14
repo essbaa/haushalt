@@ -35,7 +35,7 @@ func capDensity(in Input, cands []candidate) ([]candidate, []Skipped) {
 			org++
 			continue
 		}
-		skipped = append(skipped, Skipped{c.tmpl.ID, c.tmpl.Title, SkipDensity})
+		skipped = append(skipped, Skipped{TemplateID: c.tmpl.ID, Title: c.tmpl.Title, Code: SkipDensity})
 	}
 	return kept, skipped
 }

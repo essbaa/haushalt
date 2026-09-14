@@ -38,6 +38,9 @@ type Household struct {
 	Timezone  string
 	CreatedAt pgtype.Timestamptz
 	Slug      *string
+	Facts     []byte
+	Rooms     int32
+	Baths     int32
 }
 
 type Invitation struct {
@@ -62,6 +65,16 @@ type Member struct {
 	CapacityMinutes []int32
 	AuthUserID      *string
 	CreatedAt       pgtype.Timestamptz
+}
+
+type Occasion struct {
+	ID          pgtype.UUID
+	HouseholdID pgtype.UUID
+	Title       string
+	Day         pgtype.Date
+	Kind        string
+	Yearly      bool
+	CreatedAt   pgtype.Timestamptz
 }
 
 type Signal struct {

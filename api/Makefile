@@ -38,7 +38,7 @@ test: ## Alle Tests
 	go test ./...
 
 .PHONY: generate
-generate: ## Typen und Server-Rümpfe aus ../openapi.yaml erzeugen
+generate: sqlc ## Alles Erzeugte: Vertragstypen und Datenbankabfragen
 	go tool oapi-codegen -config oapi.yaml ../openapi.yaml
 
 .PHONY: import
@@ -62,8 +62,8 @@ sqlc: ## Typsichere Abfragen aus db/query erzeugen
 	go tool sqlc generate
 
 .PHONY: verify-generate
-verify-generate: generate ## Prüfen, dass der erzeugte Code zur Spezifikation passt
-	git diff --exit-code -- internal/httpapi/openapi
+verify-generate: generate ## Prüfen, dass der erzeugte Code zu Vertrag und SQL passt
+	git diff --exit-code -- internal/httpapi/openapi internal/storage/db
 
 .PHONY: check
 check: ## Was auch die CI prüft
