@@ -23,7 +23,8 @@ export function RueckmeldungenListe({ liste }: { liste: Rueckmeldung[] }) {
   if (liste.length === 0) {
     return (
       <p className="text-sm leading-relaxed text-muted text-pretty">
-        Noch nichts gemeldet. Unten auf jeder Seite steht „Stimmt etwas nicht?"
+        Noch nichts gemeldet. Unten auf jeder Seite steht &bdquo;Stimmt etwas
+        nicht?&ldquo;
         — das darf jeder im Haushalt benutzen, nicht nur du.
       </p>
     );

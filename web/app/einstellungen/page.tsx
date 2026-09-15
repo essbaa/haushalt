@@ -72,7 +72,7 @@ export default async function Einstellungen({
         <section className="mt-10 border-t border-line pt-6">
           <h2 className="text-lg font-bold tracking-tight">Was gemeldet wurde</h2>
           <p className="mt-1 mb-4 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-            Unten auf jeder Seite steht „Stimmt etwas nicht?". Das darf jeder im
+            Unten auf jeder Seite steht &bdquo;Stimmt etwas nicht?&ldquo;. Das darf jeder im
             Haushalt benutzen — und in der Probewoche ist es die wichtigste
             Zeile der App.
           </p>
