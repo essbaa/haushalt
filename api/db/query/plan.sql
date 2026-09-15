@@ -72,6 +72,22 @@ WHERE t.household_id = $1
   AND e.kind IN ('erledigt', 'wieder_geoeffnet')
 ORDER BY e.task_instance_id, e.occurred_at DESC, e.id DESC;
 
+-- name: ListStruckTasks :many
+-- Welche Aufgaben dieser Woche gestrichen sind.
+--
+-- Dieselbe Bauart wie ListDoneTasks, mit dem anderen Ereignispaar: Das
+-- jüngste Ereignis je Aufgabe entscheidet, und `wieder_eingeplant` hebt
+-- `gestrichen` auf. Gestrichen heißt: für DIESE Woche nicht — die Vorlage
+-- bleibt unangetastet und ist nächste Woche wieder dran.
+SELECT DISTINCT ON (e.task_instance_id)
+    e.task_instance_id, e.member_id, e.occurred_at, e.kind
+FROM event e
+JOIN task_instance t ON t.id = e.task_instance_id
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND e.kind IN ('gestrichen', 'wieder_eingeplant')
+ORDER BY e.task_instance_id, e.occurred_at DESC, e.id DESC;
+
 -- name: GetTaskForMember :one
 -- Eine Aufgabe samt ihrem Haushalt — aber nur, wenn der Aufrufer in diesem
 -- Haushalt Mitglied ist.
@@ -113,6 +129,30 @@ DELETE FROM task_instance t
 WHERE t.household_id = $1
   AND t.iso_week = $2
   AND NOT EXISTS (SELECT 1 FROM event e WHERE e.task_instance_id = t.id);
+
+-- name: DeleteUntouchedTemplateTasksFrom :exec
+-- Wie DeleteUntouchedWeekTasks, aber auf eine Vorlage und ab einem Tag
+-- eingegrenzt.
+--
+-- Der Unterschied ist Absicht und nicht Sparsamkeit: Wer eine Absprache
+-- einträgt, will diese eine Aufgabe in dieser Woche sehen — und nicht, dass
+-- sich nebenbei umsortiert, wer am Freitag das Bad putzt. Ein Neurechnen der
+-- ganzen Woche wäre für diesen Wunsch ein zu grobes Werkzeug.
+--
+-- Vergangene Tage bleiben unangetastet: Ein Kita-Termin von gestern früh ist
+-- keine Verabredung mehr, die man noch treffen könnte.
+DELETE FROM task_instance t
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND t.template_id = $3
+  AND t.day >= $4
+  AND NOT EXISTS (SELECT 1 FROM event e WHERE e.task_instance_id = t.id);
+
+-- name: ListTemplateTaskDays :many
+-- Die Tage, an denen diese Vorlage in dieser Woche noch steht — nach dem
+-- Verwerfen also die, an denen schon etwas geschehen ist.
+SELECT day FROM task_instance
+WHERE household_id = $1 AND iso_week = $2 AND template_id = $3;
 
 -- name: ListWeekTaskKeys :many
 -- Was von einer Woche übrig ist, nach dem Verwerfen: Vorlage und Tag. Damit

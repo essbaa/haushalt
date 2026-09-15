@@ -86,6 +86,7 @@ func (e AufgabeZeitfenster) Valid() bool {
 
 // Defines values for BegruendungCode.
 const (
+	Absprache           BegruendungCode = "absprache"
 	Ausgleich           BegruendungCode = "ausgleich"
 	EigeneAufgabe       BegruendungCode = "eigene_aufgabe"
 	EinzigeMoeglichkeit BegruendungCode = "einzige_moeglichkeit"
@@ -98,6 +99,8 @@ const (
 // Valid indicates whether the value is a known member of the BegruendungCode enum.
 func (e BegruendungCode) Valid() bool {
 	switch e {
+	case Absprache:
+		return true
 	case Ausgleich:
 		return true
 	case EigeneAufgabe:
@@ -480,20 +483,48 @@ func (e NeuesMitgliedZeit) Valid() bool {
 	}
 }
 
+// Defines values for RueckmeldungArt.
+const (
+	RueckmeldungArtFehler RueckmeldungArt = "fehler"
+	RueckmeldungArtIdee   RueckmeldungArt = "idee"
+	RueckmeldungArtStoert RueckmeldungArt = "stoert"
+)
+
+// Valid indicates whether the value is a known member of the RueckmeldungArt enum.
+func (e RueckmeldungArt) Valid() bool {
+	switch e {
+	case RueckmeldungArtFehler:
+		return true
+	case RueckmeldungArtIdee:
+		return true
+	case RueckmeldungArtStoert:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UebersprungenGrund.
 const (
-	UebersprungenGrundAbgewaehlt      UebersprungenGrund = "abgewaehlt"
-	UebersprungenGrundGiltNicht       UebersprungenGrund = "gilt_nicht"
-	UebersprungenGrundKeineKapazitaet UebersprungenGrund = "keine_kapazitaet"
-	UebersprungenGrundNichtFaellig    UebersprungenGrund = "nicht_faellig"
-	UebersprungenGrundNiemandGeeignet UebersprungenGrund = "niemand_geeignet"
-	UebersprungenGrundStartdichte     UebersprungenGrund = "startdichte"
+	UebersprungenGrundAbgewaehlt       UebersprungenGrund = "abgewaehlt"
+	UebersprungenGrundBrauchtAbsprache UebersprungenGrund = "braucht_absprache"
+	UebersprungenGrundBrauchtTermin    UebersprungenGrund = "braucht_termin"
+	UebersprungenGrundGiltNicht        UebersprungenGrund = "gilt_nicht"
+	UebersprungenGrundKeineKapazitaet  UebersprungenGrund = "keine_kapazitaet"
+	UebersprungenGrundNichtFaellig     UebersprungenGrund = "nicht_faellig"
+	UebersprungenGrundNiemandGeeignet  UebersprungenGrund = "niemand_geeignet"
+	UebersprungenGrundStartdichte      UebersprungenGrund = "startdichte"
+	UebersprungenGrundUnbekannt        UebersprungenGrund = "unbekannt"
 )
 
 // Valid indicates whether the value is a known member of the UebersprungenGrund enum.
 func (e UebersprungenGrund) Valid() bool {
 	switch e {
 	case UebersprungenGrundAbgewaehlt:
+		return true
+	case UebersprungenGrundBrauchtAbsprache:
+		return true
+	case UebersprungenGrundBrauchtTermin:
 		return true
 	case UebersprungenGrundGiltNicht:
 		return true
@@ -504,6 +535,8 @@ func (e UebersprungenGrund) Valid() bool {
 	case UebersprungenGrundNiemandGeeignet:
 		return true
 	case UebersprungenGrundStartdichte:
+		return true
+	case UebersprungenGrundUnbekannt:
 		return true
 	default:
 		return false
@@ -530,20 +563,23 @@ func (e VorlagenStandArt) Valid() bool {
 
 // Defines values for VorlagenStandGrund.
 const (
-	VorlagenStandGrundAbgewaehlt      VorlagenStandGrund = "abgewaehlt"
-	VorlagenStandGrundBrauchtTermin   VorlagenStandGrund = "braucht_termin"
-	VorlagenStandGrundGiltNicht       VorlagenStandGrund = "gilt_nicht"
-	VorlagenStandGrundKeineKapazitaet VorlagenStandGrund = "keine_kapazitaet"
-	VorlagenStandGrundNichtFaellig    VorlagenStandGrund = "nicht_faellig"
-	VorlagenStandGrundNiemandGeeignet VorlagenStandGrund = "niemand_geeignet"
-	VorlagenStandGrundStartdichte     VorlagenStandGrund = "startdichte"
-	VorlagenStandGrundUnbekannt       VorlagenStandGrund = "unbekannt"
+	VorlagenStandGrundAbgewaehlt       VorlagenStandGrund = "abgewaehlt"
+	VorlagenStandGrundBrauchtAbsprache VorlagenStandGrund = "braucht_absprache"
+	VorlagenStandGrundBrauchtTermin    VorlagenStandGrund = "braucht_termin"
+	VorlagenStandGrundGiltNicht        VorlagenStandGrund = "gilt_nicht"
+	VorlagenStandGrundKeineKapazitaet  VorlagenStandGrund = "keine_kapazitaet"
+	VorlagenStandGrundNichtFaellig     VorlagenStandGrund = "nicht_faellig"
+	VorlagenStandGrundNiemandGeeignet  VorlagenStandGrund = "niemand_geeignet"
+	VorlagenStandGrundStartdichte      VorlagenStandGrund = "startdichte"
+	VorlagenStandGrundUnbekannt        VorlagenStandGrund = "unbekannt"
 )
 
 // Valid indicates whether the value is a known member of the VorlagenStandGrund enum.
 func (e VorlagenStandGrund) Valid() bool {
 	switch e {
 	case VorlagenStandGrundAbgewaehlt:
+		return true
+	case VorlagenStandGrundBrauchtAbsprache:
 		return true
 	case VorlagenStandGrundBrauchtTermin:
 		return true
@@ -597,6 +633,27 @@ func (e CreateEinladungJSONBodyRolle) Valid() bool {
 	case CreateEinladungJSONBodyRolleAusfuehrend:
 		return true
 	case CreateEinladungJSONBodyRollePlanend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeldenJSONBodyArt.
+const (
+	MeldenJSONBodyArtFehler MeldenJSONBodyArt = "fehler"
+	MeldenJSONBodyArtIdee   MeldenJSONBodyArt = "idee"
+	MeldenJSONBodyArtStoert MeldenJSONBodyArt = "stoert"
+)
+
+// Valid indicates whether the value is a known member of the MeldenJSONBodyArt enum.
+func (e MeldenJSONBodyArt) Valid() bool {
+	switch e {
+	case MeldenJSONBodyArtFehler:
+		return true
+	case MeldenJSONBodyArtIdee:
+		return true
+	case MeldenJSONBodyArtStoert:
 		return true
 	default:
 		return false
@@ -764,6 +821,19 @@ type Frage struct {
 
 	// Frage Example: Habt ihr Pflanzen, die gegossen werden müssen?
 	Frage string `json:"frage"`
+}
+
+// Gestrichen defines model for Gestrichen.
+type Gestrichen struct {
+	Id string `json:"id"`
+
+	// Tag Der Tag, an dem sie angestanden hätte. Er gehört dazu, weil
+	// gestrichen wird, was an EINEM Tag ansteht — eine Vorlage kann
+	// mehrfach in der Woche vorkommen.
+	Tag string `json:"tag"`
+
+	// Titel Example: Bad putzen
+	Titel string `json:"titel"`
 }
 
 // Haushalt defines model for Haushalt.
@@ -945,6 +1015,15 @@ type NeueVorlage struct {
 	// monatlich.
 	AlleTage NeueVorlageAlleTage `json:"alle_tage"`
 
+	// BrauchtAbsprache „Muss festgelegt werden, wer wann?" Dann verteilt der Planer die
+	// Aufgabe nicht, sondern fordert ein Wochenraster ein.
+	//
+	// Für alles, was am Arbeitsplan hängt statt an freier Zeit — ein
+	// Kind bringen oder abholen, ein Termin, zu dem jemand hin muss. Der
+	// Planer kennt die Kapazität und nicht den Kalender; ohne Absprache
+	// teilt er mit voller Überzeugung den Falschen ein.
+	BrauchtAbsprache *bool `json:"braucht_absprache,omitempty"`
+
 	// DauerMin Geschätzt — und die Schätzung trägt die Fairnessrechnung mit. Eine
 	// zu niedrige Zahl verschiebt die Bilanz des ganzen Haushalts, ohne
 	// dass es jemand merkt.
@@ -1063,6 +1142,34 @@ type NeuesMitgliedRolle string
 // keine.
 type NeuesMitgliedZeit string
 
+// Rueckmeldung defines model for Rueckmeldung.
+type Rueckmeldung struct {
+	// Art Drei und nicht zwei: „Fehler" und „Idee" sind die üblichen, und
+	// dazwischen fällt das Wichtigste durch. `stoert` ist kein Fehler —
+	// die App tut, was sie soll — und keine Idee, weil niemand eine
+	// Lösung anzubieten hat. Genau diese Sätze führen dazu, dass jemand
+	// eine App am Mittwoch zuklappt.
+	Art        RueckmeldungArt `json:"art"`
+	GemeldetAm time.Time       `json:"gemeldet_am"`
+	Id         string          `json:"id"`
+
+	// Kontext Seite, Woche und Fassung — von der Oberfläche gesammelt.
+	Kontext *string `json:"kontext,omitempty"`
+	Text    string  `json:"text"`
+
+	// Wer Name der meldenden Person. Fehlt, wenn sie den Haushalt verlassen
+	// hat: Die Rückmeldung bleibt wahr, auch wenn niemand mehr
+	// danebensteht.
+	Wer *string `json:"wer,omitempty"`
+}
+
+// RueckmeldungArt Drei und nicht zwei: „Fehler" und „Idee" sind die üblichen, und
+// dazwischen fällt das Wichtigste durch. `stoert` ist kein Fehler —
+// die App tut, was sie soll — und keine Idee, weil niemand eine
+// Lösung anzubieten hat. Genau diese Sätze führen dazu, dass jemand
+// eine App am Mittwoch zuklappt.
+type RueckmeldungArt string
+
 // Uebersprungen defines model for Uebersprungen.
 type Uebersprungen struct {
 	Grund     UebersprungenGrund `json:"grund"`
@@ -1083,9 +1190,17 @@ type Version struct {
 
 // VorlagenStand defines model for VorlagenStand.
 type VorlagenStand struct {
+	// Absprache Das Wochenraster, Index 0 = Montag. Leerer Text heißt: für diesen
+	// Tag ist nichts abgesprochen.
+	Absprache *[]string `json:"absprache,omitempty"`
+
 	// Aktiv Ob sie in künftigen Plänen vorkommen kann.
 	Aktiv bool             `json:"aktiv"`
 	Art   VorlagenStandArt `json:"art"`
+
+	// BrauchtAbsprache Diese Aufgabe verteilt der Planer nicht — sie wird abgesprochen.
+	// Ohne Raster taucht sie mit dem Grund `braucht_absprache` auf.
+	BrauchtAbsprache *bool `json:"braucht_absprache,omitempty"`
 
 	// Dann Was eine Antwort mit Ja bringt.
 	Dann     *string `json:"dann,omitempty"`
@@ -1106,11 +1221,38 @@ type VorlagenStand struct {
 	// Grund Warum sie nicht gilt. Fehlt, wenn sie gilt.
 	Grund *VorlagenStandGrund `json:"grund,omitempty"`
 
+	// Haeufigkeit Wie oft sie vorkommt, als Satz: „täglich", „3× pro Woche",
+	// „wöchentlich", „jährlich im Oktober".
+	//
+	// Gerechnet im Planer aus dem Rhythmus, nicht in der Oberfläche
+	// nachgebaut — dieselbe Regel wie bei `Mitglied.zeit`. Ohne diese
+	// Angabe fehlte in der Liste die Zahl, die über den Aufwand
+	// entscheidet: „Abendessen kochen, 40 Minuten" ist etwas anderes,
+	// wenn es dreimal die Woche dran ist.
+	//
+	//
+	// Example: 3× pro Woche
+	Haeufigkeit *string `json:"haeufigkeit,omitempty"`
+
 	// Id Example: t-pflanzen
 	Id        string    `json:"id"`
 	Kategorie Kategorie `json:"kategorie"`
 	Kopflast  int       `json:"kopflast"`
 	Titel     string    `json:"titel"`
+
+	// Voraussetzung Bei `gilt_nicht`: die fehlende Bedingung als Satz — „Braucht ein
+	// Kind, das zur Schule geht." Fehlt, wenn ein verneintes Faktum die
+	// Ursache ist; dann steht in `frage`, was noch einmal zu fragen
+	// wäre.
+	//
+	// Gerechnet im Planer, der die Bedingung ohnehin prüft. Vorher stand
+	// in der Liste nur „gilt bei euch nicht" und daneben eine
+	// Aufzählung aller denkbaren Ursachen — eine Andeutung statt einer
+	// Auskunft.
+	//
+	//
+	// Example: Braucht ein Kind, das zur Schule geht.
+	Voraussetzung *string `json:"voraussetzung,omitempty"`
 }
 
 // VorlagenStandArt defines model for VorlagenStand.Art.
@@ -1136,8 +1278,14 @@ type Wochenplan struct {
 	// weiß, plant sie nicht ein; sie fragt danach, und zwar mit dem
 	// Nutzen daneben. Eine Frage ohne erkennbaren Nutzen wird nicht
 	// beantwortet.
-	Fragen   *[]Frage `json:"fragen,omitempty"`
-	Haushalt Haushalt `json:"haushalt"`
+	Fragen *[]Frage `json:"fragen,omitempty"`
+
+	// Gestrichen Einzelne Termine, die jemand gestrichen hat — nicht Vorlagen. Aus
+	// Plan und Bilanz sind sie raus; hier stehen sie, damit die App einen
+	// Weg zurück anbieten kann. Eine Zeile, die wortlos verschwindet,
+	// lässt jemanden, der sich vertippt hat, ohne Rückweg.
+	Gestrichen *[]Gestrichen `json:"gestrichen,omitempty"`
+	Haushalt   Haushalt      `json:"haushalt"`
 
 	// Ich Kennung des Aufrufers als Person in diesem Haushalt. Damit erkennt
 	// die Ansicht, welche Zeile seine ist — und ob er eine Aufgabe
@@ -1183,10 +1331,24 @@ type SetErledigtJSONBody struct {
 	Erledigt *bool `json:"erledigt,omitempty"`
 }
 
+// AufgabeStreichenJSONBody defines parameters for AufgabeStreichen.
+type AufgabeStreichenJSONBody struct {
+	// Gestrichen Fehlt das Feld, gilt „gestrichen". `false` plant die
+	// Aufgabe wieder ein.
+	Gestrichen *bool `json:"gestrichen,omitempty"`
+}
+
 // AufgabeZuteilenJSONBody defines parameters for AufgabeZuteilen.
 type AufgabeZuteilenJSONBody struct {
 	// Mitglied Kennung der Person, die die Aufgabe übernimmt.
 	Mitglied string `json:"mitglied"`
+}
+
+// SetAbspracheJSONBody defines parameters for SetAbsprache.
+type SetAbspracheJSONBody struct {
+	// Wochentage Sieben Kennungen von Mitgliedern, Index 0 = Montag. Leerer
+	// Text heißt: für diesen Tag ist nichts abgesprochen.
+	Wochentage []string `json:"wochentage"`
 }
 
 // CreateEinladungJSONBody defines parameters for CreateEinladung.
@@ -1210,6 +1372,16 @@ type CreateEinladungJSONBodyRolle string
 // SetFaktenJSONBody defines parameters for SetFakten.
 type SetFaktenJSONBody map[string]bool
 
+// MeldenJSONBody defines parameters for Melden.
+type MeldenJSONBody struct {
+	Art     MeldenJSONBodyArt `json:"art"`
+	Kontext *string           `json:"kontext,omitempty"`
+	Text    string            `json:"text"`
+}
+
+// MeldenJSONBodyArt defines parameters for Melden.
+type MeldenJSONBodyArt string
+
 // SetVorlageJSONBody defines parameters for SetVorlage.
 type SetVorlageJSONBody struct {
 	Aktiv bool `json:"aktiv"`
@@ -1221,6 +1393,9 @@ type AufgabeAbgebenJSONRequestBody AufgabeAbgebenJSONBody
 // SetErledigtJSONRequestBody defines body for SetErledigt for application/json ContentType.
 type SetErledigtJSONRequestBody SetErledigtJSONBody
 
+// AufgabeStreichenJSONRequestBody defines body for AufgabeStreichen for application/json ContentType.
+type AufgabeStreichenJSONRequestBody AufgabeStreichenJSONBody
+
 // AufgabeZuteilenJSONRequestBody defines body for AufgabeZuteilen for application/json ContentType.
 type AufgabeZuteilenJSONRequestBody AufgabeZuteilenJSONBody
 
@@ -1229,6 +1404,9 @@ type CreateHaushaltJSONRequestBody = NeuerHaushalt
 
 // UpdateHaushaltJSONRequestBody defines body for UpdateHaushalt for application/json ContentType.
 type UpdateHaushaltJSONRequestBody = HaushaltAenderung
+
+// SetAbspracheJSONRequestBody defines body for SetAbsprache for application/json ContentType.
+type SetAbspracheJSONRequestBody SetAbspracheJSONBody
 
 // CreateAnlassJSONRequestBody defines body for CreateAnlass for application/json ContentType.
 type CreateAnlassJSONRequestBody = NeuerAnlass
@@ -1241,6 +1419,9 @@ type SetFaktenJSONRequestBody SetFaktenJSONBody
 
 // UpdateMitgliedJSONRequestBody defines body for UpdateMitglied for application/json ContentType.
 type UpdateMitgliedJSONRequestBody = MitgliedAenderung
+
+// MeldenJSONRequestBody defines body for Melden for application/json ContentType.
+type MeldenJSONRequestBody MeldenJSONBody
 
 // CreateEigeneVorlageJSONRequestBody defines body for CreateEigeneVorlage for application/json ContentType.
 type CreateEigeneVorlageJSONRequestBody = NeueVorlage
@@ -1256,6 +1437,9 @@ type ServerInterface interface {
 	// SetErledigt Aufgabe abhaken oder wieder öffnen
 	// (POST /api/aufgaben/{aufgabeId}/erledigt)
 	SetErledigt(w http.ResponseWriter, r *http.Request, aufgabeId string)
+	// AufgabeStreichen Einen einzelnen Termin streichen
+	// (POST /api/aufgaben/{aufgabeId}/streichen)
+	AufgabeStreichen(w http.ResponseWriter, r *http.Request, aufgabeId string)
 	// AufgabeZuteilen Aufgabe von Hand an eine Person geben
 	// (POST /api/aufgaben/{aufgabeId}/zuteilen)
 	AufgabeZuteilen(w http.ResponseWriter, r *http.Request, aufgabeId string)
@@ -1271,6 +1455,12 @@ type ServerInterface interface {
 	// UpdateHaushalt Einstellungen des Haushalts ändern
 	// (PATCH /api/haushalte/{haushaltId})
 	UpdateHaushalt(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// SetAbsprache Wochenraster einer Vorlage setzen
+	// (PUT /api/haushalte/{haushaltId}/absprachen/{vorlageId})
+	SetAbsprache(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string)
+	// AbsprachAbHeute Die Absprache in die laufende Woche eintragen
+	// (POST /api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute)
+	AbsprachAbHeute(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string)
 	// ListAnlaesse Die eingetragenen Anlässe
 	// (GET /api/haushalte/{haushaltId}/anlaesse)
 	ListAnlaesse(w http.ResponseWriter, r *http.Request, haushaltId string)
@@ -1295,6 +1485,12 @@ type ServerInterface interface {
 	// WocheNeuRechnen Woche neu rechnen
 	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
 	WocheNeuRechnen(w http.ResponseWriter, r *http.Request, haushaltId string, woche string)
+	// ListRueckmeldungen Was der Haushalt gemeldet hat
+	// (GET /api/haushalte/{haushaltId}/rueckmeldungen)
+	ListRueckmeldungen(w http.ResponseWriter, r *http.Request, haushaltId string)
+	// Melden Etwas melden
+	// (POST /api/haushalte/{haushaltId}/rueckmeldungen)
+	Melden(w http.ResponseWriter, r *http.Request, haushaltId string)
 	// ListVorlagen Alles, was die App kennt — und was davon bei euch gilt
 	// (GET /api/haushalte/{haushaltId}/vorlagen)
 	ListVorlagen(w http.ResponseWriter, r *http.Request, haushaltId string)
@@ -1364,6 +1560,32 @@ func (siw *ServerInterfaceWrapper) SetErledigt(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetErledigt(w, r, aufgabeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AufgabeStreichen operation middleware
+func (siw *ServerInterfaceWrapper) AufgabeStreichen(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "aufgabeId" -------------
+	var aufgabeId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "aufgabeId", r.PathValue("aufgabeId"), &aufgabeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "aufgabeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AufgabeStreichen(w, r, aufgabeId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1470,6 +1692,76 @@ func (siw *ServerInterfaceWrapper) UpdateHaushalt(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateHaushalt(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetAbsprache operation middleware
+func (siw *ServerInterfaceWrapper) SetAbsprache(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "vorlageId" -------------
+	var vorlageId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "vorlageId", r.PathValue("vorlageId"), &vorlageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "vorlageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetAbsprache(w, r, haushaltId, vorlageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AbsprachAbHeute operation middleware
+func (siw *ServerInterfaceWrapper) AbsprachAbHeute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "vorlageId" -------------
+	var vorlageId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "vorlageId", r.PathValue("vorlageId"), &vorlageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "vorlageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AbsprachAbHeute(w, r, haushaltId, vorlageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1714,6 +2006,58 @@ func (siw *ServerInterfaceWrapper) WocheNeuRechnen(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.WocheNeuRechnen(w, r, haushaltId, woche)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRueckmeldungen operation middleware
+func (siw *ServerInterfaceWrapper) ListRueckmeldungen(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRueckmeldungen(w, r, haushaltId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Melden operation middleware
+func (siw *ServerInterfaceWrapper) Melden(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Melden(w, r, haushaltId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1969,6 +2313,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen", wrapper.ListVorlagen)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen", wrapper.CreateEigeneVorlage)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen/{vorlageId}", wrapper.SetVorlage)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/haushalte/{haushaltId}/absprachen/{vorlageId}", wrapper.SetAbsprache)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute", wrapper.AbsprachAbHeute)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/rueckmeldungen", wrapper.ListRueckmeldungen)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/rueckmeldungen", wrapper.Melden)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse", wrapper.ListAnlaesse)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse", wrapper.CreateAnlass)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse/{anlassId}", wrapper.DeleteAnlass)
@@ -1976,6 +2324,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/einladungen", wrapper.CreateEinladung)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/erledigt", wrapper.SetErledigt)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/abgeben", wrapper.AufgabeAbgeben)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/streichen", wrapper.AufgabeStreichen)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/aufgaben/{aufgabeId}/zuteilen", wrapper.AufgabeZuteilen)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/einladungen/{code}/annehmen", wrapper.AcceptEinladung)
 
@@ -2067,6 +2416,51 @@ func (response SetErledigt403JSONResponse) VisitSetErledigtResponse(w http.Respo
 type SetErledigt404JSONResponse Fehler
 
 func (response SetErledigt404JSONResponse) VisitSetErledigtResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeStreichenRequestObject struct {
+	AufgabeId string `json:"aufgabeId"`
+	Body      *AufgabeStreichenJSONRequestBody
+}
+
+type AufgabeStreichenResponseObject interface {
+	VisitAufgabeStreichenResponse(w http.ResponseWriter) error
+}
+
+type AufgabeStreichen204Response struct {
+}
+
+func (response AufgabeStreichen204Response) VisitAufgabeStreichenResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AufgabeStreichen403JSONResponse Fehler
+
+func (response AufgabeStreichen403JSONResponse) VisitAufgabeStreichenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AufgabeStreichen404JSONResponse Fehler
+
+func (response AufgabeStreichen404JSONResponse) VisitAufgabeStreichenResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2318,6 +2712,125 @@ func (response UpdateHaushalt403JSONResponse) VisitUpdateHaushaltResponse(w http
 type UpdateHaushalt404JSONResponse Fehler
 
 func (response UpdateHaushalt404JSONResponse) VisitUpdateHaushaltResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAbspracheRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	VorlageId  string `json:"vorlageId"`
+	Body       *SetAbspracheJSONRequestBody
+}
+
+type SetAbspracheResponseObject interface {
+	VisitSetAbspracheResponse(w http.ResponseWriter) error
+}
+
+type SetAbsprache204Response struct {
+}
+
+func (response SetAbsprache204Response) VisitSetAbspracheResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetAbsprache400JSONResponse Fehler
+
+func (response SetAbsprache400JSONResponse) VisitSetAbspracheResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAbsprache403JSONResponse Fehler
+
+func (response SetAbsprache403JSONResponse) VisitSetAbspracheResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAbsprache404JSONResponse Fehler
+
+func (response SetAbsprache404JSONResponse) VisitSetAbspracheResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AbsprachAbHeuteRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	VorlageId  string `json:"vorlageId"`
+}
+
+type AbsprachAbHeuteResponseObject interface {
+	VisitAbsprachAbHeuteResponse(w http.ResponseWriter) error
+}
+
+type AbsprachAbHeute200JSONResponse struct {
+	// Eingetragen Wie viele Termine entstanden sind. Null ist eine gültige
+	// Antwort: An den verbleibenden Tagen steht schon etwas,
+	// oder das Raster trifft in dieser Woche keinen fälligen
+	// Tag mehr. Die Zahl geht mit hinaus, damit die Oberfläche
+	// genau das sagen kann, statt „fertig" zu melden und
+	// nichts zu zeigen.
+	Eingetragen int `json:"eingetragen"`
+}
+
+func (response AbsprachAbHeute200JSONResponse) VisitAbsprachAbHeuteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AbsprachAbHeute403JSONResponse Fehler
+
+func (response AbsprachAbHeute403JSONResponse) VisitAbsprachAbHeuteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AbsprachAbHeute404JSONResponse Fehler
+
+func (response AbsprachAbHeute404JSONResponse) VisitAbsprachAbHeuteResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2773,6 +3286,115 @@ func (response WocheNeuRechnen404JSONResponse) VisitWocheNeuRechnenResponse(w ht
 	return err
 }
 
+type ListRueckmeldungenRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+}
+
+type ListRueckmeldungenResponseObject interface {
+	VisitListRueckmeldungenResponse(w http.ResponseWriter) error
+}
+
+type ListRueckmeldungen200JSONResponse []Rueckmeldung
+
+func (response ListRueckmeldungen200JSONResponse) VisitListRueckmeldungenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRueckmeldungen403JSONResponse Fehler
+
+func (response ListRueckmeldungen403JSONResponse) VisitListRueckmeldungenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRueckmeldungen404JSONResponse Fehler
+
+func (response ListRueckmeldungen404JSONResponse) VisitListRueckmeldungenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MeldenRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	Body       *MeldenJSONRequestBody
+}
+
+type MeldenResponseObject interface {
+	VisitMeldenResponse(w http.ResponseWriter) error
+}
+
+type Melden204Response struct {
+}
+
+func (response Melden204Response) VisitMeldenResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type Melden400JSONResponse Fehler
+
+func (response Melden400JSONResponse) VisitMeldenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Melden403JSONResponse Fehler
+
+func (response Melden403JSONResponse) VisitMeldenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Melden404JSONResponse Fehler
+
+func (response Melden404JSONResponse) VisitMeldenResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListVorlagenRequestObject struct {
 	HaushaltId string `json:"haushaltId"`
 }
@@ -2970,6 +3592,9 @@ type StrictServerInterface interface {
 	// SetErledigt Aufgabe abhaken oder wieder öffnen
 	// (POST /api/aufgaben/{aufgabeId}/erledigt)
 	SetErledigt(ctx context.Context, request SetErledigtRequestObject) (SetErledigtResponseObject, error)
+	// AufgabeStreichen Einen einzelnen Termin streichen
+	// (POST /api/aufgaben/{aufgabeId}/streichen)
+	AufgabeStreichen(ctx context.Context, request AufgabeStreichenRequestObject) (AufgabeStreichenResponseObject, error)
 	// AufgabeZuteilen Aufgabe von Hand an eine Person geben
 	// (POST /api/aufgaben/{aufgabeId}/zuteilen)
 	AufgabeZuteilen(ctx context.Context, request AufgabeZuteilenRequestObject) (AufgabeZuteilenResponseObject, error)
@@ -2985,6 +3610,12 @@ type StrictServerInterface interface {
 	// UpdateHaushalt Einstellungen des Haushalts ändern
 	// (PATCH /api/haushalte/{haushaltId})
 	UpdateHaushalt(ctx context.Context, request UpdateHaushaltRequestObject) (UpdateHaushaltResponseObject, error)
+	// SetAbsprache Wochenraster einer Vorlage setzen
+	// (PUT /api/haushalte/{haushaltId}/absprachen/{vorlageId})
+	SetAbsprache(ctx context.Context, request SetAbspracheRequestObject) (SetAbspracheResponseObject, error)
+	// AbsprachAbHeute Die Absprache in die laufende Woche eintragen
+	// (POST /api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute)
+	AbsprachAbHeute(ctx context.Context, request AbsprachAbHeuteRequestObject) (AbsprachAbHeuteResponseObject, error)
 	// ListAnlaesse Die eingetragenen Anlässe
 	// (GET /api/haushalte/{haushaltId}/anlaesse)
 	ListAnlaesse(ctx context.Context, request ListAnlaesseRequestObject) (ListAnlaesseResponseObject, error)
@@ -3009,6 +3640,12 @@ type StrictServerInterface interface {
 	// WocheNeuRechnen Woche neu rechnen
 	// (POST /api/haushalte/{haushaltId}/plan/{woche}/neu)
 	WocheNeuRechnen(ctx context.Context, request WocheNeuRechnenRequestObject) (WocheNeuRechnenResponseObject, error)
+	// ListRueckmeldungen Was der Haushalt gemeldet hat
+	// (GET /api/haushalte/{haushaltId}/rueckmeldungen)
+	ListRueckmeldungen(ctx context.Context, request ListRueckmeldungenRequestObject) (ListRueckmeldungenResponseObject, error)
+	// Melden Etwas melden
+	// (POST /api/haushalte/{haushaltId}/rueckmeldungen)
+	Melden(ctx context.Context, request MeldenRequestObject) (MeldenResponseObject, error)
 	// ListVorlagen Alles, was die App kennt — und was davon bei euch gilt
 	// (GET /api/haushalte/{haushaltId}/vorlagen)
 	ListVorlagen(ctx context.Context, request ListVorlagenRequestObject) (ListVorlagenResponseObject, error)
@@ -3130,6 +3767,42 @@ func (sh *strictHandler) SetErledigt(w http.ResponseWriter, r *http.Request, auf
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetErledigtResponseObject); ok {
 		if err := validResponse.VisitSetErledigtResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AufgabeStreichen operation middleware
+func (sh *strictHandler) AufgabeStreichen(w http.ResponseWriter, r *http.Request, aufgabeId string) {
+	var request AufgabeStreichenRequestObject
+
+	request.AufgabeId = aufgabeId
+
+	var body AufgabeStreichenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AufgabeStreichen(ctx, request.(AufgabeStreichenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AufgabeStreichen")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AufgabeStreichenResponseObject); ok {
+		if err := validResponse.VisitAufgabeStreichenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3277,6 +3950,67 @@ func (sh *strictHandler) UpdateHaushalt(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateHaushaltResponseObject); ok {
 		if err := validResponse.VisitUpdateHaushaltResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetAbsprache operation middleware
+func (sh *strictHandler) SetAbsprache(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string) {
+	var request SetAbspracheRequestObject
+
+	request.HaushaltId = haushaltId
+	request.VorlageId = vorlageId
+
+	var body SetAbspracheJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetAbsprache(ctx, request.(SetAbspracheRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetAbsprache")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetAbspracheResponseObject); ok {
+		if err := validResponse.VisitSetAbspracheResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AbsprachAbHeute operation middleware
+func (sh *strictHandler) AbsprachAbHeute(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string) {
+	var request AbsprachAbHeuteRequestObject
+
+	request.HaushaltId = haushaltId
+	request.VorlageId = vorlageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AbsprachAbHeute(ctx, request.(AbsprachAbHeuteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AbsprachAbHeute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AbsprachAbHeuteResponseObject); ok {
+		if err := validResponse.VisitAbsprachAbHeuteResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3517,6 +4251,65 @@ func (sh *strictHandler) WocheNeuRechnen(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(WocheNeuRechnenResponseObject); ok {
 		if err := validResponse.VisitWocheNeuRechnenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRueckmeldungen operation middleware
+func (sh *strictHandler) ListRueckmeldungen(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request ListRueckmeldungenRequestObject
+
+	request.HaushaltId = haushaltId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRueckmeldungen(ctx, request.(ListRueckmeldungenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRueckmeldungen")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRueckmeldungenResponseObject); ok {
+		if err := validResponse.VisitListRueckmeldungenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Melden operation middleware
+func (sh *strictHandler) Melden(w http.ResponseWriter, r *http.Request, haushaltId string) {
+	var request MeldenRequestObject
+
+	request.HaushaltId = haushaltId
+
+	var body MeldenJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Melden(ctx, request.(MeldenRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Melden")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MeldenResponseObject); ok {
+		if err := validResponse.VisitMeldenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

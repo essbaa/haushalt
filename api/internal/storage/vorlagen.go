@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/zakaria/haushalt/api/internal/library"
 	"github.com/zakaria/haushalt/api/internal/planner"
@@ -50,12 +51,14 @@ func (p *Plans) TemplatesFor(ctx context.Context, subject, id string) ([]planner
 
 	out := make([]planner.TemplateState, 0, len(vorlagen))
 	for _, t := range vorlagen {
-		grund, faktum := planner.Status(t, haushalt, hist)
+		grund, faktum, fehlt := planner.Status(t, haushalt, hist)
 		out = append(out, planner.TemplateState{
-			Template: t,
-			Active:   grund == "",
-			Reason:   grund,
-			Fact:     faktum,
+			Template:  t,
+			Active:    grund == "",
+			Reason:    grund,
+			Fact:      faktum,
+			Need:      fehlt,
+			Agreement: hist.Agreement(t.ID),
 		})
 	}
 	return out, haushalt, nil
@@ -166,4 +169,53 @@ func eigeneKennung() (string, error) {
 		return "", err
 	}
 	return "eigen-" + hex.EncodeToString(roh), nil
+}
+
+// SetAgreement schreibt das Wochenraster einer Vorlage — alle sieben Plätze
+// auf einmal.
+//
+// Erst leeren, dann setzen: Sieben Plätze einzeln abzugleichen wäre sieben
+// Abfragen und dieselbe Wirkung, und ein halb abgeglichenes Raster wäre ein
+// Zustand, den niemand gewollt hätte.
+//
+// Nur planende Personen. Eine Absprache ist eine Vereinbarung über andere
+// Menschen — das ist keine Einstellung, die jeder für sich dreht.
+func (p *Plans) SetAgreement(ctx context.Context, subject, id, vorlageID string, raster [7]string) error {
+	zeile, err := p.alsPlanende(ctx, subject, id)
+	if err != nil {
+		return err
+	}
+
+	tx, err := p.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := p.db.Queries.WithTx(tx)
+
+	if err := q.ClearAgreementRow(ctx, db.ClearAgreementRowParams{
+		HouseholdID: zeile.ID,
+		TemplateID:  vorlageID,
+	}); err != nil {
+		return err
+	}
+
+	for tag, wer := range raster {
+		if wer == "" {
+			continue
+		}
+		kennung, ok := parseUUID(wer)
+		if !ok {
+			return fmt.Errorf("%w: %q ist keine person", planner.ErrUnknownMember, wer)
+		}
+		if err := q.SetAgreement(ctx, db.SetAgreementParams{
+			HouseholdID: zeile.ID,
+			TemplateID:  vorlageID,
+			Weekday:     int32(tag),
+			MemberID:    kennung,
+		}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }

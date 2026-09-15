@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/zakaria/haushalt/api/internal/auth"
 	"github.com/zakaria/haushalt/api/internal/httpapi/openapi"
@@ -47,6 +48,9 @@ type Plans interface {
 	// liefert deren Namen. Anders als HandOver wählt hier ein Mensch — der
 	// Planer prüft nur noch, was diese Person nicht übernehmen kann.
 	Reassign(ctx context.Context, subject, taskID, memberID string) (string, error)
+	// Strike streicht eine Aufgabe für diese Woche oder plant sie wieder ein.
+	// Anders als das Abschalten einer Vorlage gilt das nur für diese Woche.
+	Strike(ctx context.Context, subject, taskID string, struck bool) error
 	// UpdateHousehold ändert die Einstellungen. Nur planende Personen.
 	UpdateHousehold(ctx context.Context, subject, id string, c planner.HouseholdChange) (planner.Household, error)
 	// UpdateMember ändert eine Person. Den eigenen Namen und die eigene Zeit
@@ -65,6 +69,20 @@ type Plans interface {
 	AddOwnTemplate(ctx context.Context, subject, id string, o planner.OwnTask) (planner.TaskTemplate, error)
 	// SetTemplateActive bestellt eine Vorlage ab oder wieder an.
 	SetTemplateActive(ctx context.Context, subject, id, templateID string, active bool) error
+	// SetAgreement schreibt das Wochenraster einer Vorlage: wer an welchem
+	// Wochentag, Index 0 ist Montag. Alle sieben Plätze auf einmal — ein halb
+	// gesetztes Raster wäre ein Zustand, den niemand gewollt hätte.
+	SetAgreement(ctx context.Context, subject, id, templateID string, raster [7]string) error
+	// ApplyAgreement trägt das Raster in die laufende Woche ein, ab heute.
+	// Nur diese Vorlage und nur dort, wo noch nichts geschehen ist — die
+	// Antwort sagt, wie viele Termine entstanden sind.
+	ApplyAgreement(ctx context.Context, subject, id, templateID string) (int, error)
+	// AddFeedback nimmt eine Rückmeldung entgegen. Jedes Mitglied darf melden,
+	// nicht nur die planenden — die ausführenden sehen zuerst, wo es klemmt.
+	AddFeedback(ctx context.Context, subject, id string, art planner.FeedbackKind, text, kontext string) error
+	// Feedback ist, was gemeldet wurde. Lesen dürfen nur die planenden: In der
+	// Liste stehen Sätze über andere Menschen im selben Haushalt.
+	Feedback(ctx context.Context, subject, id string) ([]planner.Feedback, error)
 	// Occasions sind die eingetragenen Anlässe des Haushalts.
 	Occasions(ctx context.Context, subject, id string) ([]planner.Occasion, error)
 	// AddOccasion trägt einen Anlass ein, RemoveOccasion löscht ihn.
@@ -337,6 +355,18 @@ func (a api) AcceptEinladung(ctx context.Context, r openapi.AcceptEinladungReque
 // Kern nichts zu suchen haben. Der Preis ist diese Übersetzung; sie steht an
 // einer Stelle und ist langweilig, und das ist genau richtig.
 
+// rang bringt die Zeitfenster in die Reihenfolge des Tages.
+func rang(s planner.Slot) int {
+	switch s {
+	case planner.SlotMorning:
+		return 0
+	case planner.SlotEvening:
+		return 2
+	default:
+		return 1
+	}
+}
+
 func planNachAussen(h planner.Household, r planner.Result, ich string, rolle planner.Role, mitBilanz bool, katalog *library.Facts) openapi.Wochenplan {
 	plan := openapi.Wochenplan{
 		Woche:    r.Week.String(),
@@ -357,12 +387,27 @@ func planNachAussen(h planner.Household, r planner.Result, ich string, rolle pla
 		plan.Bilanz = &[]openapi.Bilanz{}
 	}
 
+	if len(r.Struck) > 0 {
+		gestrichen := make([]openapi.Gestrichen, 0, len(r.Struck))
+		for _, g := range r.Struck {
+			gestrichen = append(gestrichen, openapi.Gestrichen{Id: g.ID, Titel: g.Title, Tag: g.Day.String()})
+		}
+		plan.Gestrichen = &gestrichen
+	}
+
 	// Fragen nur für Mitglieder — und nur zwei. Wer beim Öffnen vierzehn
 	// Fragen sieht, beantwortet keine; zwei mit sichtbarem Nutzen werden
 	// beantwortet. Dieselbe Überlegung wie bei der Startdichte.
 	if rolle == planner.RolePlanner {
 		fragen := []openapi.Frage{}
-		for _, id := range planner.OpenQuestions(r.Skipped, 2) {
+		// r.Open statt r.Skipped: Die Fragen sind eine Eigenschaft des
+		// Haushalts heute, nicht der Woche von gestern. Aus Skipped gelesen
+		// kam eine beantwortete Frage nach dem Neuladen wieder.
+		offen := r.Open
+		if len(offen) > 2 {
+			offen = offen[:2]
+		}
+		for _, id := range offen {
 			f, ok := katalog.Get(id)
 			if !ok {
 				// Ein Faktum ohne Frage wird nicht gefragt. Es bleibt
@@ -376,7 +421,34 @@ func planNachAussen(h planner.Household, r planner.Result, ich string, rolle pla
 		}
 	}
 
-	for _, t := range r.Tasks {
+	// Innerhalb eines Tages nach Zeitfenster: morgens, egal, abends.
+	//
+	// Bis hierher kam die Reihenfolge aus der Datenbank — `ORDER BY day, id`,
+	// und die Kennung ist eine zufällige UUID. In der Woche stand damit „Kita-
+	// Tasche packen (abends)" gern über „Zur Kita bringen (morgens)". Ein Tag,
+	// der sich nicht wie ein Tag liest, ist eine Liste.
+	//
+	// Hier und nicht in der Abfrage: Gerechnete Wochen — die Vorschau auf die
+	// nächste — kommen gar nicht aus der Datenbank. Zwei Wege, eine
+	// Reihenfolge; das ist die Stelle, an der sie sich treffen.
+	//
+	// Der Titel als letztes Kriterium macht die Ausgabe stabil: Ohne ihn
+	// tauschen zwei gleichrangige Aufgaben bei jedem Aufruf die Plätze, und
+	// ein Plan, der beim Neuladen springt, ist kein Plan (ADR-0008).
+	aufgaben := make([]planner.PlannedTask, len(r.Tasks))
+	copy(aufgaben, r.Tasks)
+	sort.SliceStable(aufgaben, func(i, j int) bool {
+		a, b := aufgaben[i], aufgaben[j]
+		if a.Day != b.Day {
+			return a.Day.Before(b.Day)
+		}
+		if rang(a.Slot) != rang(b.Slot) {
+			return rang(a.Slot) < rang(b.Slot)
+		}
+		return a.Title < b.Title
+	})
+
+	for _, t := range aufgaben {
 		aufgabe := openapi.Aufgabe{
 			VorlageId:   t.TemplateID,
 			Titel:       t.Title,
@@ -570,6 +642,32 @@ func (a api) AufgabeZuteilen(ctx context.Context, r openapi.AufgabeZuteilenReque
 	return openapi.AufgabeZuteilen200JSONResponse{Zustaendig: name}, nil
 }
 
+// AufgabeStreichen nimmt eine Aufgabe aus dieser Woche â oder holt sie zurÃ¼ck.
+func (a api) AufgabeStreichen(ctx context.Context, r openapi.AufgabeStreichenRequestObject) (openapi.AufgabeStreichenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.AufgabeStreichen403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	// Ohne Rumpf gilt „gestrichen". Das ist der Fall, den es gibt; das
+	// Zurückholen ist die Ausnahme und darf das Feld kosten — dieselbe
+	// Überlegung wie beim Abhaken.
+	gestrichen := true
+	if r.Body != nil && r.Body.Gestrichen != nil {
+		gestrichen = *r.Body.Gestrichen
+	}
+
+	switch err := a.plans.Strike(ctx, id.Subject, r.AufgabeId, gestrichen); {
+	case errors.Is(err, planner.ErrUnknownTask):
+		return openapi.AufgabeStreichen404JSONResponse{Fehler: "diese Aufgabe gibt es nicht"}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.AufgabeStreichen403JSONResponse{Fehler: "das ist nicht deine Aufgabe"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.AufgabeStreichen204Response{}, nil
+}
+
 // UpdateHaushalt ändert die Einstellungen eines Haushalts.
 func (a api) UpdateHaushalt(ctx context.Context, r openapi.UpdateHaushaltRequestObject) (openapi.UpdateHaushaltResponseObject, error) {
 	id, ok := auth.From(ctx)
@@ -746,6 +844,11 @@ func (a api) ListVorlagen(ctx context.Context, r openapi.ListVorlagenRequestObje
 			Kopflast:  int(v.Template.HeadLoad),
 			Aktiv:     v.Active,
 		}
+		// Wie oft sie vorkommt — gerechnet im Planer aus dem Rhythmus. Ohne
+		// das fehlt in der Liste die Zahl, die über den Aufwand entscheidet.
+		if wie := v.Template.Rhythm.Frequency(); wie != "" {
+			eintrag.Haeufigkeit = &wie
+		}
 		if v.Template.Source == planner.SourceHousehold {
 			eigene := true
 			eintrag.Eigene = &eigene
@@ -753,6 +856,19 @@ func (a api) ListVorlagen(ctx context.Context, r openapi.ListVorlagenRequestObje
 		if v.Reason != "" {
 			grund := openapi.VorlagenStandGrund(v.Reason)
 			eintrag.Grund = &grund
+		}
+		if v.Need != "" {
+			fehlt := v.Need
+			eintrag.Voraussetzung = &fehlt
+		}
+		// Absprache-Vorlagen: Das Raster geht mit hinaus, auch wenn es leer
+		// ist. Die Oberfläche braucht beides — dass abgesprochen werden muss,
+		// und was bisher abgesprochen wurde.
+		if v.Template.NeedsAgreement {
+			braucht := true
+			eintrag.BrauchtAbsprache = &braucht
+			raster := v.Agreement[:]
+			eintrag.Absprache = &raster
 		}
 		if v.Fact != "" {
 			faktum := v.Fact
@@ -788,6 +904,136 @@ func (a api) SetVorlage(ctx context.Context, r openapi.SetVorlageRequestObject) 
 		return nil, err
 	}
 	return openapi.SetVorlage204Response{}, nil
+}
+
+// SetAbsprache setzt das Wochenraster einer Vorlage.
+//
+// Alle sieben Plätze kommen zusammen herein. Der Vertrag erzwingt die Länge
+// nicht — `minItems` steht in der Spezifikation, aber der Generator macht
+// daraus eine gewöhnliche Liste. Also wird hier gezählt.
+func (a api) SetAbsprache(ctx context.Context, r openapi.SetAbspracheRequestObject) (openapi.SetAbspracheResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.SetAbsprache403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.SetAbsprache400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+	if len(r.Body.Wochentage) != 7 {
+		return openapi.SetAbsprache400JSONResponse{
+			Fehler: fmt.Sprintf("eine Woche hat sieben Tage, hier kamen %d", len(r.Body.Wochentage)),
+		}, nil
+	}
+
+	var raster [7]string
+	copy(raster[:], r.Body.Wochentage)
+
+	switch err := a.plans.SetAgreement(ctx, id.Subject, r.HaushaltId, r.VorlageId, raster); {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.SetAbsprache404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.SetAbsprache403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case errors.Is(err, planner.ErrUnknownMember):
+		return openapi.SetAbsprache400JSONResponse{Fehler: "diese Person gibt es im Haushalt nicht"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.SetAbsprache204Response{}, nil
+}
+
+// AbsprachAbHeute trägt die Absprache in die laufende Woche ein.
+func (a api) AbsprachAbHeute(ctx context.Context, r openapi.AbsprachAbHeuteRequestObject) (openapi.AbsprachAbHeuteResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.AbsprachAbHeute403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	anzahl, err := a.plans.ApplyAgreement(ctx, id.Subject, r.HaushaltId, r.VorlageId)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.AbsprachAbHeute404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.AbsprachAbHeute403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.AbsprachAbHeute200JSONResponse{Eingetragen: anzahl}, nil
+}
+
+// Melden nimmt eine Rückmeldung entgegen.
+func (a api) Melden(ctx context.Context, r openapi.MeldenRequestObject) (openapi.MeldenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.Melden403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.Melden400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+
+	kontext := ""
+	if r.Body.Kontext != nil {
+		kontext = *r.Body.Kontext
+	}
+
+	err := a.plans.AddFeedback(ctx, id.Subject, r.HaushaltId,
+		planner.FeedbackKind(r.Body.Art), r.Body.Text, kontext)
+	switch {
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.Melden400JSONResponse{Fehler: err.Error()}, nil
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.Melden404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.Melden403JSONResponse{Fehler: "dafür musst du zum Haushalt gehören"}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.Melden204Response{}, nil
+}
+
+// ListRueckmeldungen zeigt den planenden Personen, was gemeldet wurde.
+func (a api) ListRueckmeldungen(ctx context.Context, r openapi.ListRueckmeldungenRequestObject) (openapi.ListRueckmeldungenResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.ListRueckmeldungen403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+
+	liste, err := a.plans.Feedback(ctx, id.Subject, r.HaushaltId)
+	switch {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.ListRueckmeldungen404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.ListRueckmeldungen403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case err != nil:
+		return nil, err
+	}
+
+	out := openapi.ListRueckmeldungen200JSONResponse{}
+	for _, f := range liste {
+		eintrag := openapi.Rueckmeldung{
+			Id:         f.ID,
+			Art:        openapi.RueckmeldungArt(f.Kind),
+			Text:       f.Text,
+			GemeldetAm: f.At,
+		}
+		if f.Context != "" {
+			kontext := f.Context
+			eintrag.Kontext = &kontext
+		}
+		if f.Who != "" {
+			wer := f.Who
+			eintrag.Wer = &wer
+		}
+		out = append(out, eintrag)
+	}
+	return out, nil
 }
 
 func anlassNachAussen(o planner.Occasion) openapi.Anlass {
@@ -904,6 +1150,9 @@ func (a api) CreateEigeneVorlage(ctx context.Context, r openapi.CreateEigeneVorl
 	}
 	if r.Body.NurErwachsene != nil {
 		o.AdultsOnly = *r.Body.NurErwachsene
+	}
+	if r.Body.BrauchtAbsprache != nil {
+		o.NeedsAgreement = *r.Body.BrauchtAbsprache
 	}
 
 	vorlage, err := a.plans.AddOwnTemplate(ctx, id.Subject, r.HaushaltId, o)

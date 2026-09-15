@@ -57,6 +57,19 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 	var skipped []Skipped
 
 	for _, c := range cands {
+		// Abgesprochene Aufgaben verteilt der Planer nicht. Er sucht nur den
+		// Tag, an dem jemand eingetragen ist — und nimmt die Person, die dort
+		// steht, ohne Rotation und ohne Lastvergleich. Das ist der Sinn der
+		// Absprache: Sie weiß etwas, das der Planer nicht wissen kann.
+		if c.tmpl.NeedsAgreement {
+			if task, ok := ausAbsprache(in, states, c); ok {
+				tasks = append(tasks, task)
+			} else {
+				skipped = append(skipped, Skipped{TemplateID: c.tmpl.ID, Title: c.tmpl.Title, Code: SkipNeedsAgreement})
+			}
+			continue
+		}
+
 		eligible := eligibleMembers(c.tmpl, in)
 		// Gehört der Termin einer bestimmten Person, gibt es nichts zu wählen.
 		if c.pinned != "" {
@@ -112,6 +125,46 @@ func assign(in Input, cands []candidate) ([]PlannedTask, []Skipped) {
 		}
 	}
 	return tasks, skipped
+}
+
+// ausAbsprache legt einen Termin auf den ersten erlaubten Tag, für den jemand
+// eingetragen ist.
+//
+// Kein Lastvergleich, keine Rotation, keine Kapazitätsprüfung mit Rückfall:
+// Wer im Raster steht, macht es. Die Minuten werden trotzdem verbucht, damit
+// die Bilanz stimmt — eine Absprache ist Arbeit, und wer viel davon übernimmt,
+// bekommt vom Planer entsprechend weniger anderes.
+func ausAbsprache(in Input, states map[string]*state, c candidate) (PlannedTask, bool) {
+	for _, d := range c.days {
+		wer := in.History.agreedTo(c.tmpl.ID, weekdayIndex(d))
+		if wer == "" {
+			continue
+		}
+		st, ok := states[wer]
+		if !ok {
+			// Die abgesprochene Person gehört nicht (mehr) zum Haushalt oder
+			// führt nichts aus. Dann ist die Absprache veraltet, und das ist
+			// eine Frage an die Menschen, keine, die der Planer still löst.
+			continue
+		}
+		task := PlannedTask{
+			TemplateID:  c.tmpl.ID,
+			Title:       c.tmpl.Title,
+			Category:    c.tmpl.Category,
+			Kind:        c.tmpl.Kind,
+			Day:         d,
+			Slot:        slotOrDefault(c.tmpl.Slot),
+			DurationMin: c.tmpl.DurationMin,
+			HeadLoad:    c.tmpl.HeadLoad,
+			AssigneeID:  wer,
+			Failure:     c.tmpl.Failure,
+			Deadline:    c.deadline,
+			Reason:      Reason{Code: ReasonAgreed},
+		}
+		charge(st, d, task, in.Limits)
+		return task, true
+	}
+	return PlannedTask{}, false
 }
 
 func newStates(h Household) map[string]*state {

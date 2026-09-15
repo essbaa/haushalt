@@ -22,6 +22,42 @@ func (q *Queries) ClearAssignment(ctx context.Context, taskInstanceID pgtype.UUI
 	return err
 }
 
+const deleteUntouchedTemplateTasksFrom = `-- name: DeleteUntouchedTemplateTasksFrom :exec
+DELETE FROM task_instance t
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND t.template_id = $3
+  AND t.day >= $4
+  AND NOT EXISTS (SELECT 1 FROM event e WHERE e.task_instance_id = t.id)
+`
+
+type DeleteUntouchedTemplateTasksFromParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+	TemplateID  string
+	Day         pgtype.Date
+}
+
+// Wie DeleteUntouchedWeekTasks, aber auf eine Vorlage und ab einem Tag
+// eingegrenzt.
+//
+// Der Unterschied ist Absicht und nicht Sparsamkeit: Wer eine Absprache
+// einträgt, will diese eine Aufgabe in dieser Woche sehen — und nicht, dass
+// sich nebenbei umsortiert, wer am Freitag das Bad putzt. Ein Neurechnen der
+// ganzen Woche wäre für diesen Wunsch ein zu grobes Werkzeug.
+//
+// Vergangene Tage bleiben unangetastet: Ein Kita-Termin von gestern früh ist
+// keine Verabredung mehr, die man noch treffen könnte.
+func (q *Queries) DeleteUntouchedTemplateTasksFrom(ctx context.Context, arg DeleteUntouchedTemplateTasksFromParams) error {
+	_, err := q.db.Exec(ctx, deleteUntouchedTemplateTasksFrom,
+		arg.HouseholdID,
+		arg.ISOWeek,
+		arg.TemplateID,
+		arg.Day,
+	)
+	return err
+}
+
 const deleteUntouchedWeekTasks = `-- name: DeleteUntouchedWeekTasks :exec
 DELETE FROM task_instance t
 WHERE t.household_id = $1
@@ -318,6 +354,93 @@ func (q *Queries) ListDoneTasks(ctx context.Context, arg ListDoneTasksParams) ([
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStruckTasks = `-- name: ListStruckTasks :many
+SELECT DISTINCT ON (e.task_instance_id)
+    e.task_instance_id, e.member_id, e.occurred_at, e.kind
+FROM event e
+JOIN task_instance t ON t.id = e.task_instance_id
+WHERE t.household_id = $1
+  AND t.iso_week = $2
+  AND e.kind IN ('gestrichen', 'wieder_eingeplant')
+ORDER BY e.task_instance_id, e.occurred_at DESC, e.id DESC
+`
+
+type ListStruckTasksParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+}
+
+type ListStruckTasksRow struct {
+	TaskInstanceID pgtype.UUID
+	MemberID       pgtype.UUID
+	OccurredAt     pgtype.Timestamptz
+	Kind           string
+}
+
+// Welche Aufgaben dieser Woche gestrichen sind.
+//
+// Dieselbe Bauart wie ListDoneTasks, mit dem anderen Ereignispaar: Das
+// jüngste Ereignis je Aufgabe entscheidet, und `wieder_eingeplant` hebt
+// `gestrichen` auf. Gestrichen heißt: für DIESE Woche nicht — die Vorlage
+// bleibt unangetastet und ist nächste Woche wieder dran.
+func (q *Queries) ListStruckTasks(ctx context.Context, arg ListStruckTasksParams) ([]ListStruckTasksRow, error) {
+	rows, err := q.db.Query(ctx, listStruckTasks, arg.HouseholdID, arg.ISOWeek)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStruckTasksRow{}
+	for rows.Next() {
+		var i ListStruckTasksRow
+		if err := rows.Scan(
+			&i.TaskInstanceID,
+			&i.MemberID,
+			&i.OccurredAt,
+			&i.Kind,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTemplateTaskDays = `-- name: ListTemplateTaskDays :many
+SELECT day FROM task_instance
+WHERE household_id = $1 AND iso_week = $2 AND template_id = $3
+`
+
+type ListTemplateTaskDaysParams struct {
+	HouseholdID pgtype.UUID
+	ISOWeek     string
+	TemplateID  string
+}
+
+// Die Tage, an denen diese Vorlage in dieser Woche noch steht — nach dem
+// Verwerfen also die, an denen schon etwas geschehen ist.
+func (q *Queries) ListTemplateTaskDays(ctx context.Context, arg ListTemplateTaskDaysParams) ([]pgtype.Date, error) {
+	rows, err := q.db.Query(ctx, listTemplateTaskDays, arg.HouseholdID, arg.ISOWeek, arg.TemplateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Date{}
+	for rows.Next() {
+		var day pgtype.Date
+		if err := rows.Scan(&day); err != nil {
+			return nil, err
+		}
+		items = append(items, day)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

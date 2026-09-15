@@ -146,6 +146,11 @@ type OwnTask struct {
 
 	// AdultsOnly schränkt auf Erwachsene ein.
 	AdultsOnly bool
+
+	// NeedsAgreement: Muss festgelegt werden, wer wann? Dann verteilt der
+	// Planer nicht, sondern fordert ein Wochenraster ein — für alles, was am
+	// Arbeitsplan hängt statt an freier Zeit.
+	NeedsAgreement bool
 }
 
 // HeadLoad leitet die Kopflast aus den beiden Fragen ab.
@@ -204,14 +209,15 @@ func (o OwnTask) Template(id string) TaskTemplate {
 		dist = DistAdultsOnly
 	}
 	return TaskTemplate{
-		ID:           id,
-		Title:        o.Title,
-		Category:     o.Category,
-		Kind:         o.Kind(),
-		DurationMin:  o.DurationMin,
-		HeadLoad:     o.HeadLoad(),
-		Rhythm:       Rhythm{Type: RhythmWindow, EveryDays: o.EveryDays},
-		Distribution: dist,
+		ID:             id,
+		Title:          o.Title,
+		Category:       o.Category,
+		Kind:           o.Kind(),
+		DurationMin:    o.DurationMin,
+		HeadLoad:       o.HeadLoad(),
+		Rhythm:         Rhythm{Type: RhythmWindow, EveryDays: o.EveryDays},
+		Distribution:   dist,
+		NeedsAgreement: o.NeedsAgreement,
 		// Weich: Eine selbst angelegte Aufgabe bekommt keine harte Frist. Wer
 		// eine braucht, trägt einen Anlass ein — dafür gibt es Termine.
 		Failure: FailureSoft,

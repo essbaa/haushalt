@@ -114,6 +114,17 @@ func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week)
 	switch {
 	case err == nil:
 		r, err := p.geschriebeneWoche(ctx, haushalt, zeile.ID, week, vorlagen)
+		if err == nil {
+			// Die offenen Fragen kommen vom Haushalt, wie er JETZT ist, und
+			// nicht aus der eingefrorenen Liste der Woche. Sonst kommt eine
+			// beantwortete Frage nach dem Neuladen wieder — die Antwort hat
+			// den Haushalt geändert, nicht die Momentaufnahme.
+			hist, fehler := p.history(ctx, zeile.ID)
+			if fehler != nil {
+				return planner.Result{}, haushalt, fehler
+			}
+			r.Open = planner.OpenFacts(vorlagen, haushalt, hist, 0)
+		}
 		return r, haushalt, err
 	case !errors.Is(err, pgx.ErrNoRows):
 		return planner.Result{}, planner.Household{}, err
@@ -133,6 +144,7 @@ func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week)
 	if err != nil {
 		return planner.Result{}, haushalt, err
 	}
+	result.Open = planner.OpenFacts(vorlagen, haushalt, hist, 0)
 
 	dabei, err := p.istMitglied(ctx, subject, zeile.ID)
 	if err != nil {
@@ -170,10 +182,12 @@ func (p *Plans) Plan(ctx context.Context, subject, id string, week planner.Week)
 	if err := p.festschreiben(ctx, zeile.ID, week, result); err != nil {
 		return planner.Result{}, haushalt, err
 	}
+	offen := result.Open
 	// Noch einmal lesen statt das Gerechnete zurückzugeben: Erst jetzt haben
 	// die Aufgaben Kennungen, und im Wettlauf zweier erster Aufrufe steht hier
 	// das, was der Schnellere geschrieben hat.
 	r, err := p.geschriebeneWoche(ctx, haushalt, zeile.ID, week, vorlagen)
+	r.Open = offen
 	return r, haushalt, err
 }
 
@@ -361,6 +375,20 @@ func (p *Plans) history(ctx context.Context, haushalt pgtype.UUID) (planner.Hist
 		}
 	}
 
+	absprachen, err := p.db.ListAgreements(ctx, haushalt)
+	if err != nil {
+		return hist, err
+	}
+	hist.AgreedTo = map[string][7]string{}
+	for _, a := range absprachen {
+		if !a.MemberID.Valid || a.Weekday < 0 || a.Weekday > 6 {
+			continue
+		}
+		raster := hist.AgreedTo[a.TemplateID]
+		raster[a.Weekday] = formatUUID(a.MemberID)
+		hist.AgreedTo[a.TemplateID] = raster
+	}
+
 	signale, err := p.db.ListSignals(ctx, haushalt)
 	if err != nil {
 		return hist, err
@@ -463,6 +491,22 @@ func parseUUID(s string) (pgtype.UUID, bool) {
 //
 // Eine unbekannte Zeitzone ergibt UTC. Falsch zu rechnen ist besser, als
 // deshalb gar keinen Plan auszuliefern.
+// heuteIn ist der laufende Kalendertag in der Zeitzone des Haushalts.
+//
+// Dieselbe Rechnung wie in aktuelleWoche, nur einen Schritt kürzer: Für „ab
+// heute" zählt der Tag und nicht die Woche. Ein Aufruf kurz nach Mitternacht
+// in Frankfurt ist in UTC noch gestern — und träfe damit einen Tag, der
+// bereits vorbei ist.
+func heuteIn(zone string) planner.Date {
+	ort := time.UTC
+	if zone != "" {
+		if geladen, err := time.LoadLocation(zone); err == nil {
+			ort = geladen
+		}
+	}
+	return planner.DateOf(time.Now().In(ort))
+}
+
 func aktuelleWoche(zone string) planner.Week {
 	ort := time.UTC
 	if zone != "" {

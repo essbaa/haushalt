@@ -72,3 +72,23 @@ UPDATE household
 SET facts = facts || $2::jsonb
 WHERE id = $1
 RETURNING *;
+
+-- name: ListAgreements :many
+-- Das Wochenraster des Haushalts: je Vorlage und Wochentag eine Person.
+SELECT template_id, weekday, member_id
+FROM agreement
+WHERE household_id = $1
+ORDER BY template_id, weekday;
+
+-- name: SetAgreement :exec
+-- Einen Platz im Raster besetzen. Zweimal dasselbe zu setzen ist kein Fehler.
+INSERT INTO agreement (household_id, template_id, weekday, member_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (household_id, template_id, weekday)
+DO UPDATE SET member_id = EXCLUDED.member_id;
+
+-- name: ClearAgreementRow :exec
+-- Das ganze Raster einer Vorlage leeren — der erste Schritt beim Setzen einer
+-- kompletten Zeile. Sieben Plätze einzeln abzugleichen wäre sieben Abfragen
+-- und dieselbe Wirkung.
+DELETE FROM agreement WHERE household_id = $1 AND template_id = $2;

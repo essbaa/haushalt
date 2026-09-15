@@ -76,6 +76,19 @@ func recoverPanic(log *slog.Logger) middleware {
 // nicht im Code — du wirst sie mehrfach ändern. Und ein "*" ist nur so lange
 // harmlos, wie keine Anmeldedaten mitgeschickt werden; sobald Cookies oder
 // Tokens im Spiel sind, lehnt der Browser "*" ab.
+// erlaubteMethoden ist die Liste, die der Browser in der Vorabfrage bekommt.
+//
+// Sie muss jede Methode enthalten, die in openapi.yaml vorkommt — und sie ist
+// von Hand gepflegt, also genau die Sorte Liste, die hinter dem Vertrag
+// zurückbleibt. Genau das ist passiert: Die erste PUT-Route kam dazu, die
+// Vorabfrage antwortete brav mit 204 und ohne PUT, und der Browser brach
+// danach mit „Failed to fetch" ab — ohne Zeile im Protokoll des Dienstes, weil
+// die eigentliche Anfrage nie losgeschickt wurde.
+//
+// Ein Test in vertrag_test.go liest die Spezifikation und hält beides
+// zusammen.
+const erlaubteMethoden = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+
 func cors(allowed []string) middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +97,7 @@ func cors(allowed []string) middleware {
 			if origin != "" && slices.Contains(allowed, origin) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Methods", erlaubteMethoden)
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 				w.Header().Set("Access-Control-Max-Age", "86400")
 				// Antworten unterscheiden sich je nach Origin — sonst liefert

@@ -11,6 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearAgreementRow = `-- name: ClearAgreementRow :exec
+DELETE FROM agreement WHERE household_id = $1 AND template_id = $2
+`
+
+type ClearAgreementRowParams struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+}
+
+// Das ganze Raster einer Vorlage leeren — der erste Schritt beim Setzen einer
+// kompletten Zeile. Sieben Plätze einzeln abzugleichen wäre sieben Abfragen
+// und dieselbe Wirkung.
+func (q *Queries) ClearAgreementRow(ctx context.Context, arg ClearAgreementRowParams) error {
+	_, err := q.db.Exec(ctx, clearAgreementRow, arg.HouseholdID, arg.TemplateID)
+	return err
+}
+
 const createHousehold = `-- name: CreateHousehold :one
 INSERT INTO household (name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -105,6 +122,40 @@ func (q *Queries) GetHouseholdBySlug(ctx context.Context, slug *string) (Househo
 		&i.Baths,
 	)
 	return i, err
+}
+
+const listAgreements = `-- name: ListAgreements :many
+SELECT template_id, weekday, member_id
+FROM agreement
+WHERE household_id = $1
+ORDER BY template_id, weekday
+`
+
+type ListAgreementsRow struct {
+	TemplateID string
+	Weekday    int32
+	MemberID   pgtype.UUID
+}
+
+// Das Wochenraster des Haushalts: je Vorlage und Wochentag eine Person.
+func (q *Queries) ListAgreements(ctx context.Context, householdID pgtype.UUID) ([]ListAgreementsRow, error) {
+	rows, err := q.db.Query(ctx, listAgreements, householdID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAgreementsRow{}
+	for rows.Next() {
+		var i ListAgreementsRow
+		if err := rows.Scan(&i.TemplateID, &i.Weekday, &i.MemberID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listDemoHouseholds = `-- name: ListDemoHouseholds :many
@@ -227,6 +278,31 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 		return nil, err
 	}
 	return items, nil
+}
+
+const setAgreement = `-- name: SetAgreement :exec
+INSERT INTO agreement (household_id, template_id, weekday, member_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (household_id, template_id, weekday)
+DO UPDATE SET member_id = EXCLUDED.member_id
+`
+
+type SetAgreementParams struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	Weekday     int32
+	MemberID    pgtype.UUID
+}
+
+// Einen Platz im Raster besetzen. Zweimal dasselbe zu setzen ist kein Fehler.
+func (q *Queries) SetAgreement(ctx context.Context, arg SetAgreementParams) error {
+	_, err := q.db.Exec(ctx, setAgreement,
+		arg.HouseholdID,
+		arg.TemplateID,
+		arg.Weekday,
+		arg.MemberID,
+	)
+	return err
 }
 
 const setFacts = `-- name: SetFacts :one

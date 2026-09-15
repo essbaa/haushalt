@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Agreement struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	Weekday     int32
+	MemberID    pgtype.UUID
+}
+
 type Assignment struct {
 	ID             pgtype.UUID
 	TaskInstanceID pgtype.UUID
@@ -26,6 +33,16 @@ type Event struct {
 	Kind           string
 	Payload        []byte
 	OccurredAt     pgtype.Timestamptz
+}
+
+type Feedback struct {
+	ID          pgtype.UUID
+	HouseholdID pgtype.UUID
+	MemberID    pgtype.UUID
+	Art         string
+	Text        string
+	Kontext     string
+	CreatedAt   pgtype.Timestamptz
 }
 
 type Household struct {

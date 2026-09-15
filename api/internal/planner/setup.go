@@ -286,3 +286,25 @@ func OpenQuestions(skipped []Skipped, max int) []string {
 	}
 	return fakten
 }
+
+// OpenFacts sind die Fakten, die heute unbeantwortet sind und mindestens eine
+// Vorlage freischalten würden — häufigste zuerst.
+//
+// Der Unterschied zu OpenQuestions ist die Quelle, und er ist der ganze Punkt:
+// OpenQuestions liest die übersprungenen Vorlagen EINER Woche. Bei einer
+// festgeschriebenen Woche ist das eine Momentaufnahme von damals — wer eine
+// Frage beantwortet, ändert den Haushalt und nicht die Momentaufnahme, und
+// bekam nach dem Neuladen dieselbe Frage noch einmal.
+//
+// Offene Fragen sind eine Eigenschaft des Haushalts heute. Also werden sie am
+// Haushalt gerechnet.
+func OpenFacts(templates []TaskTemplate, h Household, hist History, max int) []string {
+	var offen []Skipped
+	for _, t := range templates {
+		code, faktum, _ := Status(t, h, hist)
+		if code == SkipUnknown && faktum != "" {
+			offen = append(offen, Skipped{TemplateID: t.ID, Title: t.Title, Code: code, Fact: faktum})
+		}
+	}
+	return OpenQuestions(offen, max)
+}

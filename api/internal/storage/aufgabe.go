@@ -265,6 +265,36 @@ func (p *Plans) Reassign(ctx context.Context, subject, aufgabeID, mitgliedID str
 	return name, nil
 }
 
+// Strike streicht eine Aufgabe für diese Woche — oder plant sie wieder ein.
+//
+// Der Unterschied zu „Brauchen wir nicht" ist die Reichweite, und er ist der
+// ganze Grund für diese Funktion: Das Abschalten einer Vorlage gilt für alle
+// künftigen Wochen, das hier nur für diese eine. Bis es das gab, war der
+// einzige Ausweg aus einer Aufgabe eine Entscheidung über die Zukunft — und
+// ein Fehlgriff nahm dem Haushalt eine Vorlage weg, die er eigentlich wollte.
+//
+// Geschrieben wird ein Ereignis, keine Spalte. Wie bei „erledigt": Nur das
+// Protokoll kann erzählen, dass jemand es sich anders überlegt hat.
+func (p *Plans) Strike(ctx context.Context, subject, aufgabeID string, gestrichen bool) error {
+	aufgabe, err := p.zustaendig(ctx, subject, aufgabeID)
+	if err != nil {
+		return err
+	}
+
+	art := "gestrichen"
+	if !gestrichen {
+		art = "wieder_eingeplant"
+	}
+	_, err = p.db.AppendEvent(ctx, db.AppendEventParams{
+		HouseholdID:    aufgabe.HouseholdID,
+		MemberID:       aufgabe.MemberID,
+		TaskInstanceID: aufgabe.ID,
+		Kind:           art,
+		Payload:        []byte(`{}`),
+	})
+	return err
+}
+
 // zustaendig holt die Aufgabe und prüft in einem Zug, ob dieser Aufrufer sie
 // anfassen darf.
 //

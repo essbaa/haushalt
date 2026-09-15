@@ -41,6 +41,7 @@ type templateDTO struct {
 	MinAge      int          `json:"ab_alter" yaml:"ab_alter"`
 	Dist        string       `json:"verteilung" yaml:"verteilung"`
 	PerPerson   bool         `json:"je_person" yaml:"je_person"`
+	NeedsAgree  bool         `json:"braucht_absprache" yaml:"braucht_absprache"`
 	AppliesTo   conditionDTO `json:"gilt_fuer" yaml:"gilt_fuer"`
 	ChainNext   []string     `json:"kette" yaml:"kette"`
 	Failure     string       `json:"ausfall" yaml:"ausfall"`
@@ -159,23 +160,24 @@ func (d templateDTO) toTemplate() (planner.TaskTemplate, error) {
 	cond.RequiresEvent = d.BenoetigtTermin
 
 	return planner.TaskTemplate{
-		ID:           d.ID,
-		Title:        d.Title,
-		Category:     planner.Category(d.Category),
-		Kind:         kind,
-		DurationMin:  d.DurationMin,
-		HeadLoad:     planner.HeadLoad(d.HeadLoad),
-		Rhythm:       rhythm,
-		LeadDays:     d.LeadDays,
-		Slot:         parseSlot(d.Slot),
-		MinAge:       d.MinAge,
-		Distribution: dist,
-		PerPerson:    d.PerPerson,
-		AppliesTo:    cond,
-		ChainNext:    d.ChainNext,
-		ScalesWith:   planner.Scale(d.Skaliert),
-		Failure:      parseFailure(d.Failure),
-		Source:       parseSource(d.Source),
+		ID:             d.ID,
+		Title:          d.Title,
+		Category:       planner.Category(d.Category),
+		Kind:           kind,
+		DurationMin:    d.DurationMin,
+		HeadLoad:       planner.HeadLoad(d.HeadLoad),
+		Rhythm:         rhythm,
+		LeadDays:       d.LeadDays,
+		Slot:           parseSlot(d.Slot),
+		MinAge:         d.MinAge,
+		Distribution:   dist,
+		PerPerson:      d.PerPerson,
+		NeedsAgreement: d.NeedsAgree,
+		AppliesTo:      cond,
+		ChainNext:      d.ChainNext,
+		ScalesWith:     planner.Scale(d.Skaliert),
+		Failure:        parseFailure(d.Failure),
+		Source:         parseSource(d.Source),
 	}, nil
 }
 
@@ -517,11 +519,12 @@ func MarshalTemplate(t planner.TaskTemplate) ([]byte, error) {
 			Type:      string(t.Rhythm.Type),
 			EveryDays: t.Rhythm.EveryDays,
 		},
-		MinAge:   t.MinAge,
-		Dist:     string(t.Distribution),
-		Skaliert: string(t.ScalesWith),
-		Failure:  string(t.Failure),
-		Source:   string(t.Source),
+		MinAge:     t.MinAge,
+		NeedsAgree: t.NeedsAgreement,
+		Dist:       string(t.Distribution),
+		Skaliert:   string(t.ScalesWith),
+		Failure:    string(t.Failure),
+		Source:     string(t.Source),
 	}
 	for _, w := range t.Rhythm.Weekdays {
 		d.Rhythm.Weekdays = append(d.Rhythm.Weekdays, wochentagName(w))

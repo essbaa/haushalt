@@ -53,6 +53,17 @@ func Handover(in Input, tasks []PlannedTask, taskID string) (string, Reason, boo
 		return "", Reason{}, false
 	}
 
+	// Abgesprochenes gibt der Planer nicht weiter. Wer einspringen kann, hängt
+	// am Arbeitsplan und nicht an freien Minuten (ADR-0016) — die Aufgabe
+	// bliebe formal besetzt und wäre in Wahrheit unbesetzt.
+	//
+	// Sie steht danach offen da, und das ist hier die ehrliche Antwort: eine
+	// sichtbare Lücke, die ein Mensch schließt. „Wer macht das?" verteilt sie
+	// gezielt (ADR-0013), und für den einen Tag reicht das.
+	if vorlage.NeedsAgreement {
+		return "", Reason{}, false
+	}
+
 	last := BalanceOf(in.Household, tasks, in.Limits)
 	auslastung := make(map[string]int, len(last))
 	for _, b := range last {

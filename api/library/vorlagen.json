@@ -1175,6 +1175,56 @@
       "ab_alter": 14,
       "ausfall": "weich",
       "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kita-bringen",
+      "titel": "Zur Kita bringen",
+      "kategorie": "kind",
+      "art": "ausfuehrung",
+      "dauer_min": 25,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ]
+      },
+      "zeitfenster": "morgens",
+      "gilt_fuer": {
+        "betreuung": "kita"
+      },
+      "braucht_absprache": true,
+      "ausfall": "hart",
+      "quelle": "kuratiert"
+    },
+    {
+      "id": "t-kita-abholen",
+      "titel": "Von der Kita abholen",
+      "kategorie": "kind",
+      "art": "ausfuehrung",
+      "dauer_min": 25,
+      "kopflast": 1,
+      "rhythmus": {
+        "typ": "fest",
+        "wochentage": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ]
+      },
+      "zeitfenster": "abends",
+      "gilt_fuer": {
+        "betreuung": "kita"
+      },
+      "braucht_absprache": true,
+      "ausfall": "hart",
+      "quelle": "kuratiert"
     }
   ]
 }

@@ -13,7 +13,10 @@
 // Es berührt die Berechnung nicht.
 package planner
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ---------------------------------------------------------------- Haushalt
 
@@ -395,6 +398,20 @@ type TaskTemplate struct {
 	// ChainNext sind Folgeaufgaben: waschen → aufhängen → zusammenlegen.
 	ChainNext []string
 
+	// NeedsAgreement sagt: Diese Aufgabe verteilt der Planer nicht, sie wird
+	// abgesprochen.
+	//
+	// Der Fall, der sie nötig macht: Ein Kind in die Kita bringen und wieder
+	// abholen. Der Planer verteilt nach **Kapazität** — wie viel Zeit jemand
+	// hat. Gebraucht wird **Verfügbarkeit** — ob jemand um 7:45 an einem
+	// bestimmten Ort sein kann. Das sind verschiedene Größen, und die App
+	// kennt nur die erste. Ohne Absprache teilt sie mit voller Überzeugung
+	// den Elternteil ein, der um acht eine Besprechung hat.
+	//
+	// Fehlt die Absprache, wird die Aufgabe nicht geraten, sondern gefragt —
+	// dieselbe Regel wie bei unbekannten Fakten (ADR-0010), eine Ebene höher.
+	NeedsAgreement bool
+
 	Failure Failure
 	Source  Source
 }
@@ -416,9 +433,124 @@ type History struct {
 	// FixedTo bindet eine Vorlage dauerhaft an eine Person
 	// (Distribution == DistFixed).
 	FixedTo map[string]string
+
+	// AgreedTo ist die Absprache: je Vorlage eine Person pro Wochentag,
+	// Index 0 = Montag, leer = keine Absprache für diesen Tag.
+	//
+	// Der Unterschied zu FixedTo ist der Wochentag — und genau der ist der
+	// Fall: „Ich bringe montags und mittwochs, du dienstags und donnerstags."
+	// Eine Vorlage dauerhaft an eine Person zu binden trifft das nicht.
+	//
+	// Die Absprache gilt, bis jemand sie ändert. Damit ist „diese Woche wie
+	// letzte" der Normalfall und braucht keinen Knopf; eine einzelne Ausnahme
+	// ist Umverteilen und betrifft nur den einen Termin.
+	AgreedTo map[string][7]string
 }
 
 func (h History) lastDone(templateID string) Date  { return h.LastDone[templateID] }
 func (h History) lastAssignee(id string) string    { return h.LastAssignee[id] }
 func (h History) isMuted(templateID string) bool   { return h.Muted[templateID] }
 func (h History) fixedTo(templateID string) string { return h.FixedTo[templateID] }
+
+// agreedTo liefert die abgesprochene Person für diese Vorlage an diesem
+// Wochentag — leer, wenn nichts abgesprochen ist.
+func (h History) agreedTo(templateID string, wochentag int) string {
+	raster, ok := h.AgreedTo[templateID]
+	if !ok || wochentag < 0 || wochentag > 6 {
+		return ""
+	}
+	return raster[wochentag]
+}
+
+// Agreement liefert das ganze Raster einer Vorlage — für die Übersicht, die
+// es zum Bearbeiten anzeigt.
+func (h History) Agreement(templateID string) [7]string { return h.AgreedTo[templateID] }
+
+// hasAgreement sagt, ob für diese Vorlage überhaupt etwas abgesprochen ist.
+func (h History) hasAgreement(templateID string) bool {
+	for _, wer := range h.AgreedTo[templateID] {
+		if wer != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// Frequency ist ein Satz darüber, wie oft eine Vorlage vorkommt — für
+// Menschen, nicht für den Planer.
+//
+// Die Aufgabenliste zeigte bis hierher Dauer und Kopflast und verschwieg die
+// Häufigkeit. Damit fehlte die Zahl, die über den Aufwand entscheidet:
+// „Abendessen kochen, 40 Minuten" ist etwas anderes, wenn es dreimal die Woche
+// dran ist. Wer abschalten will, was zu viel ist, muss das sehen können.
+//
+// Gerechnet wird hier und nicht in der Oberfläche — dieselbe Regel wie bei
+// BudgetOf: Welche Zahlen ein Rhythmus bedeutet, weiß genau eine Stelle im
+// System. Eine nachgebaute Übersetzung wäre eine zweite Wahrheit.
+func (r Rhythm) Frequency() string {
+	switch r.Type {
+	case RhythmFixed:
+		switch len(r.Weekdays) {
+		case 0:
+			return ""
+		case 1:
+			return wochentag(r.Weekdays[0]) + "s"
+		case 7:
+			return "täglich"
+		default:
+			return fmt.Sprintf("%d× pro Woche", len(r.Weekdays))
+		}
+
+	case RhythmSeason:
+		if len(r.Months) == 0 {
+			return "jährlich"
+		}
+		if len(r.Months) == 1 {
+			return "jährlich im " + monat(r.Months[0])
+		}
+		return fmt.Sprintf("jährlich, %d Monate", len(r.Months))
+
+	case RhythmWindow, RhythmTrigger, RhythmPhase:
+		return abstandInWorten(r.EveryDays)
+	}
+	return ""
+}
+
+// abstandInWorten übersetzt einen Abstand in Tagen in einen Satz.
+//
+// Die Sprünge sind bewusst grob: „alle 9 Tage" ist eine Genauigkeit, die die
+// Schätzung dahinter nicht hergibt (siehe DefaultLimits — die Zahlen sind
+// geraten und gehören kalibriert).
+func abstandInWorten(tage int) string {
+	switch {
+	case tage <= 0:
+		return ""
+	case tage == 1:
+		return "täglich"
+	case tage <= 3:
+		return fmt.Sprintf("%d× pro Woche", 7/tage)
+	case tage <= 8:
+		return "wöchentlich"
+	case tage <= 20:
+		return "alle zwei Wochen"
+	case tage <= 45:
+		return "monatlich"
+	case tage <= 100:
+		return "alle drei Monate"
+	case tage <= 200:
+		return "halbjährlich"
+	default:
+		return "jährlich"
+	}
+}
+
+func wochentag(d time.Weekday) string {
+	return [...]string{"sonntag", "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag"}[d]
+}
+
+func monat(m time.Month) string {
+	return [...]string{
+		"", "Januar", "Februar", "März", "April", "Mai", "Juni",
+		"Juli", "August", "September", "Oktober", "November", "Dezember",
+	}[m]
+}

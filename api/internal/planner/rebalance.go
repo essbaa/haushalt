@@ -145,6 +145,21 @@ func swapAllowed(in Input, templates map[string]TaskTemplate, tasks []PlannedTas
 		return false
 	}
 
+	// Abgesprochenes tauscht der Ausgleich nicht.
+	//
+	// Er rechnet mit Kapazität — mit Zeit, die jemand hat. Eine Absprache
+	// steht da, weil genau diese Größe hier nicht entscheidet (ADR-0016). Ein
+	// Tausch würde die Zahlen verbessern und die Aussage zerstören: Im Plan
+	// stünde am Montag jemand, der um 7:45 gar nicht dort sein kann, und
+	// daneben als Begründung „zum Ausgleich" — eine Behauptung über eine
+	// Vereinbarung, die niemand getroffen hat.
+	//
+	// Verbucht bleibt die Last trotzdem. Der Ausgleich steuert also weiter
+	// gegen, nur an den Aufgaben, bei denen er es darf.
+	if ta.NeedsAgreement || tb.NeedsAgreement {
+		return false
+	}
+
 	// Eignung: Alters- und Rollenregeln gelten nach dem Tausch wie davor.
 	if !eligibleFor(in, ta, b.AssigneeID) || !eligibleFor(in, tb, a.AssigneeID) {
 		return false

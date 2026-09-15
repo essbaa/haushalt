@@ -44,6 +44,10 @@ func (fakePlans) HandOver(context.Context, string, string, string) (string, erro
 	return "", planner.ErrUnknownTask
 }
 
+func (fakePlans) Strike(context.Context, string, string, bool) error {
+	return planner.ErrUnknownTask
+}
+
 func (fakePlans) Reassign(context.Context, string, string, string) (string, error) {
 	return "", planner.ErrUnknownTask
 }
@@ -347,6 +351,22 @@ func (fakePlans) TemplatesFor(context.Context, string, string) ([]planner.Templa
 
 func (fakePlans) SetTemplateActive(context.Context, string, string, string, bool) error {
 	return planner.ErrNotAllowed
+}
+
+func (fakePlans) SetAgreement(context.Context, string, string, string, [7]string) error {
+	return planner.ErrNotAllowed
+}
+
+func (fakePlans) ApplyAgreement(context.Context, string, string, string) (int, error) {
+	return 0, planner.ErrNotAllowed
+}
+
+func (fakePlans) AddFeedback(context.Context, string, string, planner.FeedbackKind, string, string) error {
+	return planner.ErrNotAllowed
+}
+
+func (fakePlans) Feedback(context.Context, string, string) ([]planner.Feedback, error) {
+	return nil, planner.ErrNotAllowed
 }
 
 func (fakePlans) Occasions(context.Context, string, string) ([]planner.Occasion, error) {

@@ -110,6 +110,10 @@ func (c *Catalog) HandOver(context.Context, string, string, string) (string, err
 	return "", planner.ErrUnknownTask
 }
 
+func (c *Catalog) Strike(context.Context, string, string, bool) error {
+	return planner.ErrUnknownTask
+}
+
 func (c *Catalog) Reassign(context.Context, string, string, string) (string, error) {
 	return "", planner.ErrUnknownTask
 }
@@ -167,6 +171,22 @@ func (c *Catalog) TemplatesFor(context.Context, string, string) ([]planner.Templ
 
 func (c *Catalog) SetTemplateActive(context.Context, string, string, string, bool) error {
 	return planner.ErrNotAllowed
+}
+
+func (c *Catalog) SetAgreement(context.Context, string, string, string, [7]string) error {
+	return planner.ErrNotAllowed
+}
+
+func (c *Catalog) ApplyAgreement(context.Context, string, string, string) (int, error) {
+	return 0, planner.ErrNotAllowed
+}
+
+func (c *Catalog) AddFeedback(context.Context, string, string, planner.FeedbackKind, string, string) error {
+	return planner.ErrNotAllowed
+}
+
+func (c *Catalog) Feedback(context.Context, string, string) ([]planner.Feedback, error) {
+	return nil, planner.ErrNotAllowed
 }
 
 func (c *Catalog) Occasions(context.Context, string, string) ([]planner.Occasion, error) {

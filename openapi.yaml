@@ -459,6 +459,234 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/haushalte/{haushaltId}/absprachen/{vorlageId}:
+    put:
+      tags: [haushalt]
+      summary: Wochenraster einer Vorlage setzen
+      description: |
+        Wer an welchem Wochentag. Alle sieben Plätze auf einmal, Index 0 ist
+        Montag; ein leerer Eintrag heißt „für diesen Tag ist nichts
+        abgesprochen".
+
+        **Der Planer verteilt diese Aufgaben nicht.** Er verteilt nach
+        Kapazität — wie viel Zeit jemand hat. Wer ein Kind um 7:45 in die Kita
+        bringen kann, hängt dagegen am Arbeitsplan, und den kennt die App
+        nicht. Ohne Absprache würde sie mit voller Überzeugung den Falschen
+        einteilen; deshalb wird hier nicht geraten, sondern gefragt.
+
+        Die Absprache gilt, bis jemand sie ändert — „diese Woche wie letzte"
+        ist damit der Normalfall. Eine einzelne Ausnahme ist `zuteilen` und
+        betrifft nur den einen Termin.
+
+        Nur planende Personen: Eine Absprache ist eine Vereinbarung über andere
+        Menschen.
+      operationId: setAbsprache
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vorlageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wochentage]
+              properties:
+                wochentage:
+                  type: array
+                  minItems: 7
+                  maxItems: 7
+                  items:
+                    type: string
+                  description: |
+                    Sieben Kennungen von Mitgliedern, Index 0 = Montag. Leerer
+                    Text heißt: für diesen Tag ist nichts abgesprochen.
+      responses:
+        "204":
+          description: gesetzt
+        "400":
+          description: so geht das nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute:
+    post:
+      tags: [haushalt]
+      summary: Die Absprache in die laufende Woche eintragen
+      description: |
+        Die laufende Woche steht fest, sobald sie das erste Mal angesehen
+        wurde. Eine frisch gesetzte Absprache gilt deshalb ab der **nächsten**
+        Woche von selbst — dieser Aufruf ist der Handgriff für „ab sofort".
+
+        Er trägt **nur diese Vorlage** ein und **nur ab heute**. Bewusst nicht
+        `plan/{woche}/neu`: Das Neurechnen verteilt die ganze Woche neu, und
+        wer am Mittwoch eine Kita-Absprache einträgt, bekäme nebenbei eine
+        neue Antwort darauf, wer am Freitag das Bad putzt. Ein Plan, der sich
+        an Stellen ändert, die niemand angefasst hat, ist der Plan, dem
+        niemand mehr glaubt.
+
+        Was Spuren hinterlassen hat — abgehakt, abgegeben, gestrichen —,
+        bleibt stehen. Vergangene Tage bleiben unberührt.
+
+        Nur planende Personen.
+      operationId: absprachAbHeute
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vorlageId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: eingetragen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [eingetragen]
+                properties:
+                  eingetragen:
+                    type: integer
+                    description: |
+                      Wie viele Termine entstanden sind. Null ist eine gültige
+                      Antwort: An den verbleibenden Tagen steht schon etwas,
+                      oder das Raster trifft in dieser Woche keinen fälligen
+                      Tag mehr. Die Zahl geht mit hinaus, damit die Oberfläche
+                      genau das sagen kann, statt „fertig" zu melden und
+                      nichts zu zeigen.
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
+  /api/haushalte/{haushaltId}/rueckmeldungen:
+    get:
+      tags: [haushalt]
+      summary: Was der Haushalt gemeldet hat
+      description: |
+        Nur planende Personen. Melden darf jedes Mitglied, lesen nicht: In der
+        Liste stehen Sätze über andere Menschen im selben Haushalt, und die
+        gehören nicht an jede Pinnwand.
+      operationId: listRueckmeldungen
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: die letzten fünfzig
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rueckmeldung"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+    post:
+      tags: [haushalt]
+      summary: Etwas melden
+      description: |
+        **Jedes Mitglied darf melden, nicht nur die planenden.** Die
+        ausführenden Personen sehen die Stellen, an denen es klemmt, zuerst —
+        sie bekommen den Plan, den sie nicht gemacht haben. Eine Meldefunktion
+        nur für Planende meldet, was der Planende ohnehin weiß.
+
+        `kontext` sammelt die Oberfläche selbst — Seite, Woche, Fassung. Wer
+        erst beschreiben muss, wo er gerade war, meldet nichts.
+      operationId: melden
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [art, text]
+              properties:
+                art:
+                  type: string
+                  enum: [fehler, idee, stoert]
+                text:
+                  type: string
+                  maxLength: 2000
+                kontext:
+                  type: string
+                  maxLength: 500
+      responses:
+        "204":
+          description: angekommen
+        "400":
+          description: so geht das nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: dafür musst du zum Haushalt gehören
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/haushalte/{haushaltId}/anlaesse:
     get:
       tags: [haushalt]
@@ -775,6 +1003,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/aufgaben/{aufgabeId}/streichen:
+    post:
+      tags: [plan]
+      summary: Einen einzelnen Termin streichen
+      description: |
+        Nimmt **diesen einen Termin** aus dem Plan. Die Vorlage bleibt
+        unangetastet, und ihre übrigen Termine derselben Woche auch: Kommt
+        „Safiya zur Kita bringen" fünfmal vor, streicht das hier genau einen
+        Tag.
+
+        Der Unterschied zum Abschalten einer Vorlage ist die Reichweite, und er
+        ist der Grund für diesen Endpunkt: Abschalten gilt für alle künftigen
+        Wochen. Bis es das Streichen gab, war der einzige Ausweg aus einer
+        Aufgabe eine Entscheidung über die Zukunft — und ein Fehlgriff nahm
+        dem Haushalt eine Vorlage weg, die er eigentlich wollte.
+
+        Gestrichenes verschwindet aus dem Plan und aus der Bilanz; es steht als
+        `gestrichen` in der Antwort, damit die App einen Weg zurück anbieten
+        kann.
+
+        Erlaubt ist es der zuständigen Person und jeder planenden.
+      operationId: aufgabeStreichen
+      parameters:
+        - name: aufgabeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gestrichen:
+                  type: boolean
+                  description: |
+                    Fehlt das Feld, gilt „gestrichen". `false` plant die
+                    Aufgabe wieder ein.
+      responses:
+        "204":
+          description: eingetragen
+        "403":
+          description: das ist nicht deine Aufgabe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: diese Aufgabe gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/aufgaben/{aufgabeId}/zuteilen:
     post:
       tags: [plan]
@@ -1028,6 +1312,24 @@ components:
             „keine", egal was hier steht — sie erzeugen Arbeit und übernehmen
             keine.
 
+    Gestrichen:
+      type: object
+      required: [id, titel, tag]
+      properties:
+        id:
+          type: string
+        titel:
+          type: string
+          example: Bad putzen
+        tag:
+          type: string
+          format: date
+          x-go-type: string
+          description: |
+            Der Tag, an dem sie angestanden hätte. Er gehört dazu, weil
+            gestrichen wird, was an EINEM Tag ansteht — eine Vorlage kann
+            mehrfach in der Woche vorkommen.
+
     Zuteilung:
       type: object
       required: [zustaendig]
@@ -1144,6 +1446,45 @@ components:
           type: integer
         kopflast:
           type: integer
+        braucht_absprache:
+          type: boolean
+          description: |
+            Diese Aufgabe verteilt der Planer nicht — sie wird abgesprochen.
+            Ohne Raster taucht sie mit dem Grund `braucht_absprache` auf.
+        absprache:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items:
+            type: string
+          description: |
+            Das Wochenraster, Index 0 = Montag. Leerer Text heißt: für diesen
+            Tag ist nichts abgesprochen.
+        voraussetzung:
+          type: string
+          description: |
+            Bei `gilt_nicht`: die fehlende Bedingung als Satz — „Braucht ein
+            Kind, das zur Schule geht." Fehlt, wenn ein verneintes Faktum die
+            Ursache ist; dann steht in `frage`, was noch einmal zu fragen
+            wäre.
+
+            Gerechnet im Planer, der die Bedingung ohnehin prüft. Vorher stand
+            in der Liste nur „gilt bei euch nicht" und daneben eine
+            Aufzählung aller denkbaren Ursachen — eine Andeutung statt einer
+            Auskunft.
+          example: Braucht ein Kind, das zur Schule geht.
+        haeufigkeit:
+          type: string
+          description: |
+            Wie oft sie vorkommt, als Satz: „täglich", „3× pro Woche",
+            „wöchentlich", „jährlich im Oktober".
+
+            Gerechnet im Planer aus dem Rhythmus, nicht in der Oberfläche
+            nachgebaut — dieselbe Regel wie bei `Mitglied.zeit`. Ohne diese
+            Angabe fehlte in der Liste die Zahl, die über den Aufwand
+            entscheidet: „Abendessen kochen, 40 Minuten" ist etwas anderes,
+            wenn es dreimal die Woche dran ist.
+          example: 3× pro Woche
         aktiv:
           type: boolean
           description: Ob sie in künftigen Plänen vorkommen kann.
@@ -1165,6 +1506,7 @@ components:
               niemand_geeignet,
               unbekannt,
               braucht_termin,
+              braucht_absprache,
             ]
           description: Warum sie nicht gilt. Fehlt, wenn sie gilt.
         faktum:
@@ -1262,6 +1604,16 @@ components:
             erinnert.
         nur_erwachsene:
           type: boolean
+        braucht_absprache:
+          type: boolean
+          description: |
+            „Muss festgelegt werden, wer wann?" Dann verteilt der Planer die
+            Aufgabe nicht, sondern fordert ein Wochenraster ein.
+
+            Für alles, was am Arbeitsplan hängt statt an freier Zeit — ein
+            Kind bringen oder abholen, ein Termin, zu dem jemand hin muss. Der
+            Planer kennt die Kapazität und nicht den Kalender; ohne Absprache
+            teilt er mit voller Überzeugung den Falschen ein.
 
     Frage:
       type: object
@@ -1397,6 +1749,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Aufgabe"
+        gestrichen:
+          type: array
+          description: |
+            Einzelne Termine, die jemand gestrichen hat — nicht Vorlagen. Aus
+            Plan und Bilanz sind sie raus; hier stehen sie, damit die App einen
+            Weg zurück anbieten kann. Eine Zeile, die wortlos verschwindet,
+            lässt jemanden, der sich vertippt hat, ohne Rückweg.
+          items:
+            $ref: "#/components/schemas/Gestrichen"
         meine_rolle:
           type: string
           enum: [planend, ausfuehrend, betreut]
@@ -1512,7 +1873,7 @@ components:
         code:
           type: string
           enum:
-            [rotation, ausgleich, feste_person, einzige_moeglichkeit, frist, eigene_aufgabe, von_hand]
+            [rotation, ausgleich, feste_person, einzige_moeglichkeit, frist, eigene_aufgabe, von_hand, absprache]
         zuletzt_bei:
           type: string
           nullable: true
@@ -1554,8 +1915,53 @@ components:
           type: string
         grund:
           type: string
+          # Dasselbe Vokabular wie VorlagenStand.grund — planner.AllSkipCodes.
+          # Diese Liste war lange unvollständig (ohne `unbekannt` und
+          # `braucht_termin`), und niemand merkte es, weil die Oberfläche die
+          # Werte nur nachschlug statt sie zu vergleichen. Ein Test in
+          # internal/httpapi hält beide Listen jetzt am Planer fest.
           enum:
-            [gilt_nicht, abgewaehlt, nicht_faellig, startdichte, keine_kapazitaet, niemand_geeignet]
+            [
+              gilt_nicht,
+              abgewaehlt,
+              nicht_faellig,
+              startdichte,
+              keine_kapazitaet,
+              niemand_geeignet,
+              unbekannt,
+              braucht_termin,
+              braucht_absprache,
+            ]
+
+    Rueckmeldung:
+      type: object
+      required: [id, art, text, gemeldet_am]
+      properties:
+        id:
+          type: string
+        art:
+          type: string
+          enum: [fehler, idee, stoert]
+          description: |
+            Drei und nicht zwei: „Fehler" und „Idee" sind die üblichen, und
+            dazwischen fällt das Wichtigste durch. `stoert` ist kein Fehler —
+            die App tut, was sie soll — und keine Idee, weil niemand eine
+            Lösung anzubieten hat. Genau diese Sätze führen dazu, dass jemand
+            eine App am Mittwoch zuklappt.
+        text:
+          type: string
+        kontext:
+          type: string
+          description: Seite, Woche und Fassung — von der Oberfläche gesammelt.
+        wer:
+          type: string
+          description: |
+            Name der meldenden Person. Fehlt, wenn sie den Haushalt verlassen
+            hat: Die Rückmeldung bleibt wahr, auch wenn niemand mehr
+            danebensteht.
+        gemeldet_am:
+          type: string
+          format: date-time
 
     Kategorie:
       type: string

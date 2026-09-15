@@ -173,10 +173,42 @@ type Result struct {
 	Week    Week
 	Tasks   []PlannedTask
 	Balance []MemberLoad
+	// Struck sind die Aufgaben, die jemand für diese Woche gestrichen hat.
+	//
+	// Sie stehen hier und nicht in Tasks: Aus dem Plan sind sie raus, aus der
+	// Bilanz auch. Aber sie ganz zu verschweigen hieße, dass eine Zeile
+	// wortlos verschwindet — und wer sich vertippt hat, fände keinen Weg
+	// zurück. Die Oberfläche zeigt sie leise am Ende des Tages, mit
+	// „Doch wieder einplanen" daneben.
+	Struck []StruckTask
+
+	// Open sind die Fakten, die der Haushalt HEUTE nicht beantwortet hat —
+	// die Grundlage der Fragen in der App.
+	//
+	// Getrennt von Skipped, weil die beiden verschiedene Zeitpunkte meinen:
+	// Skipped erklärt die Woche, wie sie festgeschrieben wurde; Open
+	// beschreibt den Haushalt, wie er jetzt ist. Solange beides dasselbe war,
+	// fiel der Unterschied nicht auf — bis jemand eine Frage beantwortete und
+	// sie nach dem Neuladen wiederkam.
+	Open []string
+
 	// Skipped erklärt, was nicht im Plan steht und warum. Ohne dieses Feld ist
 	// ein Planer nicht zu debuggen — und die App könnte nicht begründen,
 	// warum etwas fehlt.
 	Skipped []Skipped
+}
+
+// StruckTask ist eine Aufgabe, die für diese Woche gestrichen wurde.
+//
+// Kennung, Titel und Tag — mehr nicht. Der Tag muss dabei sein, weil
+// gestrichen wird, was an EINEM Tag ansteht: „Safiya zur Kita bringen"
+// kommt fünfmal vor, und welches der fünf gestrichen ist, sieht man nur am
+// Datum. Alles Weitere wäre eine Einladung, sie doch wieder wie eine Aufgabe
+// zu behandeln.
+type StruckTask struct {
+	ID    string
+	Title string
+	Day   Date
 }
 
 // PlannedTask ist eine eingeplante Aufgabe an einem konkreten Tag.
@@ -226,7 +258,16 @@ const (
 	ReasonDeadline ReasonCode = "frist"
 	ReasonOwn      ReasonCode = "eigene_aufgabe" // gehört dieser Person selbst
 	ReasonManual   ReasonCode = "von_hand"       // ein Mensch hat umverteilt
+	ReasonAgreed   ReasonCode = "absprache"      // steht so im Wochenraster
 )
+
+// AllReasonCodes ist die vollständige Liste, aus demselben Grund wie
+// AllSkipCodes: Der Vertrag führt dieselben Wörter noch einmal, und zwei
+// Listen von Hand laufen auseinander.
+var AllReasonCodes = []ReasonCode{
+	ReasonRotation, ReasonBalance, ReasonFixed, ReasonOnlyOne,
+	ReasonDeadline, ReasonOwn, ReasonManual, ReasonAgreed,
+}
 
 type Reason struct {
 	Code ReasonCode
@@ -272,15 +313,33 @@ func (l MemberLoad) Utilization() int {
 type SkipCode string
 
 const (
-	SkipNotApplicable SkipCode = "gilt_nicht"       // Bedingungen nicht erfüllt
-	SkipMuted         SkipCode = "abgewaehlt"       // Haushalt hat sie wiederholt gelöscht
-	SkipNotDue        SkipCode = "nicht_faellig"    // diese Woche nicht dran
-	SkipDensity       SkipCode = "startdichte"      // bewusst zurückgehalten
-	SkipNoCapacity    SkipCode = "keine_kapazitaet" // niemand hat Zeit
-	SkipNoOneEligible SkipCode = "niemand_geeignet" // Alters- oder Rollenregel
-	SkipUnknown       SkipCode = "unbekannt"        // eine Voraussetzung ist ungeklärt
-	SkipNeedsEvent    SkipCode = "braucht_termin"   // entsteht nur aus einem Anlass
+	SkipNotApplicable  SkipCode = "gilt_nicht"        // Bedingungen nicht erfüllt
+	SkipMuted          SkipCode = "abgewaehlt"        // Haushalt hat sie wiederholt gelöscht
+	SkipNotDue         SkipCode = "nicht_faellig"     // diese Woche nicht dran
+	SkipDensity        SkipCode = "startdichte"       // bewusst zurückgehalten
+	SkipNoCapacity     SkipCode = "keine_kapazitaet"  // niemand hat Zeit
+	SkipNoOneEligible  SkipCode = "niemand_geeignet"  // Alters- oder Rollenregel
+	SkipUnknown        SkipCode = "unbekannt"         // eine Voraussetzung ist ungeklärt
+	SkipNeedsEvent     SkipCode = "braucht_termin"    // entsteht nur aus einem Anlass
+	SkipNeedsAgreement SkipCode = "braucht_absprache" // wer wann, ist nicht abgesprochen
 )
+
+// AllSkipCodes ist die vollständige Liste — dieselbe Überlegung wie bei
+// AllCategories, nur teurer erkauft.
+//
+// Dieses Vokabular steht an drei Stellen: hier, und im Vertrag gleich zweimal
+// (VorlagenStand.grund und Uebersprungen.grund). Die zweite war monatelang
+// unvollständig, ohne dass es auffiel: Sie kannte `unbekannt` und
+// `braucht_termin` nicht, obwohl der Planer beide meldet. Der Vertrag
+// behauptete also etwas über die Antwort, was nicht stimmte, und der Fehler
+// tauchte erst auf, als die Oberfläche einen der Werte zum ersten Mal
+// vergleichen wollte.
+//
+// Ein Test in httpapi hält die drei Listen jetzt zusammen.
+var AllSkipCodes = []SkipCode{
+	SkipNotApplicable, SkipMuted, SkipNotDue, SkipDensity, SkipNoCapacity,
+	SkipNoOneEligible, SkipUnknown, SkipNeedsEvent, SkipNeedsAgreement,
+}
 
 type Skipped struct {
 	TemplateID string

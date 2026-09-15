@@ -144,6 +144,11 @@ func (p *Plans) geschriebeneWoche(
 		return planner.Result{}, err
 	}
 
+	gestrichen, err := p.gestrichene(ctx, kennung, woche)
+	if err != nil {
+		return planner.Result{}, err
+	}
+
 	nachID := make(map[string]planner.TaskTemplate, len(vorlagen))
 	for _, v := range vorlagen {
 		nachID[v.ID] = v
@@ -151,6 +156,19 @@ func (p *Plans) geschriebeneWoche(
 
 	out := planner.Result{Week: woche}
 	for _, z := range zeilen {
+		// Gestrichenes verschwindet aus dem Plan — und damit auch aus der
+		// Bilanz, die gleich daraus gerechnet wird. Wer eine Aufgabe für
+		// diese Woche streicht, soll sie nicht als Last angerechnet
+		// bekommen; das Protokoll weiß trotzdem, dass es sie gab.
+		if gestrichen[formatUUID(z.ID)] {
+			out.Struck = append(out.Struck, planner.StruckTask{
+				ID:    formatUUID(z.ID),
+				Title: nachID[z.TemplateID].Title,
+				Day:   datum(z.Day),
+			})
+			continue
+		}
+
 		v := nachID[z.TemplateID]
 		t := planner.PlannedTask{
 			ID:          formatUUID(z.ID),
@@ -205,6 +223,26 @@ func (p *Plans) erledigte(ctx context.Context, haushalt pgtype.UUID, woche plann
 	for _, z := range zeilen {
 		if z.TaskInstanceID.Valid {
 			out[formatUUID(z.TaskInstanceID)] = z.Kind == "erledigt"
+		}
+	}
+	return out, nil
+}
+
+// gestrichene sagt je Aufgabe, ob sie zuletzt gestrichen oder wieder
+// eingeplant wurde. Dieselbe Bauart wie erledigte — das jüngste Ereignis
+// gewinnt.
+func (p *Plans) gestrichene(ctx context.Context, haushalt pgtype.UUID, woche planner.Week) (map[string]bool, error) {
+	zeilen, err := p.db.ListStruckTasks(ctx, db.ListStruckTasksParams{
+		HouseholdID: haushalt,
+		ISOWeek:     woche.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]bool, len(zeilen))
+	for _, z := range zeilen {
+		if z.TaskInstanceID.Valid {
+			out[formatUUID(z.TaskInstanceID)] = z.Kind == "gestrichen"
 		}
 	}
 	return out, nil
