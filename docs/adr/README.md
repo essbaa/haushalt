@@ -21,6 +21,8 @@ nicht überschrieben. Der Wert steckt in der Kette, nicht im letzten Stand.
 | [0012](0012-rotation-ist-eine-vorliebe.md) | Rotation ist eine Vorliebe, keine Bedingung | angenommen |
 | [0013](0013-von-hand-sticht.md) | Von Hand sticht: Umverteilen prüft Bedingungen, nicht Vorlieben | angenommen |
 | [0014](0014-anmeldung-bleibt-bei-mail.md) | Anmeldung bleibt bei E-Mail und Passwort | angenommen |
+| [0015](0015-streichen-statt-abschalten.md) | Streichen trifft einen Termin, Abschalten eine Vorlage | angenommen |
+| [0016](0016-absprache-statt-raten.md) | Wo die App den Kalender nicht kennt, spricht der Haushalt ab | angenommen |
 
 ## Aufbau eines Eintrags
 

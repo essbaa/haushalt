@@ -535,6 +535,66 @@ geschrieben, es gibt keine Aufgabe, die man umverteilen könnte.
 dem man gerade arbeitet. Der Übersetzer findet es sowieso — er findet es nur
 später als man selbst könnte.
 
+### 3.15 Der Ausgleich tauschte eine Absprache weg
+
+**Symptom** — Ein Test, den ich als Gegenprobe geschrieben hatte, schlug fehl:
+Das Bad landete bei der Person, die laut Absprache jeden Morgen zur Kita
+fährt. Der Fehler saß nicht dort, wo er auffiel.
+
+**Ursache** — `swapAllowed` kannte `braucht_absprache` nicht. Der zweite
+Durchgang tauschte also den Montag an die andere Person, weil die Zahlen
+dadurch aufgingen — und schrieb als Begründung „zum Ausgleich" daneben. Im
+Plan stand damit jemand, der um 7:45 gar nicht dort sein kann, mitsamt einer
+Behauptung über eine Vereinbarung, die niemand getroffen hatte. Genau der
+Zustand, gegen den ADR-0016 antritt, erzeugt vom eigenen zweiten Durchgang.
+
+**Lösung** — `ta.NeedsAgreement || tb.NeedsAgreement` verbietet den Tausch,
+wie `DistFixed` und `PerPerson` daneben. Dasselbe in `Handover`: Abgeben sucht
+die Person mit den meisten freien Minuten — die Größe, die hier nicht
+entscheidet. Abgesprochenes steht danach offen da, und ein Mensch schließt die
+Lücke.
+
+**Lehre** — Eine neue Regel im Planer ist erst fertig, wenn **jeder**
+Durchgang sie kennt, der Zuteilungen anfasst: `assign`, `rebalance`,
+`Handover`, `Reassign`. Vier Stellen, und drei davon hatte ich beim Bauen der
+vierten nicht im Kopf. Der Ort, an dem eine Regel entsteht, ist selten der
+einzige, an dem sie gelten muss.
+
+Und: Die Gegenprobe war es wert. Ich hatte sie fast weggelassen — „prüft doch
+nur das Offensichtliche". Sie hat den einzigen echten Fehler der ganzen
+Funktion gefunden, und zwar an einer Stelle, an der ich nicht gesucht hätte.
+
+### 3.16 Der Vertrag kannte zwei eigene Antworten nicht
+
+**Symptom** — TypeScript beim Bauen der Weboberfläche: *This comparison
+appears to be unintentional … `"gilt_nicht" | … | "niemand_geeignet"` and
+`"braucht_absprache"` have no overlap.*
+
+**Ursache** — In `openapi.yaml` steht dasselbe Vokabular zweimal:
+`VorlagenStand.grund` und `Uebersprungen.grund`. Die zweite Liste war
+unvollständig — ohne `unbekannt`, ohne `braucht_termin` —, und zwar seit dem
+Tag, an dem es diese Gründe gibt. Der Dienst hat beide Werte die ganze Zeit
+ausgeliefert; der Vertrag behauptete, es könne sie nicht geben.
+
+**Warum es niemandem auffiel** — Die Oberfläche hat die Gründe nur
+*nachgeschlagen* (`grundText[u.grund] ?? u.grund`), und ein Nachschlagen in
+`Record<string, string>` prüft nichts. Erst der erste *Vergleich* auf einen
+dieser Werte brachte den Übersetzer dazu, die Liste ernst zu nehmen. Ein
+falscher Vertrag, an dem nichts bricht, bleibt beliebig lange falsch.
+
+**Lösung** — Die Liste vervollständigt, und zwei Tests in `internal/httpapi`
+dagegengestellt: Jeder Wert aus `planner.AllSkipCodes` und
+`planner.AllReasonCodes` muss in den erzeugten Aufzählungen `Valid()` sein.
+`oapi-codegen` erzeugt diese Methode ohnehin — der Test kostet zwölf Zeilen
+und hält drei Listen zusammen, die sonst nur Disziplin zusammenhält.
+
+**Lehre** — Dieselbe Sorte Absicherung wie `git diff --exit-code` über die
+erzeugten Dateien in der CI: Der Vertrag ist nur dann die eine Wahrheit, wenn
+etwas nachrechnet, dass er es ist. Und der Reihe nach das dritte Mal dieselbe
+Ursache in diesem Projekt — ein Wissen, das an einer Stelle entsteht und an
+einer zweiten von Hand gepflegt wird (vgl. 3.15, und die geschlossenen Listen
+im Schema unter 4.x).
+
 ## 4. Datenbank und Schema
 
 ### 4.1 Das Schema hatte eine Produktentscheidung getroffen
@@ -706,9 +766,26 @@ das brav dasselbe neu lud.
 Nicht stillschweigend neu rechnen: Wer auf „Habt ihr Pflanzen? — Ja" tippt,
 rechnet nicht damit, dass sich der Samstag umsortiert.
 
+**Nachtrag — der Fix war Kosmetik.** Die Karte klappte zu einer Bestätigung
+zusammen, und das war ein Zustand im Browser. Wer die Seite neu lud, bekam
+**dieselben zwei Fragen noch einmal** — denn gelesen wurden sie weiter aus
+`r.Skipped`, und bei einer festgeschriebenen Woche ist das die eingefrorene
+Liste von damals. Die Antwort ändert den Haushalt, nicht die Momentaufnahme.
+
+Behoben durch `planner.OpenFacts`: Die offenen Fragen werden am **aktuellen**
+Haushalt gerechnet und stehen als eigenes Feld `Result.Open` neben `Skipped`.
+Die beiden meinen verschiedene Zeitpunkte — Skipped erklärt die Woche, wie sie
+festgeschrieben wurde, Open beschreibt den Haushalt, wie er jetzt ist. Solange
+das dasselbe war, fiel der Unterschied nicht auf.
+
 **Lehre** — **Eine Antwort, die nichts sichtbar bewirkt, sieht aus wie eine
 verlorene Antwort.** Der Fehler war nicht im Speichern, sondern im Schweigen
 danach.
+
+**Und die zweite, teurere:** Ich habe das Symptom in der Oberfläche behandelt
+und die Ursache stehen gelassen — an derselben Stelle, an der ich drei Stunden
+später schrieb, was der Server weiß, gehöre nicht nebenher in den Browser.
+**Ein Fix, der nur beim Hinsehen hält, ist kein Fix, sondern eine Verzögerung.**
 
 ### 5.6 Zustand im Browser, der eine Server-Aktualisierung überlebt
 
@@ -839,6 +916,114 @@ zweites Mal öffnet.
 Und als Fortsetzung von 5.6: Erst spiegelte die Oberfläche Serverwissen, dann
 behauptete sie, fertig zu sein, bevor der Server es war. **Beide Male log der
 Bildschirm über den Zustand.**
+
+### 5.11 Das Etikett behauptete mehr, als die Sache tut
+
+**Symptom** — „Ich wische *Safiya zur Kita bringen* am Montag weg. Das heißt
+doch nicht, dass sie die ganze Woche nicht hingeht."
+
+**Ursache** — Der Code war richtig, das Wort war falsch. Gestrichen wird ein
+**Termin an einem Tag**; das Etikett hieß „Diese Woche nicht" und behauptete
+damit die Reichweite einer ganzen Woche. Bei einer Vorlage, die fünfmal
+vorkommt, ist das eine andere Aussage — und die falsche.
+
+**Lösung** — „Diesmal nicht". Und die gestrichene Zeile trägt jetzt den Tag:
+*Safiya zur Kita bringen · Montag, 15.09.* Ohne ihn wüsste niemand, welches von
+fünf gemeint ist.
+
+**Lehre** — **Die Reichweite einer Handlung gehört in ihr Etikett, und zwar
+genau.** Derselbe Fehler wie bei den ausgegrauten Zeilen und bei der
+Vorschau-Woche: Die Oberfläche sagt etwas über die Welt, das der Code nicht
+deckt. Nur fällt es hier erst auf, wenn die Vorlage mehrfach vorkommt — bei
+„Bad putzen" wäre „diese Woche" zufällig richtig gewesen.
+
+### 5.12 „Gilt bei euch nicht" — und dann?
+
+**Symptom** — „Wie schalte ich eine Aufgabe frei, die gerade nicht gilt? Ich
+gehe auf Einstellungen und finde nichts."
+
+**Ursachen**, zwei, und beide waren Andeutung statt Auskunft:
+
+*Ein verneintes Faktum war eine Sackgasse.* `Status` gab das Faktum nur bei
+„unbekannt" zurück, nicht bei „nein". Die Oberfläche hatte also keine Frage,
+die sie noch einmal hätte stellen können: Ein Nein galt für immer. Das ist
+derselbe Fehler wie die geratene Betreuungsform aus ADR-0007 — **eine Antwort,
+die man nicht zurücknehmen kann, ist eine Behauptung.**
+
+*Die Kontextbedingung wurde nicht genannt.* Die Liste sagte „gilt bei euch
+nicht" und dazu eine Aufzählung aller denkbaren Ursachen — Garten, Auto,
+Haustiere, Betreuung. Wer „Brotdose vorbereiten" freischalten wollte, las die
+Liste und wusste hinterher genauso wenig. Der Planer prüft die Bedingung
+ohnehin; er gab sie nur nicht heraus.
+
+**Lösung** — Das Faktum kommt jetzt auch bei „nein" zurück, und die Frage
+steht mit einer Zeile darüber wieder da („Ihr habt das mit Nein
+beantwortet."). `conditionsMet` liefert die fehlende Bedingung als Satz:
+*Braucht ein Kind, das zur Schule geht.*
+
+**Lehre** — **Wer eine Bedingung prüft, kann sie auch nennen.** Ein `bool`
+zurückzugeben, wo man den Grund kennt, wirft Auskunft weg, die schon berechnet
+ist. Dritte Auflage desselben Musters an einem Tag: erst die grauen Zeilen,
+dann „gilt bei euch nicht", jetzt die fehlende Bedingung.
+
+### 5.13 Die Vorabfrage antwortete mit 204 — und ohne PUT
+
+**Symptom** — „Failed to fetch" beim Speichern der Absprache. Im Protokoll des
+Dienstes stand genau eine Zeile:
+
+```
+level=INFO msg=anfrage methode=OPTIONS pfad=/api/haushalte/…/absprachen/… status=204
+```
+
+Also: Vorabfrage beantwortet, alles in Ordnung — und danach nichts mehr.
+
+**Ursache** — `Access-Control-Allow-Methods` stand als Text im Code:
+`"GET, POST, PATCH, DELETE, OPTIONS"`. Die Absprache ist die erste PUT-Route
+im ganzen Vertrag. Der Browser fragt, bekommt eine Liste ohne PUT, und
+schickt die eigentliche Anfrage **gar nicht erst los**. Deshalb steht sie
+nirgends im Protokoll.
+
+**Lösung** — PUT ergänzt, die Liste in eine Konstante gehoben, und ein Test
+liest `openapi.yaml` und prüft, dass jede dort vorkommende Methode darin
+steht.
+
+**Lehre** — Das Tückische ist die Form des Fehlers: Die Antwort, die man
+sieht, ist richtig. 204 ist der erwartete Status der Vorabfrage, und wer nur
+auf den Status schaut, sucht als Nächstes an der falschen Stelle. Bei „Failed
+to fetch" ohne zugehörige Zeile im Protokoll ist die Reihenfolge deshalb:
+erst die **Kopfzeilen** der Vorabfrage ansehen, dann alles andere.
+
+Und inhaltlich zum vierten Mal an einem Tag dieselbe Ursache: eine Liste, die
+etwas über den Vertrag behauptet und von Hand gepflegt wird (vgl. 3.15, 3.16).
+
+**Nachtrag** — `Access-Control-Max-Age: 86400`. Der Browser merkt sich die
+Antwort der Vorabfrage einen Tag lang. Nach der Korrektur kann derselbe Aufruf
+also weiter scheitern, obwohl der Dienst richtig antwortet — ein privates
+Fenster oder geleerte Caches klären, ob es noch der alte Eintrag ist.
+
+### 5.14 Gespeichert, und dann passierte nichts
+
+**Symptom** — Das Wochenraster für „Von der Kita abholen" für Mo–Fr gesetzt,
+„Übernehmen" gedrückt, Meldung „übernommen" — und im Plan stand nichts. Keine
+Auskunft, ob es diese Woche noch kommt, ob nächste Woche, ob überhaupt.
+
+**Ursache** — Kein Fehler im Code: Die laufende Woche steht fest, sobald sie
+das erste Mal angesehen wurde (ADR-0008). Eine neue Absprache ändert sie also
+nicht rückwirkend, sondern gilt ab der nächsten. Das ist richtig — und die
+Oberfläche hat es verschwiegen.
+
+**Lösung** — Nach dem Speichern steht jetzt da, was passiert ist („ab nächster
+Woche von selbst — diese Woche steht schon fest"), und daneben derselbe Knopf,
+den die Fragen schon haben: **Schon diese Woche**. Er ruft dieselbe
+Neurechnung auf, die Abgehaktes und Abgegebenes stehen lässt.
+
+**Lehre** — Dieselbe Sorte Lücke wie bei den grauen Zeilen und bei „gilt bei
+euch nicht", nur andersherum: Dort behauptete die Oberfläche mehr, als die
+Sache trägt, hier hat sie gar nichts gesagt. Beides ist dasselbe Versäumnis —
+**eine Handlung ohne sichtbare Wirkung braucht einen Satz, der die Wirkung
+nennt.** Und wenn die Wirkung „erst später" ist, gehört der Weg dazu, sie
+sofort zu bekommen. Ein Bestätigungswort allein („übernommen") ist keine
+Auskunft, sondern eine Quittung.
 
 ## 6. Betrieb
 
