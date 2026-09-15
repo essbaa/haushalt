@@ -238,6 +238,107 @@ export interface paths {
         patch: operations["setVorlage"];
         trace?: never;
     };
+    "/api/haushalte/{haushaltId}/absprachen/{vorlageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Wochenraster einer Vorlage setzen
+         * @description Wer an welchem Wochentag. Alle sieben Plätze auf einmal, Index 0 ist
+         *     Montag; ein leerer Eintrag heißt „für diesen Tag ist nichts
+         *     abgesprochen".
+         *
+         *     **Der Planer verteilt diese Aufgaben nicht.** Er verteilt nach
+         *     Kapazität — wie viel Zeit jemand hat. Wer ein Kind um 7:45 in die Kita
+         *     bringen kann, hängt dagegen am Arbeitsplan, und den kennt die App
+         *     nicht. Ohne Absprache würde sie mit voller Überzeugung den Falschen
+         *     einteilen; deshalb wird hier nicht geraten, sondern gefragt.
+         *
+         *     Die Absprache gilt, bis jemand sie ändert — „diese Woche wie letzte"
+         *     ist damit der Normalfall. Eine einzelne Ausnahme ist `zuteilen` und
+         *     betrifft nur den einen Termin.
+         *
+         *     Nur planende Personen: Eine Absprache ist eine Vereinbarung über andere
+         *     Menschen.
+         */
+        put: operations["setAbsprache"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Die Absprache in die laufende Woche eintragen
+         * @description Die laufende Woche steht fest, sobald sie das erste Mal angesehen
+         *     wurde. Eine frisch gesetzte Absprache gilt deshalb ab der **nächsten**
+         *     Woche von selbst — dieser Aufruf ist der Handgriff für „ab sofort".
+         *
+         *     Er trägt **nur diese Vorlage** ein und **nur ab heute**. Bewusst nicht
+         *     `plan/{woche}/neu`: Das Neurechnen verteilt die ganze Woche neu, und
+         *     wer am Mittwoch eine Kita-Absprache einträgt, bekäme nebenbei eine
+         *     neue Antwort darauf, wer am Freitag das Bad putzt. Ein Plan, der sich
+         *     an Stellen ändert, die niemand angefasst hat, ist der Plan, dem
+         *     niemand mehr glaubt.
+         *
+         *     Was Spuren hinterlassen hat — abgehakt, abgegeben, gestrichen —,
+         *     bleibt stehen. Vergangene Tage bleiben unberührt.
+         *
+         *     Nur planende Personen.
+         */
+        post: operations["absprachAbHeute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/haushalte/{haushaltId}/rueckmeldungen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Was der Haushalt gemeldet hat
+         * @description Nur planende Personen. Melden darf jedes Mitglied, lesen nicht: In der
+         *     Liste stehen Sätze über andere Menschen im selben Haushalt, und die
+         *     gehören nicht an jede Pinnwand.
+         */
+        get: operations["listRueckmeldungen"];
+        put?: never;
+        /**
+         * Etwas melden
+         * @description **Jedes Mitglied darf melden, nicht nur die planenden.** Die
+         *     ausführenden Personen sehen die Stellen, an denen es klemmt, zuerst —
+         *     sie bekommen den Plan, den sie nicht gemacht haben. Eine Meldefunktion
+         *     nur für Planende meldet, was der Planende ohnehin weiß.
+         *
+         *     `kontext` sammelt die Oberfläche selbst — Seite, Woche, Fassung. Wer
+         *     erst beschreiben muss, wo er gerade war, meldet nichts.
+         */
+        post: operations["melden"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/haushalte/{haushaltId}/anlaesse": {
         parameters: {
             query?: never;
@@ -372,6 +473,41 @@ export interface paths {
          *     besserem Gewissen.
          */
         post: operations["aufgabeAbgeben"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aufgaben/{aufgabeId}/streichen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einen einzelnen Termin streichen
+         * @description Nimmt **diesen einen Termin** aus dem Plan. Die Vorlage bleibt
+         *     unangetastet, und ihre übrigen Termine derselben Woche auch: Kommt
+         *     „Safiya zur Kita bringen" fünfmal vor, streicht das hier genau einen
+         *     Tag.
+         *
+         *     Der Unterschied zum Abschalten einer Vorlage ist die Reichweite, und er
+         *     ist der Grund für diesen Endpunkt: Abschalten gilt für alle künftigen
+         *     Wochen. Bis es das Streichen gab, war der einzige Ausweg aus einer
+         *     Aufgabe eine Entscheidung über die Zukunft — und ein Fehlgriff nahm
+         *     dem Haushalt eine Vorlage weg, die er eigentlich wollte.
+         *
+         *     Gestrichenes verschwindet aus dem Plan und aus der Bilanz; es steht als
+         *     `gestrichen` in der Antwort, damit die App einen Weg zurück anbieten
+         *     kann.
+         *
+         *     Erlaubt ist es der zuständigen Person und jeder planenden.
+         */
+        post: operations["aufgabeStreichen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -540,6 +676,18 @@ export interface components {
              */
             zeit?: "keine" | "wenig" | "mittel" | "viel";
         };
+        Gestrichen: {
+            id: string;
+            /** @example Bad putzen */
+            titel: string;
+            /**
+             * Format: date
+             * @description Der Tag, an dem sie angestanden hätte. Er gehört dazu, weil
+             *     gestrichen wird, was an EINEM Tag ansteht — eine Vorlage kann
+             *     mehrfach in der Woche vorkommen.
+             */
+            tag: string;
+        };
         Zuteilung: {
             /**
              * @description Name der Person, die die Aufgabe jetzt hat.
@@ -611,6 +759,41 @@ export interface components {
             art: "ausfuehrung" | "organisation";
             dauer_min: number;
             kopflast: number;
+            /**
+             * @description Diese Aufgabe verteilt der Planer nicht — sie wird abgesprochen.
+             *     Ohne Raster taucht sie mit dem Grund `braucht_absprache` auf.
+             */
+            braucht_absprache?: boolean;
+            /**
+             * @description Das Wochenraster, Index 0 = Montag. Leerer Text heißt: für diesen
+             *     Tag ist nichts abgesprochen.
+             */
+            absprache?: string[];
+            /**
+             * @description Bei `gilt_nicht`: die fehlende Bedingung als Satz — „Braucht ein
+             *     Kind, das zur Schule geht." Fehlt, wenn ein verneintes Faktum die
+             *     Ursache ist; dann steht in `frage`, was noch einmal zu fragen
+             *     wäre.
+             *
+             *     Gerechnet im Planer, der die Bedingung ohnehin prüft. Vorher stand
+             *     in der Liste nur „gilt bei euch nicht" und daneben eine
+             *     Aufzählung aller denkbaren Ursachen — eine Andeutung statt einer
+             *     Auskunft.
+             * @example Braucht ein Kind, das zur Schule geht.
+             */
+            voraussetzung?: string;
+            /**
+             * @description Wie oft sie vorkommt, als Satz: „täglich", „3× pro Woche",
+             *     „wöchentlich", „jährlich im Oktober".
+             *
+             *     Gerechnet im Planer aus dem Rhythmus, nicht in der Oberfläche
+             *     nachgebaut — dieselbe Regel wie bei `Mitglied.zeit`. Ohne diese
+             *     Angabe fehlte in der Liste die Zahl, die über den Aufwand
+             *     entscheidet: „Abendessen kochen, 40 Minuten" ist etwas anderes,
+             *     wenn es dreimal die Woche dran ist.
+             * @example 3× pro Woche
+             */
+            haeufigkeit?: string;
             /** @description Ob sie in künftigen Plänen vorkommen kann. */
             aktiv: boolean;
             /**
@@ -623,7 +806,7 @@ export interface components {
              * @description Warum sie nicht gilt. Fehlt, wenn sie gilt.
              * @enum {string}
              */
-            grund?: "gilt_nicht" | "abgewaehlt" | "nicht_faellig" | "startdichte" | "keine_kapazitaet" | "niemand_geeignet" | "unbekannt" | "braucht_termin";
+            grund?: "gilt_nicht" | "abgewaehlt" | "nicht_faellig" | "startdichte" | "keine_kapazitaet" | "niemand_geeignet" | "unbekannt" | "braucht_termin" | "braucht_absprache";
             /** @description Bei `unbekannt` das Faktum, dessen Antwort fehlt. */
             faktum?: string;
             /**
@@ -691,6 +874,16 @@ export interface components {
              */
             klaeren?: boolean;
             nur_erwachsene?: boolean;
+            /**
+             * @description „Muss festgelegt werden, wer wann?" Dann verteilt der Planer die
+             *     Aufgabe nicht, sondern fordert ein Wochenraster ein.
+             *
+             *     Für alles, was am Arbeitsplan hängt statt an freier Zeit — ein
+             *     Kind bringen oder abholen, ein Termin, zu dem jemand hin muss. Der
+             *     Planer kennt die Kapazität und nicht den Kalender; ohne Absprache
+             *     teilt er mit voller Überzeugung den Falschen ein.
+             */
+            braucht_absprache?: boolean;
         };
         Frage: {
             /** @example pflanzen */
@@ -791,6 +984,13 @@ export interface components {
             haushalt: components["schemas"]["Haushalt"];
             aufgaben: components["schemas"]["Aufgabe"][];
             /**
+             * @description Einzelne Termine, die jemand gestrichen hat — nicht Vorlagen. Aus
+             *     Plan und Bilanz sind sie raus; hier stehen sie, damit die App einen
+             *     Weg zurück anbieten kann. Eine Zeile, die wortlos verschwindet,
+             *     lässt jemanden, der sich vertippt hat, ohne Rückweg.
+             */
+            gestrichen?: components["schemas"]["Gestrichen"][];
+            /**
              * @description Die Rolle des Aufrufers in diesem Haushalt. Fehlt bei
              *     Demo-Haushalten und ohne Anmeldung.
              * @enum {string|null}
@@ -876,7 +1076,7 @@ export interface components {
          */
         Begruendung: {
             /** @enum {string} */
-            code: "rotation" | "ausgleich" | "feste_person" | "einzige_moeglichkeit" | "frist" | "eigene_aufgabe" | "von_hand";
+            code: "rotation" | "ausgleich" | "feste_person" | "einzige_moeglichkeit" | "frist" | "eigene_aufgabe" | "von_hand" | "absprache";
             /** @description bei `rotation` die Person, die die Aufgabe zuletzt hatte */
             zuletzt_bei?: string | null;
         };
@@ -900,7 +1100,30 @@ export interface components {
             vorlage_id: string;
             titel: string;
             /** @enum {string} */
-            grund: "gilt_nicht" | "abgewaehlt" | "nicht_faellig" | "startdichte" | "keine_kapazitaet" | "niemand_geeignet";
+            grund: "gilt_nicht" | "abgewaehlt" | "nicht_faellig" | "startdichte" | "keine_kapazitaet" | "niemand_geeignet" | "unbekannt" | "braucht_termin" | "braucht_absprache";
+        };
+        Rueckmeldung: {
+            id: string;
+            /**
+             * @description Drei und nicht zwei: „Fehler" und „Idee" sind die üblichen, und
+             *     dazwischen fällt das Wichtigste durch. `stoert` ist kein Fehler —
+             *     die App tut, was sie soll — und keine Idee, weil niemand eine
+             *     Lösung anzubieten hat. Genau diese Sätze führen dazu, dass jemand
+             *     eine App am Mittwoch zuklappt.
+             * @enum {string}
+             */
+            art: "fehler" | "idee" | "stoert";
+            text: string;
+            /** @description Seite, Woche und Fassung — von der Oberfläche gesammelt. */
+            kontext?: string;
+            /**
+             * @description Name der meldenden Person. Fehlt, wenn sie den Haushalt verlassen
+             *     hat: Die Rückmeldung bleibt wahr, auch wenn niemand mehr
+             *     danebensteht.
+             */
+            wer?: string;
+            /** Format: date-time */
+            gemeldet_am: string;
         };
         /** @enum {string} */
         Kategorie: "kueche" | "waesche" | "reinigung" | "kind" | "vorrat" | "termine" | "verwaltung" | "wartung" | "sozial" | "aussen";
@@ -1345,6 +1568,211 @@ export interface operations {
             };
         };
     };
+    setAbsprache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                vorlageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Sieben Kennungen von Mitgliedern, Index 0 = Montag. Leerer
+                     *     Text heißt: für diesen Tag ist nichts abgesprochen.
+                     */
+                    wochentage: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description gesetzt */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description so geht das nicht */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    absprachAbHeute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                vorlageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description eingetragen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Wie viele Termine entstanden sind. Null ist eine gültige
+                         *     Antwort: An den verbleibenden Tagen steht schon etwas,
+                         *     oder das Raster trifft in dieser Woche keinen fälligen
+                         *     Tag mehr. Die Zahl geht mit hinaus, damit die Oberfläche
+                         *     genau das sagen kann, statt „fertig" zu melden und
+                         *     nichts zu zeigen.
+                         */
+                        eingetragen: number;
+                    };
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    listRueckmeldungen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description die letzten fünfzig */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rueckmeldung"][];
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    melden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    art: "fehler" | "idee" | "stoert";
+                    text: string;
+                    kontext?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description angekommen */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description so geht das nicht */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description dafür musst du zum Haushalt gehören */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
     listAnlaesse: {
         parameters: {
             query?: never;
@@ -1659,6 +2087,54 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Abgabe"];
                 };
+            };
+            /** @description das ist nicht deine Aufgabe */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description diese Aufgabe gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    aufgabeStreichen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                aufgabeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Fehlt das Feld, gilt „gestrichen". `false` plant die
+                     *     Aufgabe wieder ein.
+                     */
+                    gestrichen?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description eingetragen */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description das ist nicht deine Aufgabe */
             403: {

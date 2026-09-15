@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Melden } from "@/app/components/melden";
 import { Uhr } from "@/app/components/icons";
 import { Laedt } from "@/app/components/laedt";
 import { Sitzung } from "@/app/components/sitzung";
@@ -152,8 +153,10 @@ export default async function Page({
           </div>
         )}
 
+        {/* Auf dem Telefon klebt die Leiste unten und ist aus dem Fluss
+            genommen — dann darf hier auch kein Abstand stehen bleiben. */}
         {eigener && plan && (
-          <div className="mb-8">
+          <div className="mb-8 max-sm:mb-0">
             <Bereiche
               haushaltId={plan.haushalt.id}
               planend={plan.meine_rolle === "planend"}
@@ -170,6 +173,12 @@ export default async function Page({
         )}
 
         {plan && <Wochenplan plan={plan} />}
+
+        {/* Der Weg zum Melden steht unter dem Plan und auf jeder Unterseite:
+            dort, wo jemand gerade gemerkt hat, dass etwas nicht stimmt. Ein
+            Formular, das man suchen muss, sammelt die Sätze der Menschen, die
+            suchen — und das sind nicht die, deren Sätze fehlen. */}
+        {eigener && plan && <Melden haushaltId={plan.haushalt.id} />}
 
         {!token && (
           <p className="mt-10 border-t border-line pt-6 text-sm leading-relaxed text-muted">

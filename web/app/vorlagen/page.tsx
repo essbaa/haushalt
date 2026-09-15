@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Melden } from "@/app/components/melden";
 import { VorlagenListe } from "@/app/components/vorlagen-liste";
 import { ladeHaushalte, ladeVorlagen } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -52,8 +53,11 @@ export default async function Vorlagen({
       <VorlagenListe
         haushaltId={gewaehlt.id}
         vorlagen={vorlagen}
+        mitglieder={gewaehlt.mitglieder}
         planend={gewaehlt.meine_rolle === "planend"}
       />
+
+      <Melden haushaltId={gewaehlt.id} />
     </main>
   );
 }

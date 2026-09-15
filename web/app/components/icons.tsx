@@ -126,3 +126,24 @@ export const Neu = (p: Props) => (
     <path d="M21 4v5h-5" />
   </Svg>
 );
+
+export const Kalender = (p: Props) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </Svg>
+);
+
+export const Liste = (p: Props) => (
+  <Svg {...p}>
+    <path d="M9 6h11M9 12h11M9 18h11" />
+    <path d="M4 6h.01M4 12h.01M4 18h.01" />
+  </Svg>
+);
+
+export const Fahne = (p: Props) => (
+  <Svg {...p}>
+    <path d="M5 21V4" />
+    <path d="M5 4h11l-1.5 3.5L16 11H5" />
+  </Svg>
+);

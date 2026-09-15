@@ -31,6 +31,7 @@ export type Ich = components["schemas"]["Ich"];
 export type Frage = components["schemas"]["Frage"];
 export type VorlagenStand = components["schemas"]["VorlagenStand"];
 export type Anlass = components["schemas"]["Anlass"];
+export type Rueckmeldung = components["schemas"]["Rueckmeldung"];
 export type NeuerHaushalt = components["schemas"]["NeuerHaushalt"];
 export type NeuesMitglied = components["schemas"]["NeuesMitglied"];
 export type Mitglied = components["schemas"]["Mitglied"];
@@ -154,6 +155,17 @@ export function ladeHaushalte(token?: string | null): Promise<Haushalt[]> {
 export function ladeVorlagen(haushaltId: string, token?: string | null): Promise<VorlagenStand[]> {
   return hole<VorlagenStand[]>(
     `/api/haushalte/${encodeURIComponent(haushaltId)}/vorlagen`,
+    token,
+  );
+}
+
+/** Was der Haushalt gemeldet hat — nur für die planenden Personen. */
+export function ladeRueckmeldungen(
+  haushaltId: string,
+  token?: string | null,
+): Promise<Rueckmeldung[]> {
+  return hole<Rueckmeldung[]>(
+    `/api/haushalte/${encodeURIComponent(haushaltId)}/rueckmeldungen`,
     token,
   );
 }

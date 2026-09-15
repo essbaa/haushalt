@@ -198,8 +198,15 @@ export function Merkmal({ children, ton = "still" }: { children: ReactNode; ton?
   );
 }
 
-/** Die Anfangsbuchstaben einer Person. Farbe allein trägt nie eine Aussage —
- *  der Name steht daneben. */
+/** Die Anfangsbuchstaben einer Person.
+ *
+ *  Den Ton bringt die Zeile mit: `--person` und `--person-soft` stehen an
+ *  einem Elternelement (siehe lib/personen.ts). Ohne eins fällt es auf die
+ *  gedeckten Vorgaben zurück und sieht aus wie bisher.
+ *
+ *  `eigen` füllt die Fläche statt sie zu tönen. Zwei Fragen, zwei Mittel:
+ *  Die Farbe sagt WER, die Füllung sagt DU. Farbe allein trägt nie eine
+ *  Aussage — der Name steht daneben. */
 export function Zeichen({ name, eigen = false }: { name: string; eigen?: boolean }) {
   const kurz = name
     .split(/\s+/)
@@ -211,7 +218,9 @@ export function Zeichen({ name, eigen = false }: { name: string; eigen?: boolean
     <span
       aria-hidden="true"
       className={`inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-        eigen ? "bg-primary text-on-primary" : "bg-surface-3 text-muted"
+        eigen
+          ? "bg-[var(--person)] text-[var(--person-on)]"
+          : "bg-[var(--person-soft)] text-[var(--person)]"
       }`}
     >
       {kurz || "?"}

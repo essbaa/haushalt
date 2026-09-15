@@ -40,6 +40,7 @@ export function EigeneAufgabe({
   const [denken, setDenken] = useState(false);
   const [klaeren, setKlaeren] = useState(false);
   const [nurErwachsene, setNurErwachsene] = useState(false);
+  const [absprache, setAbsprache] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export function EigeneAufgabe({
           denken,
           klaeren,
           nur_erwachsene: nurErwachsene,
+          braucht_absprache: absprache,
         },
       );
       setTitel("");
@@ -165,6 +167,24 @@ export function EigeneAufgabe({
           onChange={(e) => setNurErwachsene(e.target.checked)}
         />
         Nur Erwachsene können das übernehmen
+      </label>
+
+      {/* Die Frage, die entscheidet, ob der Planer diese Aufgabe überhaupt
+          verteilt. Er verteilt nach Kapazität — nach verfügbarer Zeit. Wo
+          nicht die Zeit entscheidet, sondern der Arbeitsplan, würde er mit
+          voller Überzeugung den Falschen einteilen (ADR-0016). */}
+      <label className="flex items-start gap-2.5 text-sm">
+        <input
+          type="checkbox"
+          checked={absprache}
+          onChange={(e) => setAbsprache(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          Das müssen wir <strong>absprechen</strong> — wer das kann, hängt an
+          den Arbeitszeiten und nicht daran, wer Zeit übrig hat. Ihr tragt dann
+          selbst ein, wer an welchem Tag dran ist.
+        </span>
       </label>
 
       {fehler && (

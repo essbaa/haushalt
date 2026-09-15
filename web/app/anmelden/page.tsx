@@ -23,6 +23,12 @@ export default function Anmelden() {
   const [email, setEmail] = useState("");
   const [passwort, setPasswort] = useState("");
   const [wiederholung, setWiederholung] = useState("");
+  // Aus der Adresse vorbefüllt: Ein Einladungslink bringt den Code mit, und
+  // wer eingeladen ist, soll nicht noch eine zweite Zeichenkette abtippen.
+  const [zugang, setZugang] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("zugang") ?? "";
+  });
   const [fehler, setFehler] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const [bestaetigen, setBestaetigen] = useState(false);
@@ -41,7 +47,12 @@ export default function Anmelden() {
 
     setLaeuft(true);
     const antwort = neu
-      ? await signUp.email({ name, email, password: passwort })
+      ? await signUp.email(
+          { name, email, password: passwort },
+          // Der Code reist im Kopf der Anfrage. Geprüft wird er im Dienst
+          // (lib/auth.ts) — dieses Feld ist die Eingabe, nicht die Sperre.
+          { headers: { "x-zugangscode": zugang.trim() } },
+        )
       : await signIn.email({ email, password: passwort });
     setLaeuft(false);
     if (antwort.error) {
@@ -129,11 +140,25 @@ export default function Anmelden() {
       </h1>
       <p className="mb-7 text-sm leading-relaxed text-muted">
         {neu
-          ? "Danach gehört dir ein Haushalt, und du kannst weitere Personen einladen."
+          ? "Die App ist noch geschlossen — zum Anlegen brauchst du einen Zugangscode. Danach gehört dir ein Haushalt, und du kannst weitere Personen einladen."
           : "Mit der E-Mail-Adresse, mit der du dich registriert hast."}
       </p>
 
       <form onSubmit={absenden} className="space-y-4">
+        {/* Der Zugangscode steht oben und nicht unten: Wer keinen hat, soll es
+            erfahren, bevor er ein Passwort ausdenkt. */}
+        {neu && (
+          <Feld
+            beschriftung="Zugangscode"
+            value={zugang}
+            onChange={(e) => setZugang(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            required
+            hinweis="Die App ist in Erprobung. Den Code bekommst du von der Person, die dich einlädt."
+          />
+        )}
         {neu && (
           <Feld
             beschriftung="Name"

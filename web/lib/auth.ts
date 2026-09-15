@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { jwt } from "better-auth/plugins";
 import { Pool } from "pg";
 
 import { appAdresse, schicke } from "@/lib/mail";
+import { zugangEingerichtet, zugangErlaubt } from "@/lib/zugang";
 
 /**
  * Die Anmeldung läuft in der Next.js-App, nicht im Go-Dienst.
@@ -98,6 +100,44 @@ export const auth = betterAuth({
 
   // Die Basisadresse für die Links in den Mails oben.
   baseURL: appAdresse(),
+
+  /**
+   * Die Tür: Ein Konto anlegen darf nur, wer einen Zugangscode hat.
+   *
+   * **Hier und nicht im Formular.** Ein Feld, das die Oberfläche prüft, ist
+   * keine Sperre — `/api/auth/sign-up/email` steht offen im Netz, und ein
+   * POST dorthin geht an jedem Formular vorbei. Die einzige Stelle, die
+   * zählt, ist die, durch die jede Registrierung muss.
+   *
+   * Der Code reist im Kopf der Anfrage und nicht im Rumpf: Better Auth prüft
+   * den Rumpf gegen ein eigenes Schema, und ein zusätzliches Feld dort wäre
+   * eine Änderung an der Nutzertabelle (das CLI von Better Auth besitzt sie,
+   * siehe oben). Ein Kopfeintrag kostet nichts und gehört niemandem.
+   *
+   * Angemeldet wird weiterhin ohne Code. Wer ein Konto hat, ist durch die Tür
+   * — sie zweimal zu verschließen sperrt nur die aus, die schon drin waren.
+   */
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email") return;
+
+      if (!zugangEingerichtet()) {
+        // Absichtlich eine andere Meldung: Das ist kein Fehler des Menschen
+        // vor dem Bildschirm, sondern einer des Betreibers — und er soll ihn
+        // beim ersten Versuch lesen, statt ihn zu suchen.
+        throw new APIError("SERVICE_UNAVAILABLE", {
+          message:
+            "Die Registrierung ist nicht eingerichtet (ZUGANGSCODES fehlt).",
+        });
+      }
+
+      if (!zugangErlaubt(ctx.headers?.get("x-zugangscode"))) {
+        throw new APIError("FORBIDDEN", {
+          message: "Dieser Zugangscode stimmt nicht.",
+        });
+      }
+    }),
+  },
 
   plugins: [
     /**

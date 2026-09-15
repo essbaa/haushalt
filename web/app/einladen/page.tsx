@@ -2,6 +2,7 @@ import { Bereiche } from "@/app/components/bereiche";
 import { EinladenFormular, type Offene } from "@/app/components/einladen-formular";
 import { ladeHaushalte } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
+import { ersterCode } from "@/lib/zugang";
 
 /**
  * Jemanden in den Haushalt einladen.
@@ -46,7 +47,7 @@ export default async function Einladen({
       </p>
 
       {haushalt ? (
-        <EinladenFormular haushaltId={haushalt} offene={offene} />
+        <EinladenFormular haushaltId={haushalt} offene={offene} zugang={ersterCode()} />
       ) : (
         <p className="text-sm text-clay">
           Es fehlt der Haushalt in der Adresse. Geh über den Wochenplan hierher.

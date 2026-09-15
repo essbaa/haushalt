@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AbspracheRaster } from "@/app/components/absprache-raster";
 import { EigeneAufgabe } from "@/app/components/eigene-aufgabe";
-import type { VorlagenStand } from "@/lib/api";
+import type { Mitglied, VorlagenStand } from "@/lib/api";
 import { patchMitToken } from "@/lib/browser-token";
 
 const gruende: Record<string, string> = {
@@ -15,6 +17,7 @@ const gruende: Record<string, string> = {
   niemand_geeignet: "niemand geeignet",
   unbekannt: "ungeklärt",
   braucht_termin: "braucht Termin",
+  braucht_absprache: "braucht Absprache",
 };
 
 // Alle zehn Bereiche aus planner.AllCategories. Eine Abbildung, die nur die
@@ -36,10 +39,12 @@ const bereiche: Record<string, string> = {
 export function VorlagenListe({
   haushaltId,
   vorlagen,
+  mitglieder,
   planend,
 }: {
   haushaltId: string;
   vorlagen: VorlagenStand[];
+  mitglieder: Mitglied[];
   planend: boolean;
 }) {
   const router = useRouter();
@@ -148,6 +153,7 @@ export function VorlagenListe({
           name={bereiche[bereich] ?? bereich}
           kategorie={bereich}
           haushaltId={haushaltId}
+          mitglieder={mitglieder}
           planend={planend}
           liste={[...nachBereich.get(bereich)!].sort((a, b) =>
             a.aktiv === b.aktiv ? a.titel.localeCompare(b.titel) : a.aktiv ? -1 : 1,
@@ -172,6 +178,7 @@ function Bereich({
   name,
   kategorie,
   haushaltId,
+  mitglieder,
   planend,
   liste,
   laeuft,
@@ -181,6 +188,7 @@ function Bereich({
   name: string;
   kategorie: string;
   haushaltId: string;
+  mitglieder: Mitglied[];
   planend: boolean;
   liste: VorlagenStand[];
   laeuft: string | null;
@@ -254,6 +262,14 @@ function Bereich({
                 v.frage && v.faktum
                   ? { faktum: v.faktum, frage: v.frage, dann: v.dann ?? "" }
                   : undefined;
+              // „Gilt bei euch nicht" hat zwei Ursachen mit zwei Rückwegen.
+              // Hängt es an einem Faktum, das ihr verneint habt, steht die
+              // Frage hier noch einmal — ein Nein, das man nicht zurücknehmen
+              // kann, ist dasselbe wie ein Rateschluss, den man nicht
+              // korrigieren kann (ADR-0007). Hängt es am Kontext (kein Garten,
+              // kein Auto), führt der Weg über die Einstellungen.
+              const verneint = v.grund === "gilt_nicht" && frage !== undefined;
+              const ausKontext = v.grund === "gilt_nicht" && frage === undefined;
 
               return (
                 <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
@@ -266,7 +282,16 @@ function Bereich({
                         </span>
                       )}
                     </p>
+                    {/* Die Häufigkeit stand hier nicht, und damit fehlte die
+                        Zahl, die über den Aufwand entscheidet: „Abendessen
+                        kochen, 40 Minuten" ist etwas anderes, wenn es dreimal
+                        die Woche dran ist. Wer abschalten will, was zu viel
+                        ist, muss das sehen können. */}
                     <p className="text-xs text-subtle">
+                      {v.haeufigkeit && (
+                        <span className="font-semibold text-muted">{v.haeufigkeit}</span>
+                      )}
+                      {v.haeufigkeit && " · "}
                       {v.dauer_min} min
                       {v.kopflast >= 2 && `, Kopflast ${v.kopflast}`}
                     </p>
@@ -287,6 +312,12 @@ function Bereich({
 
                   {planend && frage && (
                     <div className="w-full space-y-2 rounded-md bg-surface-2 p-3">
+                      {verneint && (
+                        <p className="text-xs font-semibold text-clay">
+                          Ihr habt das mit Nein beantwortet. Ändert sich das,
+                          antwortet hier neu.
+                        </p>
+                      )}
                       <p className="text-sm font-semibold text-pretty">{frage.frage}</p>
                       <p className="text-xs leading-relaxed text-muted text-pretty">{frage.dann}</p>
                       <div className="flex flex-wrap gap-2">
@@ -308,6 +339,41 @@ function Bereich({
                         </button>
                       </div>
                     </div>
+                  )}
+
+                  {/* Die fehlende Bedingung im Klartext statt einer
+                      Aufzählung aller denkbaren. Der Planer prüft sie ohnehin
+                      — sie nicht zu nennen war eine Andeutung statt einer
+                      Auskunft. */}
+                  {ausKontext && (
+                    <p className="w-full text-xs leading-relaxed text-muted text-pretty">
+                      <span className="font-semibold text-fg">
+                        {v.voraussetzung ?? "Hängt an euren Angaben zum Haushalt."}
+                      </span>{" "}
+                      Sobald das zutrifft, taucht sie von selbst wieder auf.
+                      {planend && (
+                        <>
+                          {" "}
+                          <Link
+                            href={`/einstellungen?haushalt=${encodeURIComponent(haushaltId)}`}
+                            className="font-semibold text-primary underline underline-offset-2"
+                          >
+                            In den Einstellungen ändern
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
+
+                  {v.braucht_absprache && (
+                    <AbspracheRaster
+                      haushaltId={haushaltId}
+                      vorlageId={v.id}
+                      titel={v.titel}
+                      mitglieder={mitglieder}
+                      raster={v.absprache ?? ["", "", "", "", "", "", ""]}
+                      planend={planend}
+                    />
                   )}
 
                   {v.grund === "braucht_termin" && (

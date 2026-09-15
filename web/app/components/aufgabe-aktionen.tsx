@@ -2,15 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Personen, Zurueck } from "@/app/components/icons";
+import { Personen } from "@/app/components/icons";
 import { postMitToken } from "@/lib/browser-token";
 
 /**
- * Abgeben und Umverteilen — zwei der drei Handgriffe, die einen Plan von einem
- * Dienstplan unterscheiden. Der dritte, das Abhäkchen, sitzt in der Zeile
- * selbst und ist immer sichtbar: Er ist die häufigste Handlung des Tages und
- * die Alternative zur Wischgeste (WCAG 2.2). Was seltener gebraucht wird,
- * steht hier und erscheint erst, wenn jemand die Zeile antippt.
+ * Was mit einer Aufgabe sonst noch geht: streichen, abschalten, umverteilen.
+ *
+ * Die beiden häufigen Handgriffe sitzen in der Zeile selbst und sind immer
+ * sichtbar — abhaken und abgeben, beide als Zeichen neben dem Text. Sie sind
+ * zugleich die Alternative zu den Wischgesten, die WCAG 2.2 verlangt. Was
+ * seltener gebraucht wird, steht hier und erscheint erst, wenn jemand die
+ * Zeile antippt.
+ *
+ * Das Formular fürs Abgeben steht trotzdem hier: Es braucht Platz für eine
+ * Zeile Text, und der ist neben dem Häkchen nicht. Aufgeklappt wird es von
+ * dort — der Knopf oben, das Feld hier.
  *
  * Aus dem Produktkonzept: „Ausführende brauchen Handlungsmacht, nicht nur
  * Pflichten. Eine reine Empfangsliste wird gelöscht." Abgeben ist die kleinste
@@ -27,16 +33,17 @@ import { postMitToken } from "@/lib/browser-token";
 export function AufgabeAktionen({
   aufgabeId,
   erledigt,
-  abgebbar,
   zustaendig,
   kandidaten,
   verteilbar,
+  fragt,
+  setFragt,
+  streichen,
   abschaltbar,
   abschalten,
 }: {
   aufgabeId: string;
   erledigt: boolean;
-  abgebbar: boolean;
   /** Wer die Aufgabe gerade hat. Leer, wenn sie offen steht. */
   zustaendig: string;
   /** Alle, die überhaupt Aufgaben übernehmen — betreute Personen stehen
@@ -46,14 +53,22 @@ export function AufgabeAktionen({
   /** Eigene Aufgaben wandern nicht: „Dein Bett beziehen" bei jemand anderem
    *  ist eine andere Aufgabe, nicht dieselbe in anderen Händen (ADR-0005). */
   verteilbar: boolean;
-  /** „Brauchen wir nicht" — die Alternative zur Wischgeste. WCAG 2.2 verlangt
-   *  für jede Zieh-Bewegung einen Weg mit einem Zeiger. */
+  /** Ob nach dem Grund fürs Abgeben gefragt wird. Von außen gesteuert: Der
+   *  Knopf dafür sitzt in der Zeile selbst, direkt neben dem Häkchen, und
+   *  muss beides können — die Zeile aufklappen und gleich das Feld öffnen.
+   *  Dasselbe Muster wie „+" bei den eigenen Aufgaben. */
+  fragt: boolean;
+  setFragt: (f: boolean) => void;
+  /** „Diesmal nicht" — die Alternative zur Wischgeste nach links.
+   *  WCAG 2.2 verlangt für jede Zieh-Bewegung einen Weg mit einem Zeiger. */
+  streichen?: () => void;
+  /** „Brauchen wir nicht" — schaltet die Vorlage dauerhaft ab, für alle
+   *  künftigen Wochen. Steht nur hier und ist keine Geste mehr. */
   abschaltbar?: boolean;
   abschalten?: () => void;
 }) {
   const router = useRouter();
   const [laeuft, setLaeuft] = useState(false);
-  const [fragt, setFragt] = useState(false);
   const [verteilt, setVerteilt] = useState(false);
   const [grund, setGrund] = useState("");
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -109,6 +124,17 @@ export function AufgabeAktionen({
   return (
     <div className="space-y-2 pt-1">
       <div className="flex flex-wrap items-center gap-2">
+        {streichen && !fragt && (
+          <button
+            type="button"
+            onClick={streichen}
+            disabled={beschaeftigt}
+            className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
+          >
+            Diesmal nicht
+          </button>
+        )}
+
         {abschaltbar && abschalten && !fragt && (
           <button
             type="button"
@@ -117,18 +143,6 @@ export function AufgabeAktionen({
             className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
           >
             Brauchen wir nicht
-          </button>
-        )}
-
-        {abgebbar && !erledigt && !fragt && (
-          <button
-            type="button"
-            onClick={() => setFragt(true)}
-            disabled={beschaeftigt}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
-          >
-            <Zurueck className="size-4" />
-            Abgeben
           </button>
         )}
 

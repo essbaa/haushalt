@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { AufgabeAktionen } from "@/app/components/aufgabe-aktionen";
-import { Haken, Kreis } from "@/app/components/icons";
+import { Haken, Kreis, Zurueck } from "@/app/components/icons";
 import { Zeichen } from "@/app/components/ui";
 import { Wischen } from "@/app/components/wischen";
-import type { Aufgabe } from "@/lib/api";
+import type { Aufgabe, Mitglied } from "@/lib/api";
+import { farbklasse } from "@/lib/personen";
 import { patchMitToken, postMitToken } from "@/lib/browser-token";
 
 /**
@@ -29,6 +30,7 @@ import { patchMitToken, postMitToken } from "@/lib/browser-token";
 export function AufgabeZeile({
   aufgabe: a,
   namen,
+  mitglieder,
   kandidaten,
   ich,
   planend,
@@ -36,6 +38,8 @@ export function AufgabeZeile({
 }: {
   aufgabe: Aufgabe;
   namen: Record<string, string>;
+  /** Für die Farbe: Sie hängt an der Stelle im Haushalt. */
+  mitglieder: Mitglied[];
   kandidaten: { id: string; name: string }[];
   ich: string;
   planend: boolean;
@@ -44,6 +48,9 @@ export function AufgabeZeile({
   const router = useRouter();
   const [aus, setAus] = useState(false);
   const [aufgeklappt, setAufgeklappt] = useState(false);
+  // Das Abgeben-Formular wird von hier gesteuert: Sein Knopf sitzt neben dem
+  // Häkchen und muss beides können — aufklappen und gleich fragen.
+  const [fragt, setFragt] = useState(false);
   const feld = useId();
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -58,7 +65,12 @@ export function AufgabeZeile({
   const meine = ich !== "" && a.zustaendig === ich;
   const offen = a.zustaendig === "";
   const darf = a.id !== undefined && (meine || planend);
+  // Abgeben kann nur, wer sie hat. Für planende Personen an fremden Aufgaben
+  // ist „Wer macht das?" der richtige Weg — sie wählen, statt zurückzugeben.
+  const abgebbar = meine;
   const name = offen ? "Offen" : (namen[a.zustaendig] ?? a.zustaendig);
+  const farbe = farbklasse(mitglieder, a.zustaendig);
+  const grund = begruendung(a, namen);
 
   async function vorlage(aktiv: boolean) {
     setLaeuft(true);
@@ -75,6 +87,28 @@ export function AufgabeZeile({
       setAus(false);
     } finally {
       setLaeuft(false);
+    }
+  }
+
+  // Streichen statt Abschalten: Das hier gilt nur für DIESEN Termin.
+  //
+  // Das Etikett hieß zuerst „Diese Woche nicht" und behauptete damit mehr,
+  // als die Sache tut: Gestrichen wird eine Aufgabe an einem Tag, nicht die
+  // Vorlage für die Woche. Bei „Safiya zur Kita bringen", das fünfmal
+  // vorkommt, wäre das die Ansage gewesen, sie gehe die ganze Woche nicht
+  // hin.
+  //
+  // Es ist die Geste geworden und „Brauchen wir nicht" nicht mehr — die
+  // unumkehrbare Handlung sollte nicht die sein, die man aus Versehen macht.
+  // Ein Wisch, der eine Vorlage für alle künftigen Wochen abschaltet, fällt
+  // erst nächste Woche auf, wenn sie fehlt.
+  async function streichen() {
+    if (!a.id) return;
+    try {
+      await postMitToken<void>(`/api/aufgaben/${encodeURIComponent(a.id)}/streichen`);
+      starten(() => router.refresh());
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : "Das hat nicht funktioniert.");
     }
   }
 
@@ -116,16 +150,39 @@ export function AufgabeZeile({
   const kopftext = (
     <>
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className={`font-semibold ${a.erledigt ? "line-through" : ""}`}>{a.titel}</span>
-        <span className={`text-sm ${meine ? "font-semibold text-primary" : "text-muted"}`}>
+        <span className={`leading-snug font-semibold ${a.erledigt ? "line-through" : ""}`}>
+          {a.titel}
+        </span>
+        <span
+          className={`text-sm ${
+            meine ? "font-semibold text-[var(--person)]" : "text-muted"
+          }`}
+        >
           {meine ? "du" : name}
         </span>
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-subtle">
+      {/* Die Kennzahlen als eine Zeile mit Trennpunkten statt drei Blöcken
+          mit Lücken. Lücke heißt „hier ist Platz", Punkt heißt „das gehört
+          zusammen, ist aber nicht dasselbe" — und genau das trifft zu.
+          Leere Teile fallen raus, damit nie ein Punkt am Ende steht. */}
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-subtle">
         <span className="tabular-nums">{a.dauer_min} min</span>
-        {a.kopflast >= 2 && <span className="font-semibold text-clay">Kopflast {a.kopflast}</span>}
-        <span>{begruendung(a, namen)}</span>
+        {a.kopflast >= 2 && (
+          <>
+            <span aria-hidden="true">·</span>
+            {/* Die einzige Zahl, die hier farbig bleibt. Kopflast ist der
+                Gedanke, um den es in diesem Produkt geht — sie grau unter
+                Minuten und Begründung zu mischen hieße, sie zu verstecken. */}
+            <span className="font-semibold text-clay">Kopflast {a.kopflast}</span>
+          </>
+        )}
+        {grund !== "" && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{grund}</span>
+          </>
+        )}
       </div>
     </>
   );
@@ -146,12 +203,12 @@ export function AufgabeZeile({
 
   const inhalt = (
     <div
-      className={`flex gap-3 rounded-lg px-3 py-2.5 ${
+      className={`${farbe} flex gap-3 rounded-lg border px-3 py-3 transition-colors ${
         a.erledigt
-          ? "border border-transparent opacity-50"
+          ? "border-transparent opacity-45"
           : meine
-            ? "border border-primary/35 bg-primary-soft/60"
-            : "border border-transparent"
+            ? "zeile-eigen"
+            : "border-transparent"
       }`}
     >
       <Zeichen name={offen ? "?" : name} eigen={meine} />
@@ -167,10 +224,12 @@ export function AufgabeZeile({
             <AufgabeAktionen
               aufgabeId={a.id!}
               erledigt={a.erledigt ?? false}
-              abgebbar={meine}
               zustaendig={a.zustaendig}
               kandidaten={kandidaten}
               verteilbar={a.begruendung.code !== "eigene_aufgabe"}
+              fragt={fragt}
+              setFragt={setFragt}
+              streichen={streichen}
               abschaltbar={planend}
               abschalten={() => vorlage(false)}
             />
@@ -184,24 +243,53 @@ export function AufgabeZeile({
         )}
       </div>
 
+      {/* Abgeben als Zeichen, direkt neben dem Häkchen.
+          Vorher stand es nur aufgeklappt, und damit kostete die zweite
+          Handlung des Tages drei Tipper: Zeile antippen, lesen, wählen.
+          Sichtbar sind jetzt die beiden, die man wirklich braucht — ich habe
+          es getan, und ich kann es nicht. Unter dem Aufklapper bleibt, was
+          eine Entscheidung ist: nur diesmal nicht, gar nicht mehr, oder
+          jemand anders.
+
+          Nur an eigenen Aufgaben und nur, solange sie offen sind: Ein
+          Zeichen, das für die halbe Liste nichts tut, ist schlimmer als
+          keins. */}
       {darf && (
-        <button
-          type="button"
-          onClick={abhaken}
-          disabled={beschaeftigt}
-          aria-pressed={a.erledigt ?? false}
-          aria-label={a.erledigt ? `${a.titel} wieder öffnen` : `${a.titel} abhaken`}
-          className={`-mr-1 flex size-11 shrink-0 items-center justify-center self-start rounded-full transition-colors disabled:opacity-45 ${
-            a.erledigt
-              ? // Erledigtes wird leise. Ein gefüllter Knopf auf der Zeile, die
-                // niemanden mehr interessiert, zieht den Blick genau dorthin,
-                // wo nichts mehr zu tun ist.
-                "text-primary hover:bg-surface-2"
-              : "text-subtle hover:bg-surface-2 hover:text-fg"
-          }`}
-        >
-          {a.erledigt ? <Haken className="size-5" /> : <Kreis className="size-5" />}
-        </button>
+        <div className="-mr-1 flex shrink-0 self-start">
+          {abgebbar && !a.erledigt && (
+            <button
+              type="button"
+              onClick={() => {
+                setAufgeklappt(true);
+                setFragt(true);
+              }}
+              disabled={beschaeftigt}
+              aria-label={`${a.titel} abgeben`}
+              title="Abgeben"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-45"
+            >
+              <Zurueck className="size-5" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={abhaken}
+            disabled={beschaeftigt}
+            aria-pressed={a.erledigt ?? false}
+            aria-label={a.erledigt ? `${a.titel} wieder öffnen` : `${a.titel} abhaken`}
+            className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-45 ${
+              a.erledigt
+                ? // Erledigtes wird leise. Ein gefüllter Knopf auf der Zeile,
+                  // die niemanden mehr interessiert, zieht den Blick genau
+                  // dorthin, wo nichts mehr zu tun ist.
+                  "text-primary hover:bg-surface-2"
+                : "text-subtle hover:bg-surface-2 hover:text-fg"
+            }`}
+          >
+            {a.erledigt ? <Haken className="size-5" /> : <Kreis className="size-5" />}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -211,7 +299,7 @@ export function AufgabeZeile({
   return (
     <Wischen
       rechts={{ text: a.erledigt ? "Wieder öffnen" : "Erledigt", tun: abhaken }}
-      links={planend ? { text: "Brauchen wir nicht", tun: () => vorlage(false) } : undefined}
+      links={{ text: "Diesmal nicht", tun: streichen }}
     >
       {inhalt}
     </Wischen>
@@ -235,6 +323,8 @@ function begruendung(a: Aufgabe, namen: Record<string, string>): string {
       return "eigene Aufgabe";
     case "von_hand":
       return zuletzt ? `von Hand, vorher ${namen[zuletzt] ?? zuletzt}` : "von Hand verteilt";
+    case "absprache":
+      return "so abgesprochen";
     default:
       return "";
   }

@@ -31,6 +31,11 @@ export function patchMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
   return sendeMitToken<T>("PATCH", pfad, rumpf);
 }
 
+/** Ein PUT — der ganze Zustand auf einmal, nicht ein Stück davon. */
+export function putMitToken<T>(pfad: string, rumpf?: unknown): Promise<T> {
+  return sendeMitToken<T>("PUT", pfad, rumpf);
+}
+
 /** Ein DELETE. */
 export function deleteMitToken<T>(pfad: string): Promise<T> {
   return sendeMitToken<T>("DELETE", pfad);
