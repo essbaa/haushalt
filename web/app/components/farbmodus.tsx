@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { lies, type Modus, waehle as setze } from "@/lib/farbmodus";
+import { type Modus, useModus, waehle as setze } from "@/lib/farbmodus";
 
 const wahlen: { wert: Modus; titel: string }[] = [
   { wert: "system", titel: "Wie das Gerät" },
@@ -28,23 +27,12 @@ const wahlen: { wert: Modus; titel: string }[] = [
  * dieses Geräts. Dasselbe Argument wie beim zuletzt gewählten Haushalt.
  */
 export function Farbmodus() {
-  // Erst nach dem Einhängen lesen: Auf dem Server gibt es keinen
-  // localStorage, und ein Wert, der beim ersten Malen anders aussieht als
-  // danach, ist ein Hydrationsfehler. Bis dahin steht „Wie das Gerät" da —
-  // die Vorgabe, die auch ohne Wahl gilt.
-  const [modus, setModus] = useState<Modus>("system");
-  const [bereit, setBereit] = useState(false);
-
-  useEffect(() => {
-    const gespeichert = lies();
-    setModus(gespeichert);
-    setBereit(true);
-  }, []);
-
-  function waehlen(neu: Modus) {
-    setModus(neu);
-    setze(neu);
-  }
+  // Kein Effekt, der den gespeicherten Wert nachträgt: Die Farbwahl ist ein
+  // Zustand außerhalb von React (lib/farbmodus.ts). `null` heißt „auf dem
+  // Server gerendert" — dann ist noch keine der drei Kapseln markiert, weil
+  // der Server nicht wissen kann, welche es ist. Eine geratene Markierung
+  // wäre beim ersten Malen falsch, und das sieht man.
+  const modus = useModus();
 
   return (
     <fieldset className="space-y-2">
@@ -54,10 +42,10 @@ export function Farbmodus() {
           <button
             key={w.wert}
             type="button"
-            onClick={() => waehlen(w.wert)}
-            aria-pressed={bereit && modus === w.wert}
+            onClick={() => setze(w.wert)}
+            aria-pressed={modus === w.wert}
             className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors ${
-              bereit && modus === w.wert
+              modus === w.wert
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-line-strong text-muted hover:text-fg"
             }`}

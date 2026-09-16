@@ -130,8 +130,8 @@ function Problem() {
           <p className="mt-2.5 text-sm leading-relaxed text-muted text-pretty">
             Acht Minuten am Telefon — und drei Wochen im Kopf. Diese Last heißt{" "}
             <strong className="font-semibold text-fg">Kopflast</strong>, sie liegt fast immer bei
-            derselben Person, und sie ist der Grund, warum sich „halbe-halbe" nicht halbe-halbe
-            anfühlt.
+            derselben Person, und sie ist der Grund, warum sich &bdquo;halbe-halbe&ldquo; nicht
+            halbe-halbe anfühlt.
           </p>
         </div>
       </div>
