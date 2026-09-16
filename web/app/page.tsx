@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { HaushaltGemerkt } from "@/app/components/haushalt-gemerkt";
 import { Melden } from "@/app/components/melden";
 import { Uhr } from "@/app/components/icons";
 import { Laedt } from "@/app/components/laedt";
@@ -8,6 +9,7 @@ import { Sitzung } from "@/app/components/sitzung";
 import { Wochenplan } from "@/app/components/wochenplan";
 import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
+import { waehleHaushalt } from "@/lib/haushalt-wahl";
 import { aktuelleWoche, istWoche, wocheVersetzt, wochenSpanne } from "@/lib/woche";
 
 /**
@@ -32,7 +34,10 @@ export default async function Page({
 
   try {
     haushalte = await ladeHaushalte(token);
-    const gewaehlt = haushalte.find((h) => h.id === params.haushalt)?.id ?? haushalte[0]?.id;
+    // Adresse schlägt Cookie schlägt Liste. Ohne das zeigte die Startseite
+    // immer den ÄLTESTEN Haushalt — und täuschte damit tagelang einen Fehler
+    // vor, den es nie gab (Stolperstelle 5.15).
+    const gewaehlt = (await waehleHaushalt(haushalte, params.haushalt))?.id;
     if (gewaehlt) plan = await ladePlan(gewaehlt, woche, token);
   } catch (e) {
     fehler =
@@ -172,6 +177,7 @@ export default async function Page({
           </div>
         )}
 
+        {plan && <HaushaltGemerkt id={plan.haushalt.id} />}
         {plan && <Wochenplan plan={plan} />}
 
         {/* Der Weg zum Melden steht unter dem Plan und auf jeder Unterseite:

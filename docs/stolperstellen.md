@@ -1025,6 +1025,57 @@ nennt.** Und wenn die Wirkung „erst später" ist, gehört der Weg dazu, sie
 sofort zu bekommen. Ein Bestätigungswort allein („übernommen") ist keine
 Auskunft, sondern eine Quittung.
 
+### 5.15 Der Fehler, den es nie gab: beantwortete Fragen kamen wieder
+
+**Symptom** — Über Tage, immer gleich: Zwei Fragen beantworten, Seite neu
+laden, dieselben zwei Fragen stehen wieder da. Auf dem Telefon besonders
+zuverlässig.
+
+**Drei Fehlsuchen**, alle plausibel, alle falsch: die Zusammenführung in
+`facts || $2::jsonb`, das Auslesen in `fakten()`, ein Zwischenspeicher in
+Next.js. Eine davon ergab sogar eine echte Verbesserung — `OpenFacts` rechnet
+die Fragen jetzt aus dem **heutigen** Haushalt statt aus der
+festgeschriebenen Woche —, aber das Symptom blieb.
+
+**Die Ursache** stand in einer einzigen Abfrage, und sie zu stellen hätte am
+ersten Tag zehn Sekunden gekostet:
+
+```
+ Haushalt von Zakaria | {}
+ Essbaa's Haushalt    | {"keller": true, "fahrrad": false, … 14 Fakten}
+```
+
+Es wurde **immer richtig geschrieben**. Der Aufrufer ist Mitglied in zwei
+eigenen Haushalten, und die Startseite nahm ohne `?haushalt=` in der Adresse
+`haushalte[0]` — sortiert nach `created_at`, also den **ältesten**. Das war
+ein Übungshaushalt vom Vortag, in dem nichts beantwortet war. Die Fragen
+kamen aus dem Katalog in fester Reihenfolge, also standen dort dieselben zwei
+oben wie überall am Anfang: Es sah aus wie *dieselben wiederkehrenden* Fragen
+und waren *die gleichen Fragen eines anderen Haushalts*.
+
+Auf dem Telefon war es am zuverlässigsten, weil das Symbol auf dem
+Startbildschirm immer `/` öffnet — bei jedem Start den ältesten Haushalt.
+
+**Lösung** — `lib/haushalt-wahl.ts`: Adresse schlägt Cookie schlägt Liste. Ein
+Cookie und kein Eintrag in der Datenbank, weil es eine Gewohnheit des Geräts
+ist und keine Eigenschaft des Haushalts.
+
+**Lehre** — **Wenn die Daten sagen, dass das Schreiben stimmt, hör auf, das
+Schreiben zu debuggen.** Die Abfrage `select name, facts from household` war
+dreimal angeboten und dreimal nicht gelaufen; stattdessen wurden drei
+Vermutungen geprüft, die alle die Sorte hatten „hier könnte man etwas falsch
+gemacht haben". Eine Fehlersuche, die bei den eigenen Verdächtigen anfängt,
+findet die eigenen Fehler — und dieser gehörte keinem von ihnen.
+
+Und der Befund selbst ist eine Produktaussage, keine technische: **Eine App,
+die den Zustand nicht behält, in dem man sie verlassen hat, wirkt kaputt,
+auch wenn jede einzelne Funktion stimmt.** Der Zustand „welcher Haushalt"
+gehörte nie in eine Sortierung nach Anlagedatum.
+
+**Nebenbefund** — Fünf Haushalte in der Entwicklungsdatenbank, vier davon
+Übung. Testdaten, die aussehen wie echte Daten, sind bei der Fehlersuche kein
+neutraler Hintergrund, sondern eine zweite Fehlerquelle.
+
 ## 6. Betrieb
 
 ### 6.1 Fly verlangt eine Kreditkarte

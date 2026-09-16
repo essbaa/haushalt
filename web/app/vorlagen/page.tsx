@@ -4,6 +4,7 @@ import { Melden } from "@/app/components/melden";
 import { VorlagenListe } from "@/app/components/vorlagen-liste";
 import { ladeHaushalte, ladeVorlagen } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
+import { waehleHaushalt } from "@/lib/haushalt-wahl";
 
 /**
  * Alles, was die App kennt — und was davon bei euch gilt.
@@ -30,7 +31,7 @@ export default async function Vorlagen({
   if (eigene.length === 0) redirect("/einrichten");
 
   const { haushalt } = await searchParams;
-  const gewaehlt = eigene.find((h) => h.id === haushalt) ?? eigene[0];
+  const gewaehlt = (await waehleHaushalt(eigene, haushalt))!;
   const vorlagen = await ladeVorlagen(gewaehlt.id, token);
 
   return (

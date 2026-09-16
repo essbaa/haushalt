@@ -3,6 +3,7 @@ import { Bereiche } from "@/app/components/bereiche";
 import { TermineListe } from "@/app/components/termine-liste";
 import { ladeAnlaesse, ladeHaushalte } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
+import { waehleHaushalt } from "@/lib/haushalt-wahl";
 
 /**
  * Anlässe: Geburtstage, Elternabend, Termine.
@@ -25,7 +26,7 @@ export default async function Termine({
   if (eigene.length === 0) redirect("/einrichten");
 
   const { haushalt } = await searchParams;
-  const gewaehlt = eigene.find((h) => h.id === haushalt) ?? eigene[0];
+  const gewaehlt = (await waehleHaushalt(eigene, haushalt))!;
   const anlaesse = await ladeAnlaesse(gewaehlt.id, token);
 
   return (

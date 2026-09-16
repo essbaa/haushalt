@@ -8,6 +8,7 @@ import { Melden } from "@/app/components/melden";
 import { RueckmeldungenListe } from "@/app/components/rueckmeldungen-liste";
 import { ladeHaushalte, ladeRueckmeldungen, type Haushalt, type Rueckmeldung } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
+import { waehleHaushalt } from "@/lib/haushalt-wahl";
 import { aktuelleWoche } from "@/lib/woche";
 
 /**
@@ -31,7 +32,7 @@ export default async function Einstellungen({
   if (eigene.length === 0) redirect("/einrichten");
 
   const { haushalt } = await searchParams;
-  const gewaehlt = eigene.find((h) => h.id === haushalt) ?? eigene[0];
+  const gewaehlt = (await waehleHaushalt(eigene, haushalt))!;
 
   // Gemeldetes sehen nur die planenden Personen. Fehlschlagen darf das nicht
   // die Seite: Die Einstellungen sind der Ort, an dem man etwas repariert —
