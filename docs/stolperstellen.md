@@ -1062,6 +1062,50 @@ keine Bedingung, sondern eine Gewohnheit.
 
 ---
 
+### 6.4 Der `release_command` startete den Dienst statt der Migration
+
+**Symptom** — Deploy bricht nach 5:21 Minuten ab:
+
+```
+Running haushalt-api release_command: /migrate
+> Waiting for 28692edc409318 to have state: destroyed
+✖ Failed: timeout reached waiting for machine's state to change
+```
+
+Die Maschine startete, wurde aber nie fertig. Kein Fehler, keine Ausgabe der
+Migration, nur ein Zeitüberlauf.
+
+**Ursache** — Eine Zeile im Protokoll der Maschine, und sie sagt alles:
+
+```
+INFO Preparing to run: `/server /migrate` as nonroot
+```
+
+Das Dockerfile endete auf `ENTRYPOINT ["/server"]`. Fly übergibt den
+`release_command` als **COMMAND** — und ein COMMAND wird an ein ENTRYPOINT
+**angehängt**, nicht dafür eingesetzt. Aus `/migrate` wurde also
+`/server /migrate`: Die Release-Maschine startete den HTTP-Dienst, hörte auf
+Port 8080 und hatte keinen Grund, sich jemals zu beenden. Fly wartete auf
+`destroyed`, bis die Geduld aufgebraucht war.
+
+**Lösung** — `CMD ["/server"]` statt `ENTRYPOINT`. Damit ersetzt der
+`release_command` den Befehl vollständig, und ohne Befehl startet weiterhin
+der Dienst.
+
+Zweitens, unabhängig davon: `cmd/server` bricht jetzt mit Exit-Code 2 ab, wenn
+ihm ein Argument übergeben wird, das es nicht kennt. Der Dienst hat `/migrate`
+kommentarlos geschluckt — und das war der Unterschied zwischen einer Meldung
+nach einer Sekunde und einem Zeitüberlauf nach fünf Minuten.
+
+**Lehre** — **Ein Programm, das unbekannte Argumente ignoriert, verschweigt
+den Aufrufer-Fehler.** Es fühlt sich nachsichtig an und ist es nicht: Die
+Nachsicht verlegt den Fehler von der Stelle, an der er passiert, an eine
+Stelle fünf Minuten später, an der er nicht mehr zu erkennen ist.
+
+Und: Bei einem Zeitüberlauf ohne Fehlermeldung lautet die erste Frage nicht
+„was ist schiefgelaufen", sondern **„was ist überhaupt gelaufen"**. Die
+Antwort stand in der ersten Protokollzeile der Maschine, nicht in der letzten.
+
 ## 7. Fehler, die keine waren
 
 - **`FAIL: TestWeekMonday`** — absichtlich gebrochen (Commit `29947e3`), um zu

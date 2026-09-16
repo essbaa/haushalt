@@ -34,6 +34,26 @@ var version = "dev"
 // einen Exit-Code. In Go kann man os.Exit nicht mit defer kombinieren — deshalb
 // diese Trennung, sonst laufen Aufräumarbeiten nicht.
 func main() {
+	// Ein Argument, das dieser Dienst nicht kennt, ist ein Fehler und kein
+	// Rauschen.
+	//
+	// Genau das hat einen Deploy gekostet: Fly rief die Release-Maschine mit
+	// `/server /migrate` auf, weil der `release_command` an das ENTRYPOINT
+	// angehängt wurde. Der Dienst nahm das zusätzliche Argument
+	// kommentarlos hin, startete und hörte auf Port 8080 — fünf Minuten
+	// später brach Fly mit einem Zeitüberlauf ab, ohne ein Wort über die
+	// Ursache. Eine Zeile früher wäre die Meldung gewesen: „kennt dieses
+	// Argument nicht".
+	//
+	// Das Dockerfile ist inzwischen korrigiert. Diese Prüfung bleibt: Sie
+	// kostet nichts und verwandelt dieselbe Verwechslung beim nächsten Mal
+	// in eine Antwort statt in eine Suche.
+	if rest := os.Args[1:]; len(rest) > 0 {
+		slog.Error("dienst kennt dieses argument nicht", "argumente", rest,
+			"hinweis", "die migrationen laufen als /migrate, nicht als argument von /server")
+		os.Exit(2)
+	}
+
 	if err := run(); err != nil {
 		slog.Error("dienst beendet", "fehler", err)
 		os.Exit(1)

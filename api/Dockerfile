@@ -55,4 +55,15 @@ COPY --from=build /src/db/migrations /migrations
 # Nur Dokumentation — Fly nutzt die PORT-Variable, nicht diese Zeile.
 EXPOSE 8080
 USER nonroot:nonroot
-ENTRYPOINT ["/server"]
+
+# CMD und nicht ENTRYPOINT — und das ist keine Geschmacksfrage.
+#
+# Fly übergibt den `release_command` als COMMAND. Steht hier ein ENTRYPOINT,
+# wird der Befehl daran ANGEHÄNGT: Aus `release_command = "/migrate"` wurde
+# `/server /migrate`. Die Maschine startete brav den Dienst, hörte auf Port
+# 8080 und beendete sich nie — nach fünf Minuten brach Fly mit einem
+# Zeitüberlauf ab, ohne ein Wort über die Ursache.
+#
+# Mit CMD ersetzt der release_command den Befehl vollständig. Der Dienst
+# startet weiterhin von selbst, wenn kein Befehl angegeben ist.
+CMD ["/server"]
