@@ -1076,6 +1076,56 @@ gehörte nie in eine Sortierung nach Anlagedatum.
 Übung. Testdaten, die aussehen wie echte Daten, sind bei der Fehlersuche kein
 neutraler Hintergrund, sondern eine zweite Fehlerquelle.
 
+### 5.16 Reines Weiß war die Ursache, nicht die Farbwahl
+
+**Symptom** — „Die Landingpage gefällt mir, aber die App ist seeehr hell."
+
+**Ursache** — Der Grund war ein warmes Grauweiß (`--bg: #f6f8f4`), die Karten
+darauf `--surface: #ffffff`. Zwei Töne, von denen einer **reines Weiß** ist,
+ergeben nie eine warme Fläche, sondern ein grelles Blatt mit einem farbigen
+Rand drumherum. Auf der Landingpage fiel es nicht auf, weil dort
+Verlaufsflächen liegen; in der App ist fast alles Karte.
+
+**Lösung** — Auch die Karte trägt jetzt einen Ton (`#fbfcf7`), der Grund liegt
+etwas tiefer. Der Abstand zwischen beiden bleibt derselbe — das ganze Bild
+liegt nur ein paar Prozent tiefer. Dazu ein sehr leiser Anflug der
+Landingpage-Verläufe am oberen Rand jeder Seite.
+
+**Und ein zweiter Befund beim Nachrechnen:** `--fg-subtle` stand auf hellem
+Grund bei **3,35:1** und verfehlte damit die 4,5:1, die WCAG für Fließtext
+verlangt — ausgerechnet für die Zeile, die an jeder Aufgabe steht („20 min ·
+zum Ausgleich"). Jetzt 4,75:1. Im Dunkeln lag der Wert bei 5,65:1 und war
+immer in Ordnung.
+
+**Lehre** — **Ein Kontrastwert ist eine Zahl und keine Meinung.** „Sieht grau
+genug aus" hat den Wert zwei Wochen lang durchgehen lassen; drei Minuten
+Rechnen haben ihn gefunden. Und: Wer einen hellen Modus nur nebenbei
+mitlaufen lässt, prüft ihn auch nur nebenbei — die Skill nennt das
+`dark-mode-pairing`, beide Fassungen zusammen entwerfen.
+
+### 5.17 Ein Formatierer über das ganze Repo, und die CI wäre rot geworden
+
+**Symptom** — Nach einem beherzten `npx prettier --write "app/**/*.tsx"` waren
+42 Dateien geändert, darunter `lib/api-types.ts` mit **4506 Zeilen**.
+
+**Warum das teuer geworden wäre** — Diese Datei ist **erzeugt**:
+`openapi-typescript` schreibt sie aus `openapi.yaml`, und beide CI-Läufe
+prüfen mit `git diff --exit-code`, ob sie zum Vertrag passt. Eine formatierte
+Fassung hätte den nächsten Lauf rot gemacht — und zwar mit einer Meldung über
+den Vertrag, während die Ursache ein Formatierer war.
+
+**Lösung** — Die reinen Formatierungsänderungen zurückgenommen (`git show
+HEAD:datei > datei`, weil `git checkout` im verbundenen Ordner nicht löschen
+darf). Dann das Fehlende nachgeholt: `.prettierrc` mit `printWidth: 100`
+passend zum Hausstil, `.prettierignore` für alles Erzeugte, und ein
+`format`-Skript.
+
+**Lehre** — **Ein Projekt ohne Formatierer-Konfiguration hat trotzdem einen
+Stil — nur ungeschrieben.** Wer dann einmal `prettier --write` aufruft,
+formatiert nicht, sondern ändert den Stil, und der Unterschied steht in jeder
+Zeile. Und: Erzeugte Dateien gehören in die Ignorierliste, bevor das erste
+Werkzeug über sie läuft, nicht danach.
+
 ## 6. Betrieb
 
 ### 6.1 Fly verlangt eine Kreditkarte

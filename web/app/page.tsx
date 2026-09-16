@@ -2,12 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
 import { HaushaltGemerkt } from "@/app/components/haushalt-gemerkt";
-import { Melden } from "@/app/components/melden";
 import { Uhr } from "@/app/components/icons";
 import { Laedt } from "@/app/components/laedt";
-import { Sitzung } from "@/app/components/sitzung";
+import { Kopfzeile } from "@/app/components/kopfzeile";
+import { Landing } from "@/app/components/landing";
+import { Melden } from "@/app/components/melden";
 import { Wochenplan } from "@/app/components/wochenplan";
-import { ApiError, ladeHaushalte, ladePlan, type Haushalt, type Wochenplan as Plan } from "@/lib/api";
+import {
+  ApiError,
+  ladeHaushalte,
+  ladePlan,
+  type Haushalt,
+  type Wochenplan as Plan,
+} from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
 import { waehleHaushalt } from "@/lib/haushalt-wahl";
 import { aktuelleWoche, istWoche, wocheVersetzt, wochenSpanne } from "@/lib/woche";
@@ -31,6 +38,14 @@ export default async function Page({
   let fehler: { text: string; hinweis?: string } | null = null;
 
   const token = await serverToken();
+
+  // Wer nicht angemeldet ist, sieht die Seite, die erklärt, was das hier ist.
+  //
+  // Vorher standen an dieser Stelle zwei fremde Familien ohne ein Wort dazu —
+  // das stärkste Argument des Produkts (ein echter Plan, sofort) sah aus wie
+  // ein Versehen. Die Beispielhaushalte gibt es weiterhin, einen Satz weiter
+  // unter /demo.
+  if (!token) return <Landing />;
 
   try {
     haushalte = await ladeHaushalte(token);
@@ -59,14 +74,7 @@ export default async function Page({
 
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-5 py-3">
-          <Link href="/" className="text-base font-extrabold tracking-tight">
-            Haushalt
-          </Link>
-          <Sitzung />
-        </div>
-      </header>
+      <Kopfzeile breit />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8">
         {haushalte.length > 1 && (
@@ -131,7 +139,6 @@ export default async function Page({
               </Link>
             )}
           </div>
-
         </div>
 
         {/* Eine künftige Woche wird nicht festgeschrieben (ADR-0008,
@@ -150,9 +157,8 @@ export default async function Page({
                 Vorschau — diese Woche steht noch nicht fest.
               </p>
               <p className="text-sm leading-relaxed text-muted text-pretty">
-                Festgeschrieben wird sie am Montag. Bis dahin ändert jede
-                Einstellung sie noch, und abhaken oder umverteilen geht erst
-                dann.
+                Festgeschrieben wird sie am Montag. Bis dahin ändert jede Einstellung sie noch, und
+                abhaken oder umverteilen geht erst dann.
               </p>
             </div>
           </div>
@@ -185,16 +191,6 @@ export default async function Page({
             Formular, das man suchen muss, sammelt die Sätze der Menschen, die
             suchen — und das sind nicht die, deren Sätze fehlen. */}
         {eigener && plan && <Melden haushaltId={plan.haushalt.id} />}
-
-        {!token && (
-          <p className="mt-10 border-t border-line pt-6 text-sm leading-relaxed text-muted">
-            Das ist ein Beispielhaushalt.{" "}
-            <Link href="/anmelden" className="font-semibold text-primary underline underline-offset-2">
-              Melde dich an
-            </Link>
-            , um einen eigenen anzulegen.
-          </p>
-        )}
       </main>
     </>
   );

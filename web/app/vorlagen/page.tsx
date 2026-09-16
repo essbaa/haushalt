@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Kopfzeile } from "@/app/components/kopfzeile";
 import { Melden } from "@/app/components/melden";
 import { VorlagenListe } from "@/app/components/vorlagen-liste";
 import { ladeHaushalte, ladeVorlagen } from "@/lib/api";
@@ -35,30 +36,30 @@ export default async function Vorlagen({
   const vorlagen = await ladeVorlagen(gewaehlt.id, token);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-10">
-      <Bereiche
-        haushaltId={gewaehlt.id}
-        planend={gewaehlt.meine_rolle === "planend"}
-        aktiv="vorlagen"
-      />
+    <>
+      <Kopfzeile breit />
+      <main className="mx-auto w-full max-w-2xl px-5 py-10">
+        <Bereiche
+          haushaltId={gewaehlt.id}
+          planend={gewaehlt.meine_rolle === "planend"}
+          aktiv="vorlagen"
+        />
 
-      <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
-        Aufgaben
-      </h1>
-      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-        Alles, was die App kennt, und was davon bei euch gilt. Was ihr nicht
-        braucht, schaltet ihr hier dauerhaft ab — es kommt dann in keinem Plan
-        mehr vor.
-      </p>
+        <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">Aufgaben</h1>
+        <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+          Alles, was die App kennt, und was davon bei euch gilt. Was ihr nicht braucht, schaltet ihr
+          hier dauerhaft ab — es kommt dann in keinem Plan mehr vor.
+        </p>
 
-      <VorlagenListe
-        haushaltId={gewaehlt.id}
-        vorlagen={vorlagen}
-        mitglieder={gewaehlt.mitglieder}
-        planend={gewaehlt.meine_rolle === "planend"}
-      />
+        <VorlagenListe
+          haushaltId={gewaehlt.id}
+          vorlagen={vorlagen}
+          mitglieder={gewaehlt.mitglieder}
+          planend={gewaehlt.meine_rolle === "planend"}
+        />
 
-      <Melden haushaltId={gewaehlt.id} />
-    </main>
+        <Melden haushaltId={gewaehlt.id} />
+      </main>
+    </>
   );
 }

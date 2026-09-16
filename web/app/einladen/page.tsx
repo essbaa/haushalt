@@ -1,4 +1,5 @@
 import { Bereiche } from "@/app/components/bereiche";
+import { Kopfzeile } from "@/app/components/kopfzeile";
 import { EinladenFormular, type Offene } from "@/app/components/einladen-formular";
 import { ladeHaushalte } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -34,25 +35,27 @@ export default async function Einladen({
   }
 
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-10">
-      <Bereiche haushaltId={haushalt} planend={planend} aktiv="einladen" />
+    <>
+      <Kopfzeile />
+      <main className="mx-auto w-full max-w-md px-5 py-10">
+        <Bereiche haushaltId={haushalt} planend={planend} aktiv="einladen" />
 
-      <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
-        Jemanden einladen
-      </h1>
-      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-        Du bekommst einen Code, der einmal gilt und nach einer Woche abläuft.
-        Wer schon im Plan steht, wird mit seinem Konto verbunden — Aufgaben und
-        Verlauf bleiben ihm.
-      </p>
-
-      {haushalt ? (
-        <EinladenFormular haushaltId={haushalt} offene={offene} zugang={ersterCode()} />
-      ) : (
-        <p className="text-sm text-clay">
-          Es fehlt der Haushalt in der Adresse. Geh über den Wochenplan hierher.
+        <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
+          Jemanden einladen
+        </h1>
+        <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+          Du bekommst einen Code, der einmal gilt und nach einer Woche abläuft. Wer schon im Plan
+          steht, wird mit seinem Konto verbunden — Aufgaben und Verlauf bleiben ihm.
         </p>
-      )}
-    </main>
+
+        {haushalt ? (
+          <EinladenFormular haushaltId={haushalt} offene={offene} zugang={ersterCode()} />
+        ) : (
+          <p className="text-sm text-clay">
+            Es fehlt der Haushalt in der Adresse. Geh über den Wochenplan hierher.
+          </p>
+        )}
+      </main>
+    </>
   );
 }

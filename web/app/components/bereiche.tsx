@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Fahne, Kalender, Liste, Zahnrad } from "@/app/components/icons";
-import { Laedt } from "@/app/components/laedt";
 
 /**
  * Die Bereiche der App.
@@ -34,21 +33,47 @@ const bereiche: {
   Zeichen: (p: { className?: string }) => React.ReactElement;
 }[] = [
   { id: "plan", titel: "Plan", pfad: "/", Zeichen: Kalender },
-  { id: "vorlagen", titel: "Aufgaben", pfad: "/vorlagen", nurPlanend: true, Zeichen: Liste },
-  { id: "termine", titel: "Anlässe", pfad: "/termine", nurPlanend: true, Zeichen: Fahne },
-  { id: "einstellungen", titel: "Einstellungen", pfad: "/einstellungen", Zeichen: Zahnrad },
+  {
+    id: "vorlagen",
+    titel: "Aufgaben",
+    pfad: "/vorlagen",
+    nurPlanend: true,
+    Zeichen: Liste,
+  },
+  {
+    id: "termine",
+    titel: "Anlässe",
+    pfad: "/termine",
+    nurPlanend: true,
+    Zeichen: Fahne,
+  },
+  {
+    id: "einstellungen",
+    titel: "Einstellungen",
+    pfad: "/einstellungen",
+    Zeichen: Zahnrad,
+  },
 ];
 
 export function Bereiche({
   haushaltId,
   planend,
   aktiv,
+  skelett = false,
 }: {
   /** Fehlt, solange kein Haushalt gewählt ist — dann führen die Links
    *  ohne Anhängsel, und die Seite sucht sich selbst einen. */
   haushaltId?: string;
   planend: boolean;
   aktiv: Bereich;
+  /** Für `loading.tsx`: dieselbe Leiste, nur ohne Ziele.
+   *
+   *  Auf dem Telefon klebt sie unten und liegt außerhalb des Textflusses —
+   *  ohne sie im Platzhalter wäre der untere Rand für einen Moment leer, und
+   *  genau dieses Flackern soll ein Skelett verhindern. Dieselbe Komponente
+   *  und keine zweite Abschrift: Eine nachgebaute Leiste wäre eine zweite
+   *  Wahrheit über Maße, die sich ändern. */
+  skelett?: boolean;
 }) {
   const sichtbar = bereiche.filter((b) => planend || !b.nurPlanend);
   // Einladen hat keinen eigenen Platz mehr in der Leiste. Auf dieser Seite
@@ -70,26 +95,49 @@ export function Bereiche({
       {sichtbar.map((b) => {
         const dort = b.id === hier;
         const Zeichen = b.Zeichen;
+        const klassen = [
+          "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-center transition-colors",
+          "sm:min-h-10 sm:flex-none sm:flex-row sm:gap-2 sm:rounded-full sm:border sm:px-4",
+          dort
+            ? "text-primary sm:border-primary sm:bg-primary-soft"
+            : "text-muted hover:text-fg sm:border-line-strong sm:hover:border-primary sm:hover:text-primary",
+        ].join(" ");
+
+        if (skelett) {
+          return (
+            <span key={b.id} aria-hidden="true" className={`${klassen} opacity-60`}>
+              <span className="flex size-6 items-center justify-center sm:size-4">
+                <Zeichen className="size-6 sm:size-4" />
+              </span>
+              <span className="text-[0.65rem] leading-none font-semibold sm:text-sm">
+                {b.titel}
+              </span>
+            </span>
+          );
+        }
+
         return (
           <Link
             key={b.id}
             href={haushaltId ? `${b.pfad}?haushalt=${encodeURIComponent(haushaltId)}` : b.pfad}
             aria-current={dort ? "page" : undefined}
-            className={[
-              "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-center transition-colors",
-              "sm:min-h-10 sm:flex-none sm:flex-row sm:gap-2 sm:rounded-full sm:border sm:px-4",
-              dort
-                ? "text-primary sm:border-primary sm:bg-primary-soft"
-                : "text-muted hover:text-fg sm:border-line-strong sm:hover:border-primary sm:hover:text-primary",
-            ].join(" ")}
+            className={klassen}
           >
-            {/* Der Kreisel ersetzt das Zeichen, solange die Seite lädt. Die
-                Rückmeldung erscheint damit dort, wo der Finger war — und die
-                Leiste springt nicht, weil beide gleich groß sind. */}
+            {/* Kein Kreisel mehr an dieser Stelle.
+                
+                Er stand hier, solange beim Wechsel die alte Seite stehen
+                blieb — dann war er die einzige Rückmeldung. Seit es
+                `loading.tsx` gibt, erscheint sofort das Gerüst der neuen
+                Seite, und der Kreisel flackerte für hundert Millisekunden
+                dazwischen: zwei Signale für ein Ereignis, von denen das
+                schwächere zuerst kommt.
+                
+                Er bleibt dort, wo er weiterhin das einzige Signal ist — bei
+                den Wochenpfeilen und der Haushaltswahl. Die wechseln nur den
+                Anhang der Adresse, nicht den Abschnitt, und eine
+                Suspense-Grenze löst dabei nicht aus. */}
             <span className="flex size-6 items-center justify-center sm:size-4">
-              <Laedt>
-                <Zeichen className="size-6 sm:size-4" />
-              </Laedt>
+              <Zeichen className="size-6 sm:size-4" />
             </span>
             <span className="text-[0.65rem] leading-none font-semibold sm:text-sm">{b.titel}</span>
           </Link>

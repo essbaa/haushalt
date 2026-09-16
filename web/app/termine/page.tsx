@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Kopfzeile } from "@/app/components/kopfzeile";
 import { TermineListe } from "@/app/components/termine-liste";
 import { ladeAnlaesse, ladeHaushalte } from "@/lib/api";
 import { serverToken } from "@/lib/auth-token";
@@ -30,26 +31,27 @@ export default async function Termine({
   const anlaesse = await ladeAnlaesse(gewaehlt.id, token);
 
   return (
-    <main className="mx-auto w-full max-w-lg px-5 py-10">
-      <Bereiche
-        haushaltId={gewaehlt.id}
-        planend={gewaehlt.meine_rolle === "planend"}
-        aktiv="termine"
-      />
+    <>
+      <Kopfzeile />
+      <main className="mx-auto w-full max-w-lg px-5 py-10">
+        <Bereiche
+          haushaltId={gewaehlt.id}
+          planend={gewaehlt.meine_rolle === "planend"}
+          aktiv="termine"
+        />
 
-      <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
-        Anlässe
-      </h1>
-      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-        Geburtstage, Elternabende, Termine. Manche Aufgaben entstehen nur daraus
-        — ein Geschenk braucht einen Geburtstag. Erfinden wird die App keinen.
-      </p>
+        <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">Anlässe</h1>
+        <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+          Geburtstage, Elternabende, Termine. Manche Aufgaben entstehen nur daraus — ein Geschenk
+          braucht einen Geburtstag. Erfinden wird die App keinen.
+        </p>
 
-      <TermineListe
-        haushaltId={gewaehlt.id}
-        anlaesse={anlaesse}
-        planend={gewaehlt.meine_rolle === "planend"}
-      />
-    </main>
+        <TermineListe
+          haushaltId={gewaehlt.id}
+          anlaesse={anlaesse}
+          planend={gewaehlt.meine_rolle === "planend"}
+        />
+      </main>
+    </>
   );
 }

@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "generate": "openapi-typescript ../openapi.yaml --output lib/api-types.ts"
+    "generate": "openapi-typescript ../openapi.yaml --output lib/api-types.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "better-auth": "^1.7.4",

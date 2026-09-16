@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bereiche } from "@/app/components/bereiche";
+import { Kopfzeile } from "@/app/components/kopfzeile";
 import { EinstellungenFormular } from "@/app/components/einstellungen-formular";
+import { Farbmodus } from "@/app/components/farbmodus";
 import { PersonPlus } from "@/app/components/icons";
 import { Laedt } from "@/app/components/laedt";
 import { Melden } from "@/app/components/melden";
@@ -48,62 +50,69 @@ export default async function Einstellungen({
   }
 
   return (
-    <main className="mx-auto w-full max-w-lg px-5 py-10">
-      <Bereiche
-        haushaltId={gewaehlt.id}
-        planend={gewaehlt.meine_rolle === "planend"}
-        aktiv="einstellungen"
-      />
+    <>
+      <Kopfzeile />
+      <main className="mx-auto w-full max-w-lg px-5 py-10">
+        <Bereiche
+          haushaltId={gewaehlt.id}
+          planend={gewaehlt.meine_rolle === "planend"}
+          aktiv="einstellungen"
+        />
 
-      <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
-        Einstellungen
-      </h1>
-      <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-        Beim Einrichten hat die App einiges geraten — Kapazität, Betreuungsform,
-        Wohnform. Hier steht, was sie angenommen hat, und hier änderst du es.
-      </p>
+        <h1 className="mt-5 mb-2 text-2xl font-extrabold tracking-tight text-balance">
+          Einstellungen
+        </h1>
+        <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+          Beim Einrichten hat die App einiges geraten — Kapazität, Betreuungsform, Wohnform. Hier
+          steht, was sie angenommen hat, und hier änderst du es.
+        </p>
 
-      <EinstellungenFormular
-        haushalt={gewaehlt}
-        planend={gewaehlt.meine_rolle === "planend"}
-        woche={aktuelleWoche()}
-      />
+        <EinstellungenFormular
+          haushalt={gewaehlt}
+          planend={gewaehlt.meine_rolle === "planend"}
+          woche={aktuelleWoche()}
+        />
 
-      {gewaehlt.meine_rolle === "planend" && (
         <section className="mt-10 border-t border-line pt-6">
-          <h2 className="text-lg font-bold tracking-tight">Was gemeldet wurde</h2>
-          <p className="mt-1 mb-4 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-            Unten auf jeder Seite steht &bdquo;Stimmt etwas nicht?&ldquo;. Das darf jeder im
-            Haushalt benutzen — und in der Probewoche ist es die wichtigste
-            Zeile der App.
-          </p>
-          <RueckmeldungenListe liste={gemeldet} />
+          <h2 className="mb-4 text-lg font-bold tracking-tight">Dieses Gerät</h2>
+          <Farbmodus />
         </section>
-      )}
 
-      {/* Einladen hat die Bereichsleiste verlassen: Es ist eine Handlung und
+        {gewaehlt.meine_rolle === "planend" && (
+          <section className="mt-10 border-t border-line pt-6">
+            <h2 className="text-lg font-bold tracking-tight">Was gemeldet wurde</h2>
+            <p className="mt-1 mb-4 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+              Unten auf jeder Seite steht &bdquo;Stimmt etwas nicht?&ldquo;. Das darf jeder im
+              Haushalt benutzen — und in der Probewoche ist es die wichtigste Zeile der App.
+            </p>
+            <RueckmeldungenListe liste={gemeldet} />
+          </section>
+        )}
+
+        {/* Einladen hat die Bereichsleiste verlassen: Es ist eine Handlung und
           kein Ort, und man tut es ein-, zweimal im Leben eines Haushalts.
           Hier steht es richtig — bei den anderen Dingen, die man einmal
           einstellt. */}
-      {gewaehlt.meine_rolle === "planend" && (
-        <section className="mt-10 border-t border-line pt-6">
-          <h2 className="text-lg font-bold tracking-tight">Wer noch dazugehört</h2>
-          <p className="mt-1 mb-4 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-            Jede Person im Haushalt kann einen eigenen Zugang bekommen und sieht
-            dann ihren Teil des Plans — und kann abhaken, abgeben, widersprechen.
-          </p>
-          <Link
-            href={`/einladen?haushalt=${encodeURIComponent(gewaehlt.id)}`}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line-strong px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary"
-          >
-            <PersonPlus className="size-4" />
-            Jemanden einladen
-            <Laedt />
-          </Link>
-        </section>
-      )}
+        {gewaehlt.meine_rolle === "planend" && (
+          <section className="mt-10 border-t border-line pt-6">
+            <h2 className="text-lg font-bold tracking-tight">Wer noch dazugehört</h2>
+            <p className="mt-1 mb-4 max-w-prose text-sm leading-relaxed text-muted text-pretty">
+              Jede Person im Haushalt kann einen eigenen Zugang bekommen und sieht dann ihren Teil
+              des Plans — und kann abhaken, abgeben, widersprechen.
+            </p>
+            <Link
+              href={`/einladen?haushalt=${encodeURIComponent(gewaehlt.id)}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line-strong px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary"
+            >
+              <PersonPlus className="size-4" />
+              Jemanden einladen
+              <Laedt />
+            </Link>
+          </section>
+        )}
 
-      <Melden haushaltId={gewaehlt.id} />
-    </main>
+        <Melden haushaltId={gewaehlt.id} />
+      </main>
+    </>
   );
 }

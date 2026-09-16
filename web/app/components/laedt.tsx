@@ -16,6 +16,20 @@ import type { ReactNode } from "react";
  * steckt. Das ist besser als ein Balken am Seitenrand: Die Rückmeldung
  * erscheint dort, wo der Finger war.
  *
+ * WO SIE NOCH STEHT, UND WO NICHT MEHR.
+ *
+ * Seit es `loading.tsx` gibt, zeigt ein Wechsel des Bereichs sofort das
+ * Gerüst der neuen Seite. Dort ist der Kreisel überflüssig geworden und war
+ * sogar schädlich: zwei Signale für ein Ereignis, und das schwächere kam
+ * zuerst — ein Flackern von hundert Millisekunden.
+ *
+ * Er bleibt an den Links, die **denselben Abschnitt** ansteuern und nur den
+ * Anhang der Adresse ändern: die Wochenpfeile, „Diese Woche", die
+ * Haushaltswahl. Next.js zeigt dort keine Suspense-Grenze — die Seite ist ja
+ * schon da —, und ohne diesen Kreisel gäbe es wieder das, was auf dem Telefon
+ * als Erstes aufgefallen ist: Man tippt, und eine Sekunde lang passiert
+ * sichtbar nichts.
+ *
  * Mit Kindern ersetzt der Kreisel sie (für Knöpfe, die nur ein Zeichen
  * tragen); ohne Kinder steht er daneben.
  */

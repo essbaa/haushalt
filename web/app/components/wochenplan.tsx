@@ -131,8 +131,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
           {rueckschau.length > 0 && (
             <details className="group border-t border-line pt-4">
               <summary className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-fg">
-                Schon gewesen ({rueckschau.length}{" "}
-                {rueckschau.length === 1 ? "Tag" : "Tage"})
+                Schon gewesen ({rueckschau.length} {rueckschau.length === 1 ? "Tag" : "Tage"})
                 <span aria-hidden="true" className="transition-transform group-open:rotate-90">
                   ›
                 </span>
@@ -159,9 +158,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         </section>
       )}
 
-      {plan.gestrichen && plan.gestrichen.length > 0 && (
-        <Gestrichene eintraege={plan.gestrichen} />
-      )}
+      {plan.gestrichen && plan.gestrichen.length > 0 && <Gestrichene eintraege={plan.gestrichen} />}
 
       {plan.bilanz ? (
         <Bilanztafel
@@ -172,8 +169,8 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         />
       ) : (
         <p className="text-sm leading-relaxed text-muted">
-          Die Auswertung, wer wie viel trägt, sehen die planenden Personen. Du
-          siehst den ganzen Plan.
+          Die Auswertung, wer wie viel trägt, sehen die planenden Personen. Du siehst den ganzen
+          Plan.
         </p>
       )}
 
@@ -187,7 +184,10 @@ export function Wochenplan({ plan }: { plan: Plan }) {
           </summary>
           <ul className="mt-1 space-y-1">
             {uebersprungen.map((u) => (
-              <li key={`${u.vorlage_id}-${u.grund}`} className="flex flex-wrap justify-between gap-x-4 py-1 text-sm">
+              <li
+                key={`${u.vorlage_id}-${u.grund}`}
+                className="flex flex-wrap justify-between gap-x-4 py-1 text-sm"
+              >
                 <span>{u.titel}</span>
                 <span className="text-subtle">
                   {grundText[u.grund] ?? u.grund}
@@ -306,8 +306,17 @@ function Tag({
                 : "bg-bg text-muted"
           }`}
         >
-          <span className="text-[0.65rem] font-semibold tracking-wide uppercase">{kurz}</span>
-          <span className="mt-0.5 text-lg font-extrabold tabular-nums">{nummer}</span>
+          {/* Zwei Zeilen in 44 Pixeln: Ohne feste Zeilenhöhen setzt die
+              Schrift ihre eigenen Abstände, und die Marke sitzt sichtbar zu
+              hoch. `leading-none` allein genügt nicht — die Versalhöhe von
+              „MO" und die Ziffernhöhe sind verschieden, deshalb der halbe
+              Pixel Ausgleich unten statt eines Abstands oben. */}
+          <span className="text-[0.625rem] leading-[1] font-bold tracking-[0.08em] uppercase">
+            {kurz}
+          </span>
+          <span className="mt-[0.1875rem] text-[1.0625rem] leading-[1] font-extrabold tabular-nums">
+            {nummer}
+          </span>
         </div>
         <div className="mt-1 w-px flex-1 bg-line" aria-hidden="true" />
       </div>
@@ -318,13 +327,9 @@ function Tag({
           fängt ein neuer Tag an. Die senkrechte Linie daneben verbindet, und
           genau das war das Problem: Sie führt durch, wo eine Grenze liegt. */}
       <div
-        className={`min-w-0 flex-1 space-y-1.5 pb-8 ${
-          erster ? "" : "border-t border-line pt-3.5"
-        }`}
+        className={`min-w-0 flex-1 space-y-1.5 pb-8 ${erster ? "" : "border-t border-line pt-3.5"}`}
       >
-        {heute && (
-          <p className="pb-0.5 text-sm font-semibold text-primary">Heute</p>
-        )}
+        {heute && <p className="pb-0.5 text-sm font-semibold text-primary">Heute</p>}
         {aufgaben.map((a, i) => (
           <div key={a.id ?? `${a.vorlage_id}-${i}`}>
             {/* Das Zeitfenster als leise Marke, und nur dort, wo es wechselt.
@@ -420,9 +425,8 @@ function Bilanztafel({
       </ul>
 
       <p className="text-xs leading-relaxed text-muted">
-        Angezeigt ist der Anteil der eigenen verfügbaren Zeit, nicht die Minuten.
-        Kopflast zählt in der Verteilung mit, kostet aber keine Uhrzeit und steht
-        deshalb nicht in dieser Zahl.
+        Angezeigt ist der Anteil der eigenen verfügbaren Zeit, nicht die Minuten. Kopflast zählt in
+        der Verteilung mit, kostet aber keine Uhrzeit und steht deshalb nicht in dieser Zahl.
       </p>
 
       <ul className="grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">

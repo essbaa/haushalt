@@ -1,0 +1,8 @@
+# Erzeugt, nicht geschrieben: openapi-typescript schreibt diese Datei aus
+# openapi.yaml, und die CI prüft mit `git diff --exit-code`, ob sie zum
+# Vertrag passt. Ein Formatierer, der sie anfasst, macht den nächsten Lauf
+# rot — einmal beinahe passiert.
+lib/api-types.ts
+next-env.d.ts
+.next
+node_modules

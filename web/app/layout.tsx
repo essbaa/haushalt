@@ -38,9 +38,26 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * Die gespeicherte Farbwahl, bevor irgendetwas gemalt wird.
+ *
+ * Ohne dieses Skript malt der Browser erst die Vorgabe und tauscht sie eine
+ * Zehntelsekunde später aus — auf einem dunkel gestellten Telefon ein weißer
+ * Blitz beim Öffnen der App. Das ist der Grund, warum es ein blockierendes
+ * Skript im Kopf sein muss und kein Effekt in React: Ein Effekt läuft nach
+ * dem ersten Malen, und genau das erste Malen ist hier das Problem.
+ *
+ * Es ist mit Absicht winzig und fällt still aus, wenn der Speicher gesperrt
+ * ist (privates Fenster). Dann gilt, was das Gerät sagt — die Vorgabe.
+ */
+const farbwahl = `try{var m=localStorage.getItem("farbmodus");if(m==="hell")document.documentElement.setAttribute("data-theme","light");else if(m==="dunkel")document.documentElement.setAttribute("data-theme","dark");}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="de" className={`${jakarta.variable} h-full antialiased`}>
+    <html lang="de" className={`${jakarta.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: farbwahl }} />
+      </head>
       <body className="flex min-h-full flex-col bg-bg text-fg">{children}</body>
     </html>
   );

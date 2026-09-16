@@ -18,17 +18,36 @@
 :root {
   color-scheme: light;
 
-  --bg: #f6f8f4;
-  --surface: #ffffff;
-  --surface-2: #eef1ea;
-  --surface-3: #e5e9e0;
+  /* Reines Weiß war der Fehler.
+     
+     Der Grund ist ein warmes Grauweiß, die Karten darauf waren #ffffff — und
+     zwei Töne, von denen einer reines Weiß ist, ergeben nie eine warme
+     Fläche, sondern ein grelles Blatt mit einem farbigen Rand drumherum. In
+     der App fällt das mehr auf als auf der Landingpage, weil dort fast alles
+     Karte ist: Aufgabenliste, Formulare, Einstellungen.
+     
+     Jetzt trägt auch die Karte einen Ton. Der Abstand zwischen Grund und
+     Karte bleibt derselbe — sie hebt sich weiterhin ab —, nur liegt das ganze
+     Bild ein paar Prozent tiefer und deutlich wärmer. */
+  --bg: #f1f4ec;
+  --surface: #fbfcf7;
+  --surface-2: #e8ece1;
+  --surface-3: #dde3d4;
 
   --fg: #16201a;
   --fg-muted: #55655a;
-  --fg-subtle: #7a887e;
+  /* Nachgerechnet, nicht geschätzt: #7a887e stand auf dem hellen Grund bei
+     3,35:1 und verfehlte damit die 4,5:1, die WCAG für Fließtext verlangt —
+     und zwar für die Zeile, die an jeder Aufgabe steht („20 min · zum
+     Ausgleich"). Das ist kein Randfall, das ist die zweithäufigste Zeile der
+     App. Jetzt 4,75:1. Der Abstand zu --fg-muted (5,56:1) ist kleiner
+     geworden; die Stufung trägt weiterhin über Größe und Gewicht, und lieber
+     eine leisere Hierarchie als eine, die manche gar nicht lesen können.
+     Im Dunkeln lag der Wert bei 5,65:1 und bleibt, wie er war. */
+  --fg-subtle: #616f66;
 
-  --line: #e0e6da;
-  --line-strong: #c7d1c2;
+  --line: #dce3d2;
+  --line-strong: #c2cdb9;
 
   --primary: #2c6a55;
   --primary-hover: #235444;
@@ -78,8 +97,23 @@
   --radius-full: 999px;
 }
 
+/* Der Dunkelmodus gilt in zwei Fällen, und die Reihenfolge ist Absicht:
+   wenn das Gerät ihn will UND niemand ausdrücklich Hell gewählt hat — oder
+   wenn jemand ausdrücklich Dunkel gewählt hat.
+
+   Die Zuweisungen stehen deshalb zweimal da. Das ist die Sorte Dopplung, die
+   dieses Projekt sonst bekämpft, und sie ist hier der kleinere Fehler: Die
+   Alternative wäre `light-dark()`, das beide Fassungen in einer Zeile hält —
+   aber ein Browser, der es nicht kennt, bekommt keinen Farbwert und zeigt
+   eine kaputte Seite. Für eine App, die auf fremden Telefonen läuft, ist das
+   kein Tausch, den man macht.
+
+   Auslöser, der die Dopplung wieder entfernt: wenn `light-dark()` alt genug
+   ist, dass auch das älteste iPhone im Haushalt es kennt. Wer hier etwas
+   ändert, ändert es in BEIDEN Blöcken — `grep -c "\-\-fg-muted:" globals.css`
+   muss drei ergeben. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
 
     --bg: #10150f;
@@ -124,6 +158,53 @@
     --person-6-soft: #162c2e;
   }
 }
+
+/* Dieselben Werte, wenn jemand Dunkel ausdrücklich gewählt hat. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #10150f;
+    --surface: #191f18;
+    --surface-2: #212820;
+    --surface-3: #2a322a;
+
+    --fg: #e9efe6;
+    --fg-muted: #a3b0a4;
+    --fg-subtle: #85927f;
+
+    --line: #2b332a;
+    --line-strong: #3c463b;
+
+    --primary: #74c6a5;
+    --primary-hover: #8ad4b7;
+    --primary-soft: #1d2c26;
+    --on-primary: #0a130f;
+
+    --clay: #e3a77f;
+    --clay-soft: #2b221c;
+    --danger: #f0736a;
+
+    --ring: #74c6a5;
+
+    /* Im Dunkeln kehrt sich das Verhältnis um: Der Ton wird hell, die Fläche
+       dunkel. Dieselben sechs Familien, nur von der anderen Seite. */
+    --person: var(--fg-muted);
+    --person-soft: var(--surface-3);
+
+    --person-1: #74c6a5;
+    --person-1-soft: #1d2c26;
+    --person-2: #8fb4f0;
+    --person-2-soft: #1b2434;
+    --person-3: #c3a2e2;
+    --person-3-soft: #272033;
+    --person-4: #e3a77f;
+    --person-4-soft: #2b221c;
+    --person-5: #ef9ab8;
+    --person-5-soft: #331f27;
+    --person-6: #7cc7cf;
+    --person-6-soft: #162c2e;
+  }
+
 
 /* Setzt --person und --person-soft für alles darunter. Die Klasse steht an
    der Zeile, die Kinder greifen mit var(--person) darauf zu — so braucht
@@ -171,7 +252,19 @@
 }
 
 body {
-  background: var(--bg);
+  /* Derselbe Gedanke wie auf der Landingpage, nur ein Bruchteil davon: zwei
+     sehr weiche Flächen am oberen Rand, die den Grund atmen lassen. Sie
+     scrollen mit und sind nach dem ersten Bildschirm vorbei — oben, wo man
+     ankommt, ist die Wärme; unten, wo man arbeitet, ist Ruhe.
+     
+     `no-repeat` und eine Höhe in vh statt `fixed`: Ein fest stehender
+     Hintergrund ruckelt auf dem Telefon beim Scrollen. */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(90% 55% at 8% 0%, var(--primary-soft) 0%, transparent 60%),
+    radial-gradient(70% 45% at 95% 2%, var(--clay-soft) 0%, transparent 55%);
+  background-repeat: no-repeat;
+  background-size: 100% 70vh;
   color: var(--fg);
   font-family: var(--font-sans);
   /* Platz für die Bereichsleiste, die auf dem Telefon unten klebt. Hier und
@@ -187,6 +280,70 @@ body {
   body {
     padding-bottom: 0;
   }
+}
+
+/* ============================================================================
+   Wärme.
+   ============================================================================
+
+   Die Landingpage sah zuerst tot aus, und die Ursache war nicht die Farbwahl,
+   sondern die Fläche: Text auf Grund, dazwischen dünne Linien. Warme Töne in
+   Akzenten wirken nicht warm — sie brauchen Fläche, sonst bleibt der Eindruck
+   der des Grundes, und der ist im Dunkelmodus fast schwarz.
+
+   Zwei sehr weiche Verläufe aus den vorhandenen Tokens, kein neuer Farbwert:
+   links ein Grünschimmer, rechts oben ein Lehmton. `isolate` und `-z-10` am
+   Kind, damit nichts über dem Inhalt liegt. */
+.warm-grund {
+  position: relative;
+  isolation: isolate;
+}
+
+.warm-grund::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  background:
+    radial-gradient(110% 90% at 12% 0%, var(--primary-soft) 0%, transparent 58%),
+    radial-gradient(80% 70% at 92% 8%, var(--clay-soft) 0%, transparent 55%);
+}
+
+/* Ein Hauch Körnung darüber. Sie ist einzeln nicht zu sehen und sorgt dafür,
+   dass die Verlaufsflächen nicht wie eine Bildfehlfarbe aussehen, sondern wie
+   Papier. Als Daten-URI, damit kein zweiter Aufruf nötig ist. */
+.koerner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -9;
+  opacity: 0.035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Im Dunkeln trägt kein Schatten — er fällt auf Schwarz. Stattdessen ein
+   heller Rand oben, wie ihn Licht auf einer Kante macht. */
+.karte-tief {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 12px 32px -12px rgb(0 0 0 / 0.18);
+}
+
+/* Im Dunkeln dieselbe Kante, egal ob das Gerät sie will oder jemand sie
+   gewählt hat. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .karte-tief {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 16px 40px -16px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] .karte-tief {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 16px 40px -16px rgb(0 0 0 / 0.6);
 }
 
 /* Ein sichtbarer Fokusring, überall gleich. Ihn zu entfernen ist der
