@@ -1126,6 +1126,68 @@ formatiert nicht, sondern ändert den Stil, und der Unterschied steht in jeder
 Zeile. Und: Erzeugte Dateien gehören in die Ignorierliste, bevor das erste
 Werkzeug über sie läuft, nicht danach.
 
+### 5.18 Deutsche Maske, englische Fehler
+
+**Symptom** — Auf der Anmeldeseite stand bei einem Tippfehler im Passwort
+`Invalid email or password.` — als einziger englischer Satz zwischen deutscher
+Überschrift, deutschen Feldern und deutschem Knopf. Ein Kommentar im Code
+erklärte es sogar: „Die Meldung kommt vom Anmeldedienst und ist englisch. Bis
+es eine eigene Übersetzung gibt, ist die echte Meldung besser als eine
+erfundene."
+
+**Warum der Kommentar recht hatte und die Zeile trotzdem falsch war** — Der
+Satz stimmt für Fehler, die wir nicht kennen. Er stimmt nicht für die fünf,
+die jeden Tag vorkommen. Aufgefallen ist es an einer fremden App: eine Anzeige
+für eine Meditations-App mit deutscher Begrüßung, deutscher Navigation und
+englischen Kategorienamen. Halb übersetzt sieht nicht nach Weltläufigkeit aus,
+sondern nach unfertig — und die Anmeldeseite ist der erste Bildschirm
+überhaupt.
+
+**Lösung** — `web/lib/anmelde-fehler.ts`: eine Tabelle von **Code** auf
+deutschen Satz, Rückfall auf den Originaltext. Übersetzt wird der Code und
+nicht der Text — der Text ist die Ausgabe einer fremden Bibliothek und ändert
+sich mit ihrer Version, der Code ist ihre Zusage. Die Schlüssel sind auf
+`keyof typeof authClient.$ERROR_CODES` getippt, also prüft der Compiler die
+Tabelle gegen die echte Fehlerliste.
+
+**Zwei Funde beim Bauen, die mehr wert waren als die Übersetzung selbst:**
+
+1. **Die Bremse schickt keinen Code.** `rateLimitResponse` in Better Auth
+   sitzt *vor* den Endpunkten und kennt deren Fehlerliste nicht: Sie antwortet
+   mit 429 und `{ message: "Too many requests. Please try again later." }`,
+   ohne `code`. Eine Tabelle, die nur auf Codes schaut, hätte ausgerechnet den
+   häufigsten Fehler einer Probewoche — dreimal das falsche Passwort —
+   englisch gelassen. Deshalb fragt die Funktion zuerst nach dem Status.
+
+2. **Übersetzen ist eine Gelegenheit, ein Leck zuzumachen.**
+   `USER_NOT_FOUND` und `CREDENTIAL_ACCOUNT_NOT_FOUND` verraten, ob es zu
+   einer Adresse ein Konto gibt. Im Original steht das auf Englisch da; wer
+   Satz für Satz übersetzt, schreibt das Leck auf Deutsch weiter. Beide zeigen
+   jetzt denselben Satz wie „stimmt nicht" — dieselbe Regel, die beim
+   Passwort-Vergessen und bei Einladungscodes schon gilt.
+
+**Lehre** — **Eine halb übersetzte Oberfläche ist keine halbe Übersetzung,
+sondern ein sichtbarer Bauzustand.** Und: Wer fremde Fehlermeldungen
+durchreicht, reicht auch ihre Auskünfte durch.
+
+### 5.19 „Heute ist für dich nichts offen" — über der nächsten Woche
+
+**Symptom** — Beim Blättern in die nächste Woche stand oben weiterhin „Heute
+ist für dich nichts offen." Stimmte sogar meistens, war aber eine Auskunft
+über einen Tag, der auf dem Bildschirm gar nicht vorkommt.
+
+**Warum** — `meineHeute` wird aus `heute()` gerechnet, unabhängig davon,
+welche Woche gezeigt wird. Liegt heute nicht in der gezeigten Woche, ist die
+Zahl null — und null liest sich wie eine Aussage, nicht wie „nicht zutreffend".
+
+**Lösung** — `plan.woche === aktuelleWoche()` entscheidet, ob der Satzteil
+über heute überhaupt erscheint. Sonst steht nur die Begrüßung da.
+
+**Lehre** — Wieder dieselbe: **Die Oberfläche behauptete mehr, als sie
+wusste.** Eine Null aus einer Rechnung, die auf diesen Bildschirm nicht passt,
+ist keine Null — sie ist ein fehlender Satz.
+
+
 ## 6. Betrieb
 
 ### 6.1 Fly verlangt eine Kreditkarte

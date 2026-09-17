@@ -161,3 +161,49 @@ Wiederholen ist die Entlastung.
   sichtbar sein.
 - Wie oft beißt es wirklich? **Das beantwortet die Probewoche**, und nicht
   dieser Absatz.
+
+## 5. Zeitfenster — wer setzt sie, und wie viele gibt es?
+
+**Stand: aus der Oberfläche wieder ausgebaut, 17. September 2026.**
+
+Das Feld `zeitfenster` gibt es im Schema seit dem ersten Tag, mit drei Werten:
+`morgens`, `egal`, `abends`. Es sortiert den Tag (`rang()` in `api.go`) und
+war im Wochenplan kurzzeitig als kleine Marke über den Zeilen zu sehen.
+
+**Warum es wieder raus ist** — Die Marke stand nur an Gruppen, die *nicht*
+`egal` waren. Damit teilte sie den Tag nicht auf, sondern beschriftete ihn
+falsch: Die `egal`-Aufgaben stehen zwischen `morgens` und `abends` und hingen
+optisch an der Marke darüber. An Tagen ohne eine einzige `morgens`-Aufgabe —
+das sind die meisten, weil kaum eine Vorlage ein Fenster setzt — stand oben gar
+nichts und weiter unten plötzlich „ABENDS". Genau das fiel beim Ansehen auf:
+„warum wird an manchen Tagen nur abends gezeigt?"
+
+Eine Marke auf der Tageslinie hätte es schlimmer gemacht, nicht besser: Ein
+Punkt auf einem Zeitstrang sagt „alles hierunter gehört zu mir, bis der nächste
+kommt", und das war für `egal` schlicht falsch. **Entweder teilen die Marken
+den Tag vollständig auf, oder es gibt keine.** Für diese Woche: keine.
+
+**Die eigentliche Frage, und die ist größer als die Anzeige:** Das Fenster
+kommt bisher aus der Bibliothek, nicht von den Menschen. Niemand kann es
+setzen, und es gibt keine Oberfläche dafür. Die Richtung wäre, es **den Nutzern
+zu überlassen** — je Vorlage auswählbar, und mit vier Werten statt drei:
+`morgens`, `nachmittags`, `abends`, `wann es passt`.
+
+**Zu klären:**
+
+- **Vier Werte oder drei?** `nachmittags` fehlt heute, und es ist das Fenster
+  der Kita-Abholung — also genau das, worum sich die Absprache dreht. Das
+  Vokabular ist geschlossen (Schema-CHECK), eine Erweiterung ist eine
+  Migration und eine Änderung an `openapi.yaml`, `rang()` und der Bibliothek.
+- **Was heißt das für den Planer?** Heute ist das Fenster reine Sortierung. Ein
+  vom Menschen gesetztes Fenster ist eine **Bedingung** — und dann muss
+  entschieden werden, ob es eine harte ist (wie `braucht_termin`) oder eine
+  Vorliebe (ADR-0004: Bedingung vs. Vorliebe). Zwei Aufgaben „morgens" an einem
+  Tag, beide bei derselben Person, sind sonst ein Plan, der nicht geht.
+- **Und wenn es gesetzt ist: wird es dann auch angezeigt?** Dann gilt die Regel
+  von oben — jede Gruppe eine Marke, `wann es passt` eingeschlossen. Ein Wort,
+  das der Mensch selbst gewählt hat, darf auf dem Bildschirm stehen; eines, das
+  aus einer Bibliothek stammt und das niemand ändern kann, ist nur Rauschen.
+- **Beißt es überhaupt?** Erst die Probewoche sagt, ob jemand ein Fenster
+  vermisst — oder ob die Sortierung morgens→abends schon reicht und die App
+  besser gar nichts über Uhrzeiten behauptet (ADR-0002: Tage ohne Uhrzeit).

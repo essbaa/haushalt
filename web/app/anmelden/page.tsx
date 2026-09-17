@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Passwortfeld } from "@/app/components/passwortfeld";
 import { Passwortstaerke } from "@/app/components/passwortstaerke";
 import { Feld } from "@/app/components/ui";
+import { anmeldeFehler } from "@/lib/anmelde-fehler";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 
 /**
@@ -56,10 +57,7 @@ export default function Anmelden() {
       : await signIn.email({ email, password: passwort });
     setLaeuft(false);
     if (antwort.error) {
-      // Die Meldung kommt vom Anmeldedienst und ist englisch. Bis es eine
-      // eigene Übersetzung gibt, ist die echte Meldung besser als eine
-      // erfundene.
-      setFehler(antwort.error.message ?? "Das hat nicht funktioniert.");
+      setFehler(anmeldeFehler(antwort.error, "Das hat nicht funktioniert."));
       return;
     }
     // push statt window.location: Next kennt die Route und muss die Seite
@@ -102,9 +100,9 @@ export default function Anmelden() {
       <Rahmen>
         <h1 className="mb-2 text-2xl font-extrabold tracking-tight">Konto angelegt</h1>
         <p className="mb-6 text-sm leading-relaxed text-muted text-pretty">
-          Wir haben eine Mail an <strong className="text-fg">{email}</strong>{" "}
-          geschickt. Bestätige die Adresse, sobald du magst — danach können wir
-          dir ein neues Passwort schicken, falls du es vergisst.
+          Wir haben eine Mail an <strong className="text-fg">{email}</strong> geschickt. Bestätige
+          die Adresse, sobald du magst — danach können wir dir ein neues Passwort schicken, falls du
+          es vergisst.
         </p>
         <button
           type="button"
@@ -215,7 +213,10 @@ export default function Anmelden() {
         )}
 
         {fehler && (
-          <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+          <p
+            role="alert"
+            className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+          >
             {fehler}
           </p>
         )}

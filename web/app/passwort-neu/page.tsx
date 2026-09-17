@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Passwortfeld } from "@/app/components/passwortfeld";
 import { Passwortstaerke } from "@/app/components/passwortstaerke";
+import { anmeldeFehler } from "@/lib/anmelde-fehler";
 import { resetPassword } from "@/lib/auth-client";
 
 /**
@@ -40,10 +41,13 @@ function PasswortNeu() {
       <Rahmen>
         <h1 className="mb-2 text-2xl font-extrabold tracking-tight">Der Link ist unvollständig</h1>
         <p className="mb-6 text-sm leading-relaxed text-muted text-pretty">
-          In der Adresse fehlt der Teil, der dich ausweist. Am sichersten ist es,
-          den Link in der Mail direkt anzutippen statt ihn zu kopieren.
+          In der Adresse fehlt der Teil, der dich ausweist. Am sichersten ist es, den Link in der
+          Mail direkt anzutippen statt ihn zu kopieren.
         </p>
-        <Link href="/passwort-vergessen" className="text-sm font-semibold text-primary underline underline-offset-2">
+        <Link
+          href="/passwort-vergessen"
+          className="text-sm font-semibold text-primary underline underline-offset-2"
+        >
           Neuen Link anfordern
         </Link>
       </Rahmen>
@@ -62,8 +66,10 @@ function PasswortNeu() {
     setLaeuft(false);
     if (antwort.error) {
       setFehler(
-        antwort.error.message ??
+        anmeldeFehler(
+          antwort.error,
           "Das hat nicht funktioniert. Vielleicht ist der Link älter als eine Stunde.",
+        ),
       );
       return;
     }
@@ -103,7 +109,10 @@ function PasswortNeu() {
         />
 
         {fehler && (
-          <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+          <p
+            role="alert"
+            className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+          >
             {fehler}
           </p>
         )}

@@ -4,7 +4,7 @@ import { GestrichenZeile } from "@/app/components/gestrichen-zeile";
 import { Fragen } from "@/app/components/fragen";
 import type { Aufgabe, Bilanz, Mitglied, Wochenplan as Plan } from "@/lib/api";
 import { farbklasse } from "@/lib/personen";
-import { heute } from "@/lib/woche";
+import { aktuelleWoche, gruss, heute } from "@/lib/woche";
 
 /**
  * Der Wochenplan.
@@ -24,6 +24,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
   const kandidaten = plan.haushalt.mitglieder
     .filter((m) => m.rolle !== "betreut")
     .map((m) => ({ id: m.id, name: m.name }));
+  const mitglieder = plan.haushalt.mitglieder;
   const ich = plan.ich ?? "";
   const planend = plan.meine_rolle === "planend";
   const heuteISO = heute();
@@ -36,6 +37,12 @@ export function Wochenplan({ plan }: { plan: Plan }) {
   const meineHeute = (nachTag.get(heuteISO) ?? []).filter(
     (a) => a.zustaendig === ich && !a.erledigt,
   ).length;
+  // „Heute" gilt nur, wenn heute in der gezeigten Woche liegt. Vorher stand
+  // über der nächsten Woche „Heute ist für dich nichts offen" — eine Auskunft
+  // über einen Tag, der gar nicht auf dem Bildschirm steht. Dieselbe
+  // Stolperstelle wie überall: Die Oberfläche behauptet mehr, als sie weiß.
+  const dieseWoche = plan.woche === aktuelleWoche();
+  const meinName = namen[ich] ?? "";
 
   // Vergangene Tage kommen nach unten und zusammengeklappt.
   //
@@ -74,13 +81,36 @@ export function Wochenplan({ plan }: { plan: Plan }) {
         <div className="flex items-center gap-4">
           {laeuft && <Fortschritt fertig={fertig} gesamt={gesamt} />}
           <div className="min-w-0 space-y-0.5">
+            {/* Der Name und die Tageszeit.
+                Eine Wochenplan-App ist ein Werkzeug, und ein Werkzeug darf
+                kalt sein — aber die erste Zeile nach dem Aufschlagen ist die
+                eine Stelle, an der sich entscheidet, ob man gern hersieht.
+                Gruß und Auskunft stehen deshalb in **einem** Satz und nicht in
+                zwei Zeilen: So sagt es auch ein Mensch, und die wichtigste
+                Angabe der Seite („was ist heute für mich offen") bleibt dabei
+                oben und laut, statt unter einen Gruß zu rutschen.
+
+                Der Vorname trägt die Farbe der Person — dieselbe wie im Plan
+                und in der Bilanz. Sie sagt nichts allein (der Name steht ja
+                da), sie bindet nur die drei Stellen zusammen. */}
             {ich !== "" && (
-              <p className="text-lg leading-snug font-semibold text-pretty">
-                {meineHeute === 0
-                  ? "Heute ist für dich nichts offen."
-                  : meineHeute === 1
-                    ? "Heute ist eine Sache für dich offen."
-                    : `Heute sind ${meineHeute} Sachen für dich offen.`}
+              <p
+                className={`${farbklasse(mitglieder, ich)} text-lg leading-snug font-semibold text-pretty`}
+              >
+                {meinName === "" ? (
+                  gruss()
+                ) : (
+                  <>
+                    {gruss()}, <span className="text-[var(--person)]">{meinName}</span>
+                  </>
+                )}
+                {dieseWoche
+                  ? meineHeute === 0
+                    ? " — heute ist für dich nichts offen."
+                    : meineHeute === 1
+                      ? " — heute ist eine Sache für dich offen."
+                      : ` — heute sind ${meineHeute} Sachen für dich offen.`
+                  : "."}
               </p>
             )}
             {laeuft && (
@@ -331,31 +361,16 @@ function Tag({
       >
         {heute && <p className="pb-0.5 text-sm font-semibold text-primary">Heute</p>}
         {aufgaben.map((a, i) => (
-          <div key={a.id ?? `${a.vorlage_id}-${i}`}>
-            {/* Das Zeitfenster als leise Marke, und nur dort, wo es wechselt.
-                Der Dienst sortiert den Tag jetzt danach (morgens, egal,
-                abends); ohne die Marke merkt das niemand, und mit einer Marke
-                an jeder Zeile stünde sie neunmal da.
-
-                Bewusst klein und grau: Die App plant keine Uhrzeiten, das
-                Fenster ist eine Angabe der Vorlage („Kita-Tasche packen:
-                abends"). Eine Überschrift würde daraus einen Termin machen,
-                den es nicht gibt. */}
-            {a.zeitfenster !== "egal" && a.zeitfenster !== aufgaben[i - 1]?.zeitfenster && (
-              <p className="px-3 pt-2 pb-1 text-[0.6875rem] font-semibold tracking-wide text-subtle uppercase">
-                {a.zeitfenster}
-              </p>
-            )}
-            <AufgabeZeile
-              aufgabe={a}
-              namen={namen}
-              mitglieder={mitglieder}
-              kandidaten={kandidaten}
-              ich={ich}
-              planend={planend}
-              haushaltId={haushaltId}
-            />
-          </div>
+          <AufgabeZeile
+            key={a.id ?? `${a.vorlage_id}-${i}`}
+            aufgabe={a}
+            namen={namen}
+            mitglieder={mitglieder}
+            kandidaten={kandidaten}
+            ich={ich}
+            planend={planend}
+            haushaltId={haushaltId}
+          />
         ))}
       </div>
     </div>

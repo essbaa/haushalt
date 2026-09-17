@@ -79,12 +79,46 @@ export function heute(jetzt: Date = new Date()): string {
   return heuteInBerlin(jetzt).toISOString().slice(0, 10);
 }
 
+/**
+ * „Guten Morgen", „Guten Tag" oder „Guten Abend" — nach der Uhr in Berlin.
+ *
+ * Steht hier und nicht in der Ansicht, aus demselben Grund wie alles andere
+ * in dieser Datei: Es ist eine Rechnung über die Zeit, und die Zone ist nicht
+ * die des Servers. Ein Dienst in Virginia würde um neun Uhr morgens in
+ * Frankfurt „Guten Morgen" sagen, weil dort drei Uhr ist — richtig aus
+ * Versehen. Im Sommer wäre es dann „Guten Abend" um halb acht, und der Fehler
+ * fiele erst im Oktober auf.
+ *
+ * Über `formatToParts` statt über den formatierten Text: Manche Sprachen
+ * hängen „Uhr" an, und `en-GB` schreibt Mitternacht als „24".
+ */
+export function gruss(jetzt: Date = new Date()): string {
+  const teile = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(jetzt);
+  const stunde = Number(teile.find((t) => t.type === "hour")?.value ?? "12");
+
+  if (stunde < 11) return "Guten Morgen";
+  if (stunde < 18) return "Guten Tag";
+  return "Guten Abend";
+}
+
 /** Prüft das Format, bevor eine Woche in die URL des Dienstes wandert. */
 export function istWoche(wert: string): boolean {
   return /^\d{4}-W\d{2}$/.test(wert);
 }
 
-const wochentage = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+const wochentage = [
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+  "Sonntag",
+];
 
 /** „Samstag, 19.09." aus „2026-09-19". */
 export function tagLesbar(iso: string): string {
