@@ -65,6 +65,31 @@ export async function schicke({ an, betreff, text }: Nachricht): Promise<void> {
   }
 }
 
+/**
+ * Erreicht diese App **beliebige** Adressen — oder nur die eigene?
+ *
+ * Drei Zustände, und der mittlere ist der gefährliche:
+ *
+ *  1. Kein Schlüssel: `schicke` schreibt ins Log, niemand bekommt Mail.
+ *  2. Schlüssel **und** `onboarding@resend.dev`: Resend stellt nur an die
+ *     Adresse des eigenen Kontos zu und antwortet für alle anderen mit 403.
+ *     Die App verhält sich dann gespalten — der Betreiber bekommt Mail, alle
+ *     anderen nicht, und keiner der beiden merkt es.
+ *  3. Schlüssel und eigene, verifizierte Domain: alle bekommen Mail.
+ *
+ * Nur im dritten Fall darf die Oberfläche eine Mail ankündigen. Deshalb steht
+ * die Frage hier und nicht als zweite Umgebungsvariable: Ein `MAIL_AUS`-Schalter
+ * neben `MAIL_VON` wären zwei Wahrheiten, die auseinanderlaufen können — und
+ * zwar genau an dem Tag, an dem die Domain kommt und jemand vergisst, den
+ * zweiten Schalter umzulegen. Abgeleitet kann das nicht passieren: Sobald
+ * `MAIL_VON` auf die eigene Domain zeigt, stimmen alle Sätze von selbst.
+ */
+export function mailErreichtAlle(): boolean {
+  const von = process.env.MAIL_VON ?? "";
+  if (!process.env.RESEND_API_KEY || von === "") return false;
+  return !von.includes("onboarding@resend.dev");
+}
+
 /** Die Adresse der App, für Links in Mails. */
 export function appAdresse(): string {
   return process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

@@ -25,6 +25,27 @@ Wandert eine Frage in einen ADR, verschwindet sie hier.
 3. **Domain und Resend.** Ohne sie kann niemand außer dem Besitzer des Kontos
    sein Passwort zurücksetzen, und ein verlorenes Passwort ist ein verlorener
    Haushalt.
+
+   **Stand 18. September: bewusst verschoben**, weil der Produktname noch nicht
+   feststeht und die Mail-Domain sonst zweimal gekauft wird. Die App sagt
+   solange, was stimmt — und zwar **abgeleitet, nicht verdrahtet**:
+   `mailErreichtAlle()` in `lib/mail.ts` liest `RESEND_API_KEY` und `MAIL_VON`
+   und kennt drei Zustände. Der gefährliche ist der mittlere: Schlüssel gesetzt,
+   aber Absender `onboarding@resend.dev` — dann stellt Resend nur an die eigene
+   Kontoadresse zu und antwortet für alle anderen mit 403, den Better Auth
+   schluckt (`runInBackgroundOrAwait` fängt und loggt nur). Die Registrierung
+   sieht gelungen aus, die Bestätigung kommt nie, und niemand erfährt es.
+
+   Daran hängen jetzt drei Stellen: `sendOnSignUp` in `lib/auth.ts`, der
+   Bildschirm nach der Registrierung, und `/passwort-vergessen` (kein Formular,
+   sondern ein Satz). **Beim Domainkauf ist von Hand nichts umzulegen** —
+   `MAIL_VON` auf die eigene Domain zeigen lassen genügt, alles andere folgt.
+   Das war der Grund, es abzuleiten statt zu schalten: Ein zweiter Schalter
+   wäre genau die Zeile, die man an dem Tag vergisst.
+
+   Was in der Probewoche damit offen bleibt: Ein vergessenes Passwort muss von
+   Hand zurückgesetzt werden. Bei zwei Personen und sieben Tagen tragbar — die
+   Seite sagt es auch so.
 4. **Einladungen per Mail verschicken**, sobald Resend steht. Heute ist eine
    Einladung ein Code, den der Einladende abschreibt und über einen anderen
    Kanal weitergibt. Das geht für zwei Personen und für niemanden sonst — und

@@ -3,7 +3,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { jwt } from "better-auth/plugins";
 import { Pool } from "pg";
 
-import { appAdresse, schicke } from "@/lib/mail";
+import { appAdresse, mailErreichtAlle, schicke } from "@/lib/mail";
 import { zugangEingerichtet, zugangErlaubt } from "@/lib/zugang";
 
 /**
@@ -71,7 +71,15 @@ export const auth = betterAuth({
   // Der Auslöser zum Umlegen ist benannt: sobald Resend mit eigener Domain
   // läuft und eine Testmail ankommt.
   emailVerification: {
-    sendOnSignUp: true,
+    // Abgeleitet und nicht gesetzt: Solange der Absender der Sandkasten von
+    // Resend ist, bekommt nur das eigene Konto Mail, und für alle anderen
+    // erzeugt der Versand ein Token für eine Mail, die nie ankommt — Better
+    // Auth schluckt den 403 (`runInBackgroundOrAwait` fängt und loggt nur),
+    // also scheitert nichts sichtbar. Genau deshalb ist es gefährlich: Die
+    // Registrierung sieht gelungen aus, die Bestätigung kommt nie, und
+    // niemand erfährt es. Sobald MAIL_VON auf eine eigene Domain zeigt, geht
+    // das hier von selbst wieder an.
+    sendOnSignUp: mailErreichtAlle(),
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await schicke({
@@ -126,8 +134,7 @@ export const auth = betterAuth({
         // vor dem Bildschirm, sondern einer des Betreibers — und er soll ihn
         // beim ersten Versuch lesen, statt ihn zu suchen.
         throw new APIError("SERVICE_UNAVAILABLE", {
-          message:
-            "Die Registrierung ist nicht eingerichtet (ZUGANGSCODES fehlt).",
+          message: "Die Registrierung ist nicht eingerichtet (ZUGANGSCODES fehlt).",
         });
       }
 
