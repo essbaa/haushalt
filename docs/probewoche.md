@@ -99,6 +99,41 @@ dasteht, ärgert sich weniger und korrigiert öfter.
 funktioniert, ist alles andere egal — und es ist der Weg mit den meisten
 beweglichen Teilen: Mailversand, Code, Anmeldung, Zuordnung zum Haushalt.
 
+**Nachtrag vom 18. September:** Punkt 3 und 4 sind bewusst verschoben, solange
+der Produktname nicht feststeht (offene Frage 0.3). Der Einladungsweg
+funktioniert auch ohne Mail — der Link geht über WhatsApp statt über das
+Postfach. Was ihr dabei verliert: Ein vergessenes Passwort muss von Hand
+zurückgesetzt werden. Bei zwei Personen und sieben Tagen tragbar; die Seite
+sagt es inzwischen auch so, statt eine Mail zu versprechen, die nicht kommt.
+
+### 2a-2. Der Einladungsweg, Schritt für Schritt
+
+Dieser Abschnitt ist zum Danebenlegen, während die zweite Person es tut. **Sag
+ihr nichts, außer dem Link.** Was du wissen willst, ist nicht, ob sie es
+schafft — sie schafft es, wenn du hilfst. Du willst wissen, **wo sie zögert**.
+
+| Schritt | Was sie sieht | Worauf du achtest |
+|---|---|---|
+| 1 | Du: **Einladen** → Person auswählen → *Code erzeugen* | Steht sie schon im Plan, verbindet der Code sie damit — Aufgaben und Verlauf bleiben ihr. „Jemand Neues" legt eine **zweite** Person an. Das ist die häufigste Verwechslung, und sie passiert bei dir, nicht bei ihr |
+| 2 | Du schickst **den Link**, nicht den Code | Der Link trägt beide Codes: den Zugang zur App und die Einladung in den Haushalt. Der Code allein trägt nur einen — dann steht sie vor der Registrierung und kommt nicht durch |
+| 3 | Sie tippt den Link an → **Konto anlegen** | Zugangscode steht schon im Feld. Fragt sie „welchen Code meinst du?", ist der Link unterwegs kaputtgegangen — Messenger kürzen lange Links gern |
+| 4 | Name, E-Mail, Passwort zweimal | Hier entscheidet sich, ob die Passwortregel (acht Zeichen) nervt oder nicht |
+| 5 | **Konto angelegt** → *Weiter* | Ohne Mailversand steht hier kein Satz über ein Postfach, sondern der Hinweis, sich das Passwort zu merken. Liest sie ihn? |
+| 6 | **Einem Haushalt beitreten**, Code steht schon drin → *Beitreten* | Der einzige Schritt, an dem sie noch etwas tippen müsste, wenn der Link nicht durchgekommen ist |
+| 7 | Der Wochenplan — **eurer**, mit ihren Aufgaben und ihrer Farbe | Erkennt sie sich wieder? Sucht sie ihren Namen, oder sieht sie ihn? |
+
+**Wenn sie in Schritt 5 die Seite neu lädt oder oben auf „Haushalt" tippt,**
+landet sie auf `/einrichten`. Dort steht seit dem 18. September oben „Du bist
+eingeladen worden? Code eingeben" — vorher bot der Bildschirm nur an, einen
+**eigenen** Haushalt anzulegen, und das ist genau der falsche Weg: zweiter
+leerer Haushalt, Einladung weiter offen und nirgends mehr sichtbar. Falls sie
+trotzdem dort landet und einen Haushalt anlegt, ist nichts verloren — die
+Einladung gilt eine Woche, und `/beitreten` nimmt sie danach an.
+
+**Was du dir notierst:** jede Stelle, an der sie länger als fünf Sekunden
+nichts tut, und jede Frage, die sie stellt. Beides ist wertvoller als „hat
+geklappt".
+
 ### 2b. Den Haushalt einrichten (zusammen, 20 Minuten)
 
 Setzt euch dafür einmal zusammen hin. Nicht, weil es lange dauert, sondern

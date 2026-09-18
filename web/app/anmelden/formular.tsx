@@ -16,25 +16,42 @@ import { signIn, signUp, useSession } from "@/lib/auth-client";
  * dieselbe Adresse hat wie die Seite, ist sie ein gewöhnlicher Aufruf ohne
  * CORS und ohne Token.
  *
- * `mailAn` kommt von der Seite darüber, die auf dem Server nachsieht, ob die
- * App überhaupt Mail zustellen kann. Der Browser darf das nicht selbst
- * entscheiden: `RESEND_API_KEY` und `MAIL_VON` sind Geheimnisse des Servers,
- * und eine zweite `NEXT_PUBLIC_`-Fassung wäre eine zweite Wahrheit.
+ * Alles, was aus der Adresse kommt, kommt von der Seite darüber und nicht aus
+ * `window.location`: `mailAn`, weil `RESEND_API_KEY` ein Geheimnis des Servers
+ * ist; `zugang`, `zuerstAnlegen` und `ziel`, weil sie das **erste** Bild
+ * bestimmen. Ein Wert, den erst der Browser nachträgt, erzeugt genau dort
+ * einen Hydrationsfehler — und im harmlosen Fall ein Feld, das eine
+ * Zehntelsekunde leer ist und dann springt.
  */
-export function Anmeldeformular({ mailAn }: { mailAn: boolean }) {
+export function Anmeldeformular({
+  mailAn,
+  zugang: zugangAusLink,
+  zuerstAnlegen,
+  ziel,
+}: {
+  mailAn: boolean;
+  /** Der Zugangscode aus dem Einladungslink, sonst leer. */
+  zugang: string;
+  /** Mit „Konto anlegen" beginnen statt mit „Anmelden". */
+  zuerstAnlegen: boolean;
+  /** Wohin nach dem Anmelden — vom Server geprüft. */
+  ziel: string;
+}) {
   const router = useRouter();
   const { data: sitzung, isPending } = useSession();
-  const [neu, setNeu] = useState(false);
+  // Wer einem Einladungslink folgt, hat kein Konto — sonst wäre er schon
+  // drin. Vorher stand hier `false`, und damit sah die eingeladene Person das
+  // ANMELDE-Formular: Das Zugangscode-Feld wird nur bei `neu` gerendert, also
+  // war der Code, den der Link eigens mitbringt, unsichtbar, und der Weg
+  // weiter hieß „Ich brauche ein Konto" ganz unten.
+  const [neu, setNeu] = useState(zuerstAnlegen);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [passwort, setPasswort] = useState("");
   const [wiederholung, setWiederholung] = useState("");
   // Aus der Adresse vorbefüllt: Ein Einladungslink bringt den Code mit, und
   // wer eingeladen ist, soll nicht noch eine zweite Zeichenkette abtippen.
-  const [zugang, setZugang] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("zugang") ?? "";
-  });
+  const [zugang, setZugang] = useState(zugangAusLink);
   const [fehler, setFehler] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const [bestaetigen, setBestaetigen] = useState(false);
@@ -76,24 +93,8 @@ export function Anmeldeformular({ mailAn }: { mailAn: boolean }) {
       return;
     }
 
-    router.push(weiter());
+    router.push(ziel);
     router.refresh();
-  }
-
-  /**
-   * Wohin nach dem Anmelden.
-   *
-   * Aus der Adresse gelesen, damit ein Einladungslink nicht verloren geht:
-   * /anmelden?weiter=/beitreten?code=… führt hinterher dorthin zurück.
-   *
-   * Nur Pfade, und keine, die mit zwei Schrägstrichen beginnen. Sonst wäre
-   * ?weiter=//fremde.example eine offene Weiterleitung — der klassische Weg,
-   * eine vertrauenswürdige Anmeldeseite als Sprungbrett zu missbrauchen.
-   */
-  function weiter(): string {
-    const ziel = new URLSearchParams(window.location.search).get("weiter");
-    if (!ziel || !ziel.startsWith("/") || ziel.startsWith("//")) return "/";
-    return ziel;
   }
 
   if (isPending) {
@@ -124,12 +125,16 @@ export function Anmeldeformular({ mailAn }: { mailAn: boolean }) {
         <button
           type="button"
           onClick={() => {
-            router.push(weiter());
+            router.push(ziel);
             router.refresh();
           }}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover"
         >
-          Weiter zum Wochenplan
+          {/* „Weiter zum Wochenplan" stimmte nur, wenn niemand eingeladen
+              hat. Wer über einen Einladungslink kommt, landet hier als
+              Nächstes beim Beitritt — und ein Knopf, der etwas anderes
+              ankündigt, als er tut, ist der Moment, in dem jemand nachfragt. */}
+          {ziel === "/" ? "Weiter zum Wochenplan" : "Weiter"}
         </button>
       </Rahmen>
     );
