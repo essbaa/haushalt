@@ -17,20 +17,39 @@
 // Eine Einschränkung, die man kennen muss: Der Befehl läuft, während die ALTE
 // Version noch bedient. Migrationen müssen deshalb zum alten Schema passen —
 // hinzufügen ja, wegnehmen erst im übernächsten Schritt.
+//
+// Seit dem 20. September spielt er außerdem die **Vorlagen-Bibliothek** ein.
+// Aus demselben Grund: Sie lag als Datei im Repo, kam aber nur dann in die
+// Produktion, wenn ein Mensch nach dem Deploy `make import` mit der
+// Produktions-URL laufen ließ. Einmal vergessen, und in der Produktion standen
+// die Migrationen, während die Kita-Vorlagen fehlten — sichtbar erst daran,
+// dass ein Haushalt einen halb leeren Plan bekam. Die Bibliothek ist das
+// Produkt; sie gehört in den Release und nicht in eine Shell.
+//
+// Der Import ist idempotent (Upsert je Vorlage) und darf deshalb bei jedem
+// Deploy laufen. Die Beispielhaushalte bleiben draußen: Die sind Saatgut fürs
+// lokale Arbeiten, nicht Teil des Produkts. Dafür gibt es weiterhin
+// `make import`.
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+
+	"github.com/zakaria/haushalt/api/internal/storage"
 )
 
 func main() {
 	dir := flag.String("dir", "/migrations", "Verzeichnis mit den .sql-Dateien")
+	bibliothek := flag.String("bibliothek", "/library/vorlagen.json",
+		"Vorlagen-Bibliothek; leer überspringt den Import")
 	flag.Parse()
 
 	url := os.Getenv("DATABASE_URL")
@@ -53,4 +72,25 @@ func main() {
 	if err := goose.Up(db, *dir); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
+
+	if *bibliothek == "" {
+		return
+	}
+
+	// Erst nach den Migrationen: Eine neue Vorlage kann eine Spalte brauchen,
+	// die es vorher nicht gab.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	store, err := storage.Open(ctx, url)
+	if err != nil {
+		log.Fatalf("migrate: bibliothek: %v", err)
+	}
+	defer store.Close()
+
+	vorlagen, err := store.ImportLibrary(ctx, *bibliothek)
+	if err != nil {
+		log.Fatalf("migrate: bibliothek: %v", err)
+	}
+	log.Printf("migrate: %d Vorlagen eingelesen", len(vorlagen))
 }

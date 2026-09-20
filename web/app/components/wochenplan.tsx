@@ -3,6 +3,9 @@ import { AufgabeZeile } from "@/app/components/aufgabe-zeile";
 import { GestrichenZeile } from "@/app/components/gestrichen-zeile";
 import { Fragen } from "@/app/components/fragen";
 import type { Aufgabe, Bilanz, Mitglied, Wochenplan as Plan } from "@/lib/api";
+import { Winkel } from "@/app/components/icons";
+import { begruendung } from "@/lib/begruendung";
+import { bereiche } from "@/lib/bereiche";
 import { farbklasse } from "@/lib/personen";
 import { aktuelleWoche, gruss, heute } from "@/lib/woche";
 
@@ -193,6 +196,7 @@ export function Wochenplan({ plan }: { plan: Plan }) {
       {plan.bilanz ? (
         <Bilanztafel
           bilanz={plan.bilanz}
+          aufgaben={plan.aufgaben}
           namen={namen}
           mitglieder={plan.haushalt.mitglieder}
           ich={ich}
@@ -378,85 +382,256 @@ function Tag({
 }
 
 /**
- * Die Bilanz als Gegenüberstellung.
+ * Wer trägt wie viel — und, eine Ebene tiefer, warum.
  *
  * Kein Fortschrittsbalken je Person: Das Versprechen lautet nicht „schaffe
  * hundert Prozent", sondern „wer halb so viel Zeit hat, trägt halb so viel".
- * Also stehen alle auf derselben Skala, und was man vergleicht, ist die Länge
- * nebeneinander — die Zahl daneben sagt, wovon.
+ *
+ * **Die Skala ist absolut, 0 bis 100.** Sie war einmal auf den Höchstwert
+ * normiert, und das war in dem Moment falsch, in dem es darauf ankam: Stehen
+ * beide bei 71 %, sind beide Balken voll — und „voll" liest jeder als „am
+ * Anschlag", nicht als „gleich". Eine Skala, die bei Gleichstand Alarm
+ * schlägt, ist keine.
+ *
+ * **Aufgeklappt steht nicht die Liste, sondern die Antwort.** Der erste
+ * Versuch zeigte hier alle sechsundzwanzig Aufgaben untereinander: gleiche
+ * Schriftgröße, der Wochentag sechsundzwanzigmal, „zum Ausgleich"
+ * achtzehnmal. Das ist keine Erklärung, sondern eine Halde — und sie schob
+ * die zweite Person vom Bildschirm, also genau das, womit man vergleichen
+ * wollte.
+ *
+ * Jetzt beantworten zwei kurze Abschnitte die zwei Fragen, die man wirklich
+ * hat: **wo die Zeit hingeht** (nach Bereich, die größten zuerst) und
+ * **warum es bei dieser Person liegt** (die Gründe gezählt statt
+ * sechsundzwanzigmal wiederholt). „18× zum Ausgleich" sagt mehr als achtzehn
+ * Zeilen, in denen „zum Ausgleich" steht. Die ganze Liste gibt es dahinter,
+ * einen Tipp weiter, nach Tagen gruppiert.
+ *
+ * Die Balken der Bereiche tragen den Ton der Person und keine eigenen Farben.
+ * Das Farbbudget dieser App gehört den Menschen; ein zweites System für
+ * Bereiche würde beide unlesbar machen. Die Länge zeigt den Anteil, das Wort
+ * daneben sagt wovon — Farbe allein sagt hier nichts (WCAG 1.4.1).
  */
 function Bilanztafel({
   bilanz,
+  aufgaben,
   namen,
   mitglieder,
   ich,
 }: {
   bilanz: Bilanz[];
+  aufgaben: Aufgabe[];
   namen: Record<string, string>;
   mitglieder: Mitglied[];
   ich: string;
 }) {
-  const spitze = Math.max(1, ...bilanz.map((b) => b.auslastung_prozent));
-
   return (
     <section className="space-y-4 border-t border-line pt-6">
       <h2 className="text-lg font-bold tracking-tight">Wer trägt wie viel</h2>
 
-      <ul className="space-y-4">
-        {bilanz.map((b) => {
-          const name = namen[b.mitglied_id] ?? b.mitglied_id;
-          const eigen = b.mitglied_id === ich;
-          return (
-            <li
-              key={b.mitglied_id}
-              className={`${farbklasse(mitglieder, b.mitglied_id)} grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3`}
-            >
-              <span
-                className={`truncate text-sm ${
-                  eigen ? "font-bold text-[var(--person)]" : "font-medium"
-                }`}
-              >
-                {eigen ? "Du" : name}
-              </span>
-              {/* Derselbe Ton wie im Plan. Damit beantwortet der Balken zwei
-                  Fragen auf einmal: wie viel — und wer das oben in der Woche
-                  war. Vorher war jeder Balken grau außer dem eigenen, und die
-                  Zuordnung kostete einen Blick zurück nach oben. */}
-              <span className="h-3 overflow-hidden rounded-full bg-surface-3">
-                <span
-                  className="block h-full rounded-full bg-[var(--person)]"
-                  style={{
-                    width: `${Math.max(3, (b.auslastung_prozent / spitze) * 100)}%`,
-                    opacity: eigen ? 1 : 0.75,
-                  }}
-                />
-              </span>
-              <span className="text-right text-sm font-bold tabular-nums">
-                {b.auslastung_prozent}%
-              </span>
-            </li>
-          );
-        })}
+      <ul className="space-y-1">
+        {bilanz.map((b) => (
+          <Bilanzzeile
+            key={b.mitglied_id}
+            b={b}
+            meine={aufgaben.filter((a) => a.zustaendig === b.mitglied_id)}
+            namen={namen}
+            klasse={farbklasse(mitglieder, b.mitglied_id)}
+            eigen={b.mitglied_id === ich}
+          />
+        ))}
       </ul>
 
       <p className="text-xs leading-relaxed text-muted">
         Angezeigt ist der Anteil der eigenen verfügbaren Zeit, nicht die Minuten. Kopflast zählt in
         der Verteilung mit, kostet aber keine Uhrzeit und steht deshalb nicht in dieser Zahl.
       </p>
-
-      <ul className="grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
-        {bilanz.map((b) => (
-          <li key={b.mitglied_id} className="flex justify-between gap-2">
-            <span>{namen[b.mitglied_id] ?? b.mitglied_id}</span>
-            <span className="tabular-nums">
-              {b.minuten} min, Kopflast {b.kopflast}, {b.aufgaben}{" "}
-              {b.aufgaben === 1 ? "Aufgabe" : "Aufgaben"}
-            </span>
-          </li>
-        ))}
-      </ul>
     </section>
   );
+}
+
+function Bilanzzeile({
+  b,
+  meine,
+  namen,
+  klasse,
+  eigen,
+}: {
+  b: Bilanz;
+  meine: Aufgabe[];
+  namen: Record<string, string>;
+  klasse: string;
+  eigen: boolean;
+}) {
+  const name = namen[b.mitglied_id] ?? b.mitglied_id;
+
+  // Wo die Zeit hingeht. Fünf Bereiche und dann „Übriges": Ab sechs Zeilen
+  // liest man nicht mehr, man überfliegt — und überfliegen kann man eine
+  // Rangfolge nur, solange sie kurz ist.
+  const proBereich = new Map<string, number>();
+  for (const a of meine) {
+    proBereich.set(a.kategorie, (proBereich.get(a.kategorie) ?? 0) + a.dauer_min);
+  }
+  const sortiert = [...proBereich.entries()].sort((x, y) => y[1] - x[1]);
+  const oben = sortiert.slice(0, 5);
+  const rest = sortiert.slice(5).reduce((n, [, min]) => n + min, 0);
+  const groesster = oben[0]?.[1] ?? 1;
+
+  // Die Gründe gezählt. Reihenfolge nach Häufigkeit, weil der häufigste die
+  // Antwort auf „warum ich" ist.
+  const proGrund = new Map<string, number>();
+  for (const a of meine) {
+    const g = begruendung(a, namen);
+    if (g) proGrund.set(g, (proGrund.get(g) ?? 0) + 1);
+  }
+  const gruende = [...proGrund.entries()].sort((x, y) => y[1] - x[1]);
+
+  const tage = [...new Set(meine.map((a) => a.tag))].sort();
+
+  return (
+    <li className={klasse}>
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-3 rounded-md py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+          <Winkel
+            aria-hidden="true"
+            className="size-4 shrink-0 text-subtle transition-transform group-open:rotate-90"
+          />
+          <span
+            className={`w-20 shrink-0 truncate text-sm sm:w-24 ${
+              eigen ? "font-bold text-[var(--person)]" : "font-medium"
+            }`}
+          >
+            {eigen ? "Du" : name}
+          </span>
+          {/* Absolut skaliert: Die Spur ist die eigene verfügbare Zeit, der
+              Balken der belegte Teil. Über 100 % wird die Spur nicht länger —
+              die Zahl daneben bleibt ehrlich. */}
+          <span className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-3">
+            <span
+              className="block h-full rounded-full bg-[var(--person)]"
+              style={{
+                width: `${Math.min(100, Math.max(3, b.auslastung_prozent))}%`,
+                opacity: eigen ? 1 : 0.8,
+              }}
+            />
+          </span>
+          <span className="w-12 shrink-0 text-right text-sm font-bold tabular-nums">
+            {b.auslastung_prozent}%
+          </span>
+        </summary>
+
+        <div className="mb-3 ml-7 space-y-4 border-l border-line pl-4">
+          <p className="pt-1 text-xs text-muted tabular-nums">
+            {b.minuten} min · Kopflast {b.kopflast} · {b.aufgaben}{" "}
+            {b.aufgaben === 1 ? "Aufgabe" : "Aufgaben"}
+          </p>
+
+          {oben.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold tracking-wide text-subtle uppercase">
+                Wo die Zeit hingeht
+              </h3>
+              <ul className="space-y-1">
+                {oben.map(([bereich, min]) => (
+                  <li key={bereich} className="flex items-center gap-2.5 text-xs">
+                    <span className="w-20 shrink-0 truncate text-muted">
+                      {bereiche[bereich] ?? bereich}
+                    </span>
+                    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-3">
+                      <span
+                        className="block h-full rounded-full bg-[var(--person)] opacity-70"
+                        style={{ width: `${Math.max(4, (min / groesster) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="w-14 shrink-0 text-right text-subtle tabular-nums">
+                      {min} min
+                    </span>
+                  </li>
+                ))}
+                {rest > 0 && (
+                  <li className="flex items-center gap-2.5 text-xs text-subtle">
+                    <span className="w-20 shrink-0">Übriges</span>
+                    <span className="min-w-0 flex-1" />
+                    <span className="w-14 shrink-0 text-right tabular-nums">{rest} min</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+
+          {gruende.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold tracking-wide text-subtle uppercase">
+                Warum {eigen ? "bei dir" : `bei ${name}`}
+              </h3>
+              <p className="text-xs leading-relaxed text-muted text-pretty">
+                {gruende.map(([grund, wie], i) => (
+                  <span key={grund}>
+                    {i > 0 && " · "}
+                    <span className="font-semibold tabular-nums">{wie}×</span> {grund}
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+
+          {/* Die Liste bleibt erreichbar, steht aber nicht im Weg. Wer sie
+              öffnet, will eine bestimmte Aufgabe suchen — dafür sind die Tage
+              die Ordnung, nach der man sucht. */}
+          <details className="group/liste">
+            <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-primary [&::-webkit-details-marker]:hidden">
+              Alle {meine.length} {meine.length === 1 ? "Aufgabe" : "Aufgaben"}
+              <Winkel
+                aria-hidden="true"
+                className="size-3.5 transition-transform group-open/liste:rotate-90"
+              />
+            </summary>
+            <div className="mt-1 space-y-2.5">
+              {tage.map((tag) => (
+                <div key={tag}>
+                  <p className="text-[0.6875rem] font-bold tracking-wide text-subtle uppercase">
+                    {langerTag(tag)}
+                  </p>
+                  <ul>
+                    {meine
+                      .filter((a) => a.tag === tag)
+                      .map((a, i) => (
+                        <li
+                          key={a.id ?? `${a.vorlage_id}-${i}`}
+                          className="flex items-baseline justify-between gap-3 py-0.5 text-xs"
+                        >
+                          <span
+                            className={`min-w-0 truncate ${
+                              a.erledigt ? "text-subtle line-through" : ""
+                            }`}
+                          >
+                            {a.titel}
+                            {a.kopflast >= 2 && (
+                              <span className="text-subtle"> · Kopflast {a.kopflast}</span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-subtle tabular-nums">
+                            {a.dauer_min} min
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      </details>
+    </li>
+  );
+}
+
+/** „Montag" aus „2026-09-21" — die Überschrift einer Tagesgruppe. */
+function langerTag(iso: string): string {
+  const namen = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+  const [jahr, monat, tag] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(jahr, monat - 1, tag));
+  return namen[(d.getUTCDay() + 6) % 7];
 }
 
 const grundText: Record<string, string> = {

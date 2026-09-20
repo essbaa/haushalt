@@ -79,10 +79,7 @@ export function EinstellungenFormular({
           laeuft={beschaeftigt}
           speichern={(aenderung) =>
             schicke(() =>
-              patchMitToken<Haushalt>(
-                `/api/haushalte/${encodeURIComponent(stand.id)}`,
-                aenderung,
-              ),
+              patchMitToken<Haushalt>(`/api/haushalte/${encodeURIComponent(stand.id)}`, aenderung),
             )
           }
         />
@@ -109,20 +106,22 @@ export function EinstellungenFormular({
         ))}
       </section>
 
-      {fehler && <p className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">{fehler}</p>}
+      {fehler && (
+        <p className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">{fehler}</p>
+      )}
 
       {gerechnet && (
         <p className="rounded-lg border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
-          Die Woche ist neu gerechnet. Was schon abgehakt oder abgegeben war,
-          steht unverändert da — nur die offenen Vorschläge wurden ersetzt.
+          Die Woche ist neu gerechnet. Was schon abgehakt oder abgegeben war, steht unverändert da —
+          nur die offenen Vorschläge wurden ersetzt.
         </p>
       )}
 
       {geaendert && (
         <div className="space-y-3 rounded-lg border border-line bg-surface p-4 sm:p-5">
           <p className="text-sm leading-relaxed text-muted">
-            Gespeichert. Wirksam wird es ab der nächsten Woche: Der laufende
-            Plan steht fest, damit er sich niemandem unter den Händen ändert.
+            Gespeichert. Wirksam wird es ab der nächsten Woche: Der laufende Plan steht fest, damit
+            er sich niemandem unter den Händen ändert.
           </p>
           {planend && (
             <>
@@ -135,8 +134,8 @@ export function EinstellungenFormular({
                 Diese Woche neu rechnen
               </button>
               <p className="text-xs leading-relaxed text-muted">
-                Erledigtes und Abgegebenes bleibt, wie es ist. Ersetzt werden
-                nur die Aufgaben, an denen noch nichts passiert ist.
+                Erledigtes und Abgegebenes bleibt, wie es ist. Ersetzt werden nur die Aufgaben, an
+                denen noch nichts passiert ist.
               </p>
             </>
           )}
@@ -159,9 +158,7 @@ function HaushaltTeil({
   const haustiere = stand.haustiere ?? [];
 
   function tier(art: string) {
-    const neu = haustiere.includes(art)
-      ? haustiere.filter((h) => h !== art)
-      : [...haustiere, art];
+    const neu = haustiere.includes(art) ? haustiere.filter((h) => h !== art) : [...haustiere, art];
     speichern({ haustiere: neu });
   }
 
@@ -224,8 +221,8 @@ function HaushaltTeil({
         </label>
       </div>
       <p className="text-xs leading-relaxed text-muted">
-        Danach richtet sich, wie lange Putzaufgaben dauern. Ändert ihr das, gilt
-        es ab der nächsten Woche.
+        Danach richtet sich, wie lange Putzaufgaben dauern. Ändert ihr das, gilt es ab der nächsten
+        Woche.
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -256,9 +253,8 @@ function HaushaltTeil({
       </div>
 
       <p className="text-xs leading-relaxed text-muted">
-        Diese vier entscheiden, welche Aufgaben es im Haushalt überhaupt gibt.
-        Jedes Nein spart Aufgaben, jedes Ja bringt welche mit — ohne Garten kein
-        Rasen, ohne Auto kein TÜV.
+        Diese vier entscheiden, welche Aufgaben es im Haushalt überhaupt gibt. Jedes Nein spart
+        Aufgaben, jedes Ja bringt welche mit — ohne Garten kein Rasen, ohne Auto kein TÜV.
       </p>
     </section>
   );
@@ -468,9 +464,8 @@ function PersonTeil({
                 Minuten speichern
               </button>
               <p className="text-xs leading-relaxed text-muted">
-                Diese Zahlen tragen die gesamte Verteilung: Wer weniger Zeit
-                hat, bekommt weniger. Null an einem Tag heißt, dass an dem Tag
-                nichts eingeplant wird.
+                Diese Zahlen tragen die gesamte Verteilung: Wer weniger Zeit hat, bekommt weniger.
+                Null an einem Tag heißt, dass an dem Tag nichts eingeplant wird.
               </p>
             </div>
           )}

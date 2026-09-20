@@ -64,23 +64,19 @@ export function EinladenFormular({
     return (
       <div className="space-y-5 rounded-lg border border-line bg-surface p-6">
         <div className="rounded-md bg-primary-soft px-4 py-5 text-center">
-          <p className="text-3xl font-extrabold tracking-[0.25em] text-primary">
-            {einladung.code}
-          </p>
+          <p className="text-3xl font-extrabold tracking-[0.25em] text-primary">{einladung.code}</p>
         </div>
         <div className="space-y-1">
           <p className="text-sm font-semibold">Schick diesen Link</p>
           <p className="break-all text-xs text-muted">{link}</p>
           {zugang === "" ? (
             <p className="text-xs leading-relaxed text-clay text-pretty">
-              Achtung: Es ist kein Zugangscode eingetragen (`ZUGANGSCODES`).
-              Ohne ihn kann sich niemand registrieren — der Link führt dann ins
-              Leere.
+              Achtung: Es ist kein Zugangscode eingetragen (`ZUGANGSCODES`). Ohne ihn kann sich
+              niemand registrieren — der Link führt dann ins Leere.
             </p>
           ) : (
             <p className="text-xs leading-relaxed text-muted text-pretty">
-              Er bringt beides mit: den Zugang zur App und die Einladung in
-              euren Haushalt.
+              Er bringt beides mit: den Zugang zur App und die Einladung in euren Haushalt.
             </p>
           )}
         </div>
@@ -151,7 +147,10 @@ export function EinladenFormular({
       </fieldset>
 
       {fehler && (
-        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+        >
           {fehler}
         </p>
       )}
@@ -184,9 +183,7 @@ function Wahl({
   return (
     <label
       className={`block cursor-pointer rounded-lg border p-4 transition-colors ${
-        gewaehlt
-          ? "border-primary bg-primary-soft"
-          : "border-line hover:border-line-strong"
+        gewaehlt ? "border-primary bg-primary-soft" : "border-line hover:border-line-strong"
       }`}
     >
       <span className="flex items-baseline gap-2">
@@ -199,9 +196,7 @@ function Wahl({
         />
         <span className="font-semibold">{titel}</span>
       </span>
-      <span className="mt-1 block pl-6 text-sm leading-relaxed text-muted">
-        {erklaerung}
-      </span>
+      <span className="mt-1 block pl-6 text-sm leading-relaxed text-muted">{erklaerung}</span>
     </label>
   );
 }

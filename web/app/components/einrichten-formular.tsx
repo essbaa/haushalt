@@ -46,7 +46,14 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
   const [haustiere, setHaustiere] = useState<string[]>([]);
 
   const [personen, setPersonen] = useState<Person[]>([
-    { id: 0, name: meinName || "Ich", art: "erwachsen", plant: true, geburtsjahr: "", zeit: "mittel" },
+    {
+      id: 0,
+      name: meinName || "Ich",
+      art: "erwachsen",
+      plant: true,
+      geburtsjahr: "",
+      zeit: "mittel",
+    },
   ]);
 
   function aendern(id: number, teil: Partial<Person>) {
@@ -71,7 +78,13 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
           // Index 0 ist die einrichtende Person. Ihre Rolle wird nicht aus dem
           // Formular abgeleitet, sondern gesetzt — siehe planner.Setup.
           rolle:
-            i === 0 ? "planend" : p.art === "betreut" ? "betreut" : p.plant ? "planend" : "ausfuehrend",
+            i === 0
+              ? "planend"
+              : p.art === "betreut"
+                ? "betreut"
+                : p.plant
+                  ? "planend"
+                  : "ausfuehrend",
         };
         if (p.art !== "erwachsen" && p.geburtsjahr) m.geburtsjahr = Number(p.geburtsjahr);
         m.zeit = p.art === "betreut" ? "keine" : p.zeit;
@@ -160,8 +173,8 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
             />
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            Danach richtet sich, wie lange Putzaufgaben dauern — in fünf Zimmern
-            länger als in zwei, und zwei Bäder sind doppelte Arbeit.
+            Danach richtet sich, wie lange Putzaufgaben dauern — in fünf Zimmern länger als in zwei,
+            und zwei Bäder sind doppelte Arbeit.
           </p>
 
           <div className="space-y-2">
@@ -170,11 +183,14 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
               <Marke an={garten} text="Garten" klick={() => setGarten(!garten)} />
               <Marke an={auto} text="Auto" klick={() => setAuto(!auto)} />
               <Marke an={haustiere.includes("hund")} text="Hund" klick={() => haustier("hund")} />
-              <Marke an={haustiere.includes("katze")} text="Katze" klick={() => haustier("katze")} />
+              <Marke
+                an={haustiere.includes("katze")}
+                text="Katze"
+                klick={() => haustier("katze")}
+              />
             </div>
             <p className="text-xs leading-relaxed text-muted">
-              Jedes Ja bringt Aufgaben mit, jedes Nein spart sie. Ändern kannst
-              du das später.
+              Jedes Ja bringt Aufgaben mit, jedes Nein spart sie. Ändern kannst du das später.
             </p>
           </div>
         </section>
@@ -215,8 +231,7 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
               */}
               {i === 0 ? (
                 <p className="text-sm text-muted">
-                  Du richtest ein und planst mit — du verteilst, lädst ein und
-                  siehst die Bilanz.
+                  Du richtest ein und planst mit — du verteilst, lädst ein und siehst die Bilanz.
                 </p>
               ) : (
                 <Auswahl
@@ -287,9 +302,9 @@ export function EinrichtenFormular({ meinName }: { meinName: string }) {
       {schritt === 3 && (
         <section className="space-y-5">
           <p className="text-sm leading-relaxed text-muted">
-            Wie viel Zeit bleibt im Alltag für den Haushalt? Grob reicht —
-            niemand weiß, wie viele Minuten er dienstags hat. Die Verteilung
-            richtet sich danach: Wer weniger Zeit hat, bekommt weniger.
+            Wie viel Zeit bleibt im Alltag für den Haushalt? Grob reicht — niemand weiß, wie viele
+            Minuten er dienstags hat. Die Verteilung richtet sich danach: Wer weniger Zeit hat,
+            bekommt weniger.
           </p>
 
           {ausfuehrende.map((p) => (

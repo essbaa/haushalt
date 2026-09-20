@@ -142,8 +142,7 @@ export function EigeneAufgabe({
             className="mt-1"
           />
           <span>
-            Jemand muss daran <strong>denken</strong> — man sieht es nicht von
-            selbst.
+            Jemand muss daran <strong>denken</strong> — man sieht es nicht von selbst.
           </span>
         </label>
         <label className="flex items-start gap-2.5 text-sm">
@@ -154,8 +153,8 @@ export function EigeneAufgabe({
             className="mt-1"
           />
           <span>
-            Man muss erst etwas <strong>klären</strong> — einen Termin machen,
-            nachsehen, jemanden fragen.
+            Man muss erst etwas <strong>klären</strong> — einen Termin machen, nachsehen, jemanden
+            fragen.
           </span>
         </label>
       </fieldset>
@@ -181,14 +180,16 @@ export function EigeneAufgabe({
           className="mt-1"
         />
         <span>
-          Das müssen wir <strong>absprechen</strong> — wer das kann, hängt an
-          den Arbeitszeiten und nicht daran, wer Zeit übrig hat. Ihr tragt dann
-          selbst ein, wer an welchem Tag dran ist.
+          Das müssen wir <strong>absprechen</strong> — wer das kann, hängt an den Arbeitszeiten und
+          nicht daran, wer Zeit übrig hat. Ihr tragt dann selbst ein, wer an welchem Tag dran ist.
         </span>
       </label>
 
       {fehler && (
-        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+        >
           {fehler}
         </p>
       )}

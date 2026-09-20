@@ -161,60 +161,77 @@
 
 /* Dieselben Werte, wenn jemand Dunkel ausdrücklich gewählt hat. */
 :root[data-theme="dark"] {
-    color-scheme: dark;
+  color-scheme: dark;
 
-    --bg: #10150f;
-    --surface: #191f18;
-    --surface-2: #212820;
-    --surface-3: #2a322a;
+  --bg: #10150f;
+  --surface: #191f18;
+  --surface-2: #212820;
+  --surface-3: #2a322a;
 
-    --fg: #e9efe6;
-    --fg-muted: #a3b0a4;
-    --fg-subtle: #85927f;
+  --fg: #e9efe6;
+  --fg-muted: #a3b0a4;
+  --fg-subtle: #85927f;
 
-    --line: #2b332a;
-    --line-strong: #3c463b;
+  --line: #2b332a;
+  --line-strong: #3c463b;
 
-    --primary: #74c6a5;
-    --primary-hover: #8ad4b7;
-    --primary-soft: #1d2c26;
-    --on-primary: #0a130f;
+  --primary: #74c6a5;
+  --primary-hover: #8ad4b7;
+  --primary-soft: #1d2c26;
+  --on-primary: #0a130f;
 
-    --clay: #e3a77f;
-    --clay-soft: #2b221c;
-    --danger: #f0736a;
+  --clay: #e3a77f;
+  --clay-soft: #2b221c;
+  --danger: #f0736a;
 
-    --ring: #74c6a5;
+  --ring: #74c6a5;
 
-    /* Im Dunkeln kehrt sich das Verhältnis um: Der Ton wird hell, die Fläche
+  /* Im Dunkeln kehrt sich das Verhältnis um: Der Ton wird hell, die Fläche
        dunkel. Dieselben sechs Familien, nur von der anderen Seite. */
-    --person: var(--fg-muted);
-    --person-soft: var(--surface-3);
+  --person: var(--fg-muted);
+  --person-soft: var(--surface-3);
 
-    --person-1: #74c6a5;
-    --person-1-soft: #1d2c26;
-    --person-2: #8fb4f0;
-    --person-2-soft: #1b2434;
-    --person-3: #c3a2e2;
-    --person-3-soft: #272033;
-    --person-4: #e3a77f;
-    --person-4-soft: #2b221c;
-    --person-5: #ef9ab8;
-    --person-5-soft: #331f27;
-    --person-6: #7cc7cf;
-    --person-6-soft: #162c2e;
-  }
-
+  --person-1: #74c6a5;
+  --person-1-soft: #1d2c26;
+  --person-2: #8fb4f0;
+  --person-2-soft: #1b2434;
+  --person-3: #c3a2e2;
+  --person-3-soft: #272033;
+  --person-4: #e3a77f;
+  --person-4-soft: #2b221c;
+  --person-5: #ef9ab8;
+  --person-5-soft: #331f27;
+  --person-6: #7cc7cf;
+  --person-6-soft: #162c2e;
+}
 
 /* Setzt --person und --person-soft für alles darunter. Die Klasse steht an
    der Zeile, die Kinder greifen mit var(--person) darauf zu — so braucht
    keine Komponente eine Fallunterscheidung über sechs Töne. */
-.person-1 { --person: var(--person-1); --person-soft: var(--person-1-soft); }
-.person-2 { --person: var(--person-2); --person-soft: var(--person-2-soft); }
-.person-3 { --person: var(--person-3); --person-soft: var(--person-3-soft); }
-.person-4 { --person: var(--person-4); --person-soft: var(--person-4-soft); }
-.person-5 { --person: var(--person-5); --person-soft: var(--person-5-soft); }
-.person-6 { --person: var(--person-6); --person-soft: var(--person-6-soft); }
+.person-1 {
+  --person: var(--person-1);
+  --person-soft: var(--person-1-soft);
+}
+.person-2 {
+  --person: var(--person-2);
+  --person-soft: var(--person-2-soft);
+}
+.person-3 {
+  --person: var(--person-3);
+  --person-soft: var(--person-3-soft);
+}
+.person-4 {
+  --person: var(--person-4);
+  --person-soft: var(--person-4-soft);
+}
+.person-5 {
+  --person: var(--person-5);
+  --person-soft: var(--person-5-soft);
+}
+.person-6 {
+  --person: var(--person-6);
+  --person-soft: var(--person-6-soft);
+}
 
 /* Die eigene Zeile: in der eigenen Farbe getönt, mit einem Rand, der andeutet
    statt zu umranden. color-mix statt eines zweiten Farbwerts — ein Rahmen ist
@@ -247,8 +264,7 @@
   --radius-lg: var(--radius-lg);
   --radius-full: var(--radius-full);
 
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {

@@ -11,7 +11,10 @@ export default async function Beitreten({
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-10">
-      <Link href="/" className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
+      <Link
+        href="/"
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
+      >
         <span aria-hidden="true">←</span>
         Zurück zum Wochenplan
       </Link>
@@ -20,8 +23,8 @@ export default async function Beitreten({
         Einem Haushalt beitreten
       </h1>
       <p className="mb-8 max-w-prose text-sm leading-relaxed text-muted text-pretty">
-        Du brauchst einen Code von jemandem, der im Haushalt plant. Wenn du noch
-        kein Konto hast, leg zuerst eines an — der Code wartet.
+        Du brauchst einen Code von jemandem, der im Haushalt plant. Wenn du noch kein Konto hast,
+        leg zuerst eines an — der Code wartet.
       </p>
 
       <BeitretenFormular vorgabe={code ?? ""} />

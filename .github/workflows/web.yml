@@ -52,6 +52,13 @@ jobs:
 
       - run: npm run lint
 
+      # Die Formatierung stand als Skript da und wurde nie geprüft — und lief
+      # deshalb auf 19 Dateien auseinander. Ein Prüfskript, das niemand
+      # aufruft, ist schlechter als keins: Beim ersten Lauf ist es rot, und
+      # dann schaltet man es ab statt die Dateien.
+      - name: Formatierung
+        run: npm run format:check
+
       - name: Build
         run: npm run build
         env:

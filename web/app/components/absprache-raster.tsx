@@ -98,9 +98,8 @@ export function AbspracheRaster({
   return (
     <div className="w-full space-y-2 rounded-md bg-surface-2 p-3">
       <p className="text-xs leading-relaxed text-muted text-pretty">
-        <span className="font-semibold text-fg">Das sprecht ihr ab.</span> Wer
-        das kann, hängt an euren Arbeitszeiten — die kennt die App nicht, und
-        raten wäre hier schlimmer als fragen.
+        <span className="font-semibold text-fg">Das sprecht ihr ab.</span> Wer das kann, hängt an
+        euren Arbeitszeiten — die kennt die App nicht, und raten wäre hier schlimmer als fragen.
       </p>
 
       {/* Der Stand als Zeile, bevor irgendetwas aufgeklappt ist. Ein Raster,
@@ -112,8 +111,7 @@ export function AbspracheRaster({
         <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
           {raster.map((wer, i) => (
             <li key={tage[i]} className={wer === "" ? "text-subtle" : ""}>
-              <span className="font-semibold">{tage[i]}</span>{" "}
-              {wer === "" ? "—" : name(wer)}
+              <span className="font-semibold">{tage[i]}</span> {wer === "" ? "—" : name(wer)}
             </li>
           ))}
         </ul>
@@ -141,8 +139,8 @@ export function AbspracheRaster({
             <>
               <p className="text-sm leading-relaxed text-pretty">
                 Übernommen. Ab nächster Woche steht sie von selbst im Plan —{" "}
-                <span className="font-semibold">diese Woche steht schon fest</span>{" "}
-                und ändert sich nicht von allein.
+                <span className="font-semibold">diese Woche steht schon fest</span> und ändert sich
+                nicht von allein.
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <button
@@ -154,8 +152,8 @@ export function AbspracheRaster({
                   {laeuft === "woche" ? "Einen Moment …" : "Ab heute eintragen"}
                 </button>
                 <p className="text-xs text-muted text-pretty">
-                  Trägt die restlichen Tage dieser Woche ein. Nur diese
-                  Aufgabe — am übrigen Plan ändert sich nichts.
+                  Trägt die restlichen Tage dieser Woche ein. Nur diese Aufgabe — am übrigen Plan
+                  ändert sich nichts.
                 </p>
               </div>
             </>
@@ -170,9 +168,9 @@ export function AbspracheRaster({
             // sichtbare Wirkung wäre wieder genau die Quittung, die diese
             // Zeilen vermeiden sollen.
             <p className="text-sm leading-relaxed text-muted text-pretty">
-              Für den Rest dieser Woche gab es nichts einzutragen — an den
-              verbleibenden Tagen steht die Aufgabe schon, oder sie ist nicht
-              mehr fällig. Ab nächster Woche gilt das neue Raster.
+              Für den Rest dieser Woche gab es nichts einzutragen — an den verbleibenden Tagen steht
+              die Aufgabe schon, oder sie ist nicht mehr fällig. Ab nächster Woche gilt das neue
+              Raster.
             </p>
           )}
         </div>
@@ -227,7 +225,10 @@ export function AbspracheRaster({
       )}
 
       {fehler && (
-        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+        >
           {fehler}
         </p>
       )}

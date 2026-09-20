@@ -138,9 +138,7 @@ export function Fragen({
                 <li key={f.faktum} className="rounded-lg border border-line bg-surface-2 p-4">
                   <p className="text-sm leading-relaxed text-pretty">
                     <span className="font-semibold">Notiert.</span>{" "}
-                    {antwort
-                      ? `${f.dann} — ab nächster Woche.`
-                      : "Danach fragen wir nicht mehr."}
+                    {antwort ? `${f.dann} — ab nächster Woche.` : "Danach fragen wir nicht mehr."}
                   </p>
                 </li>
               );
@@ -189,9 +187,7 @@ export function Fragen({
           </div>
         )}
 
-        {gerechnet && (
-          <p className="text-sm text-primary">Die Woche ist neu gerechnet.</p>
-        )}
+        {gerechnet && <p className="text-sm text-primary">Die Woche ist neu gerechnet.</p>}
 
         {fehler && (
           <p role="alert" className="text-sm text-danger">

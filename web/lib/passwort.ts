@@ -37,10 +37,26 @@ export type Staerke = {
 
 /** Die zwanzig, die in jeder Liste geleakter Passwörter oben stehen. */
 const haeufig = new Set([
-  "passwort", "password", "12345678", "123456789", "1234567890", "qwertz123",
-  "qwerty123", "passwort1", "password1", "iloveyou", "sonnenschein", "hallo123",
-  "willkommen", "welcome1", "admin123", "letmein1", "monkey123", "fussball",
-  "dragon123", "abc12345",
+  "passwort",
+  "password",
+  "12345678",
+  "123456789",
+  "1234567890",
+  "qwertz123",
+  "qwerty123",
+  "passwort1",
+  "password1",
+  "iloveyou",
+  "sonnenschein",
+  "hallo123",
+  "willkommen",
+  "welcome1",
+  "admin123",
+  "letmein1",
+  "monkey123",
+  "fussball",
+  "dragon123",
+  "abc12345",
 ]);
 
 export function staerke(passwort: string, umfeld: string[] = []): Staerke {
@@ -85,7 +101,11 @@ export function staerke(passwort: string, umfeld: string[] = []): Staerke {
 
   // Ein einziges wiederholtes Zeichen oder eine Tastaturreihe ist lang und
   // trotzdem nichts wert.
-  if (/^(.)\1+$/.test(passwort) || "abcdefghijklmnopqrstuvwxyz".includes(klein) || "0123456789".includes(klein)) {
+  if (
+    /^(.)\1+$/.test(passwort) ||
+    "abcdefghijklmnopqrstuvwxyz".includes(klein) ||
+    "0123456789".includes(klein)
+  ) {
     return { stufe: 1, text: "schwach", klassen, einwand: "Zu gleichförmig." };
   }
 

@@ -107,6 +107,14 @@ export const Pfeil = (p: Props) => (
   </Svg>
 );
 
+/** Der Winkel zum Aufklappen. Ohne Schaft — er zeigt keine Richtung an,
+ *  sondern einen Zustand, und dreht sich beim Öffnen. */
+export const Winkel = (p: Props) => (
+  <Svg {...p}>
+    <path d="M9 6l6 6-6 6" />
+  </Svg>
+);
+
 export const Links = (p: Props) => (
   <Svg {...p}>
     <path d="M19 12H5M11 18l-6-6 6-6" />

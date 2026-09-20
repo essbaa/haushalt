@@ -76,8 +76,8 @@ export function TermineListe({
     <div className="space-y-8">
       {anlaesse.length === 0 ? (
         <p className="rounded-lg border border-line bg-surface px-4 py-6 text-sm leading-relaxed text-muted">
-          Noch nichts eingetragen. Solange hier nichts steht, entstehen auch
-          keine Aufgaben mit Vorlauf — kein erfundener Geburtstag im Plan.
+          Noch nichts eingetragen. Solange hier nichts steht, entstehen auch keine Aufgaben mit
+          Vorlauf — kein erfundener Geburtstag im Plan.
         </p>
       ) : (
         <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
@@ -108,7 +108,10 @@ export function TermineListe({
       )}
 
       {planend && (
-        <form onSubmit={eintragen} className="space-y-4 rounded-lg border border-line bg-surface p-4 sm:p-5">
+        <form
+          onSubmit={eintragen}
+          className="space-y-4 rounded-lg border border-line bg-surface p-4 sm:p-5"
+        >
           <h2 className="text-lg font-bold tracking-tight">Anlass eintragen</h2>
 
           <Feld
@@ -148,14 +151,15 @@ export function TermineListe({
               ))}
             </div>
             <p className="text-xs leading-relaxed text-muted">
-              {jaehrlich
-                ? "Wiederholt sich jedes Jahr."
-                : "Ein einmaliger Termin."}
+              {jaehrlich ? "Wiederholt sich jedes Jahr." : "Ein einmaliger Termin."}
             </p>
           </fieldset>
 
           {fehler && (
-            <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+            <p
+              role="alert"
+              className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+            >
               {fehler}
             </p>
           )}

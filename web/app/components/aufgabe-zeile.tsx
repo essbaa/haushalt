@@ -7,6 +7,7 @@ import { Haken, Kreis, Zurueck } from "@/app/components/icons";
 import { Zeichen } from "@/app/components/ui";
 import { Wischen } from "@/app/components/wischen";
 import type { Aufgabe, Mitglied } from "@/lib/api";
+import { begruendung } from "@/lib/begruendung";
 import { farbklasse } from "@/lib/personen";
 import { patchMitToken, postMitToken } from "@/lib/browser-token";
 
@@ -153,11 +154,7 @@ export function AufgabeZeile({
         <span className={`leading-snug font-semibold ${a.erledigt ? "line-through" : ""}`}>
           {a.titel}
         </span>
-        <span
-          className={`text-sm ${
-            meine ? "font-semibold text-[var(--person)]" : "text-muted"
-          }`}
-        >
+        <span className={`text-sm ${meine ? "font-semibold text-[var(--person)]" : "text-muted"}`}>
           {meine ? "du" : name}
         </span>
       </div>
@@ -204,11 +201,7 @@ export function AufgabeZeile({
   const inhalt = (
     <div
       className={`${farbe} flex gap-3 rounded-lg border px-3 py-3 transition-colors ${
-        a.erledigt
-          ? "border-transparent opacity-45"
-          : meine
-            ? "zeile-eigen"
-            : "border-transparent"
+        a.erledigt ? "border-transparent opacity-45" : meine ? "zeile-eigen" : "border-transparent"
       }`}
     >
       <Zeichen name={offen ? "?" : name} eigen={meine} />
@@ -304,28 +297,4 @@ export function AufgabeZeile({
       {inhalt}
     </Wischen>
   );
-}
-
-function begruendung(a: Aufgabe, namen: Record<string, string>): string {
-  const zuletzt = a.begruendung.zuletzt_bei;
-  switch (a.begruendung.code) {
-    case "rotation":
-      return zuletzt ? `zuletzt bei ${namen[zuletzt] ?? zuletzt}` : "Rotation";
-    case "ausgleich":
-      return "zum Ausgleich";
-    case "feste_person":
-      return "feste Zuständigkeit";
-    case "einzige_moeglichkeit":
-      return "einzige Möglichkeit";
-    case "frist":
-      return "wegen der Frist";
-    case "eigene_aufgabe":
-      return "eigene Aufgabe";
-    case "von_hand":
-      return zuletzt ? `von Hand, vorher ${namen[zuletzt] ?? zuletzt}` : "von Hand verteilt";
-    case "absprache":
-      return "so abgesprochen";
-    default:
-      return "";
-  }
 }

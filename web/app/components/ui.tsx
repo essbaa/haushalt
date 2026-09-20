@@ -42,12 +42,7 @@ export function KnopfLink({
 
 /** Eine Fläche, die etwas zusammenhält. Rahmen statt Schatten — flach bleibt flach. */
 export function Karte({ className = "", ...rest }: ComponentProps<"div">) {
-  return (
-    <div
-      className={`rounded-lg border border-line bg-surface ${className}`}
-      {...rest}
-    />
-  );
+  return <div className={`rounded-lg border border-line bg-surface ${className}`} {...rest} />;
 }
 
 /** Überschrift einer Seite, samt Weg zurück. */
@@ -74,9 +69,7 @@ export function Kopfzeile({
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight text-balance sm:text-3xl">
-          {titel}
-        </h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-balance sm:text-3xl">{titel}</h1>
         {rechts}
       </div>
       {children && (
@@ -107,7 +100,11 @@ export function Auswahl<T extends string>({
   aus?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label={name} className="inline-flex flex-wrap gap-1.5 rounded-lg bg-surface-2 p-1">
+    <div
+      role="radiogroup"
+      aria-label={name}
+      className="inline-flex flex-wrap gap-1.5 rounded-lg bg-surface-2 p-1"
+    >
       {optionen.map((o) => {
         const gewaehlt = o.wert === wert;
         return (
@@ -186,7 +183,13 @@ export function Feld({
 }
 
 /** Kurze Zusatzinformation an einer Zeile — Dauer, Kopflast, Status. */
-export function Merkmal({ children, ton = "still" }: { children: ReactNode; ton?: "still" | "warm" }) {
+export function Merkmal({
+  children,
+  ton = "still",
+}: {
+  children: ReactNode;
+  ton?: "still" | "warm";
+}) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${

@@ -12,15 +12,7 @@ import { tagLesbar } from "@/lib/woche";
  * das Ergebnis, nicht die Bedienung. Wer ihn eine Woche später liest, weiß
  * sonst nicht mehr, was da rückgängig gemacht wird.
  */
-export function GestrichenZeile({
-  id,
-  titel,
-  tag,
-}: {
-  id: string;
-  titel: string;
-  tag: string;
-}) {
+export function GestrichenZeile({ id, titel, tag }: { id: string; titel: string; tag: string }) {
   const router = useRouter();
   const [uebergang, starten] = useTransition();
   const [fehler, setFehler] = useState<string | null>(null);

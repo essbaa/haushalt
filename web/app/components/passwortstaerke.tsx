@@ -18,15 +18,19 @@ import { staerke, type Klassen } from "@/lib/passwort";
  * Bildschirmleseausgabe soll sie mitbekommen, aber nicht bei jedem Buchstaben
  * dazwischenreden.
  */
-export function Passwortstaerke({ passwort, umfeld = [] }: { passwort: string; umfeld?: string[] }) {
+export function Passwortstaerke({
+  passwort,
+  umfeld = [],
+}: {
+  passwort: string;
+  umfeld?: string[];
+}) {
   if (passwort.length === 0) return null;
 
   const { stufe, text, klassen, einwand } = staerke(passwort, umfeld);
 
-  const farbe =
-    stufe <= 1 ? "bg-danger" : stufe === 2 ? "bg-clay" : "bg-primary";
-  const schrift =
-    stufe <= 1 ? "text-danger" : stufe === 2 ? "text-clay" : "text-primary";
+  const farbe = stufe <= 1 ? "bg-danger" : stufe === 2 ? "bg-clay" : "bg-primary";
+  const schrift = stufe <= 1 ? "text-danger" : stufe === 2 ? "text-clay" : "text-primary";
 
   return (
     <div className="space-y-1.5">

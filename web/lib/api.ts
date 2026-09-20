@@ -153,10 +153,7 @@ export function ladeHaushalte(token?: string | null): Promise<Haushalt[]> {
 
 /** Die ganze Bibliothek mit dem Stand dieses Haushalts. */
 export function ladeVorlagen(haushaltId: string, token?: string | null): Promise<VorlagenStand[]> {
-  return hole<VorlagenStand[]>(
-    `/api/haushalte/${encodeURIComponent(haushaltId)}/vorlagen`,
-    token,
-  );
+  return hole<VorlagenStand[]>(`/api/haushalte/${encodeURIComponent(haushaltId)}/vorlagen`, token);
 }
 
 /** Was der Haushalt gemeldet hat — nur für die planenden Personen. */

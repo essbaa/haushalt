@@ -44,14 +44,11 @@ export function Melden({ haushaltId }: { haushaltId: string }) {
       // eine Suspense-Grenze zwingen — viel Bauwerk für eine Zeichenkette.
       const ort = new URL(window.location.href);
       const woche = ort.searchParams.get("woche") ?? "";
-      await postMitToken<void>(
-        `/api/haushalte/${encodeURIComponent(haushaltId)}/rueckmeldungen`,
-        {
-          art,
-          text: text.trim(),
-          kontext: [ort.pathname, woche && `Woche ${woche}`].filter(Boolean).join(" · "),
-        },
-      );
+      await postMitToken<void>(`/api/haushalte/${encodeURIComponent(haushaltId)}/rueckmeldungen`, {
+        art,
+        text: text.trim(),
+        kontext: [ort.pathname, woche && `Woche ${woche}`].filter(Boolean).join(" · "),
+      });
       setText("");
       setOffen(false);
       setFertig(true);
@@ -121,9 +118,7 @@ export function Melden({ haushaltId }: { haushaltId: string }) {
       </fieldset>
 
       <label className="block space-y-1.5">
-        <span className="block text-sm font-semibold">
-          Sag es so, wie du es denkst
-        </span>
+        <span className="block text-sm font-semibold">Sag es so, wie du es denkst</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -141,7 +136,10 @@ export function Melden({ haushaltId }: { haushaltId: string }) {
       </label>
 
       {fehler && (
-        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+        >
           {fehler}
         </p>
       )}

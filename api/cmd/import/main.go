@@ -12,8 +12,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -59,10 +57,11 @@ func run() error {
 	}
 	defer store.Close()
 
-	templates, err := importTemplates(ctx, store, *bibliothek)
+	templates, err := store.ImportLibrary(ctx, *bibliothek)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Bibliothek %s: %d Vorlagen\n", *bibliothek, len(templates))
 
 	pfade, err := filepath.Glob(filepath.Join(*beispiele, "*.json"))
 	if err != nil {
@@ -75,61 +74,6 @@ func run() error {
 		}
 	}
 	return nil
-}
-
-// importTemplates schreibt die Vorlagen und gibt sie geparst zurück — die
-// Historie braucht später Dauer, Kopflast und Zeitfenster.
-//
-// In die Spalte definition geht der Abschnitt der Datei UNVERÄNDERT, nicht
-// das, was der Parser daraus gemacht hat. Sonst wäre der Umweg durch Go eine
-// stille Übersetzung: Felder, die eine spätere Version kennt, wären beim
-// Import verloren.
-func importTemplates(ctx context.Context, store *storage.DB, pfad string) (map[string]planner.TaskTemplate, error) {
-	roh, err := os.ReadFile(pfad)
-	if err != nil {
-		return nil, err
-	}
-	var doc struct {
-		Vorlagen []json.RawMessage `json:"vorlagen"`
-	}
-	if err := json.Unmarshal(roh, &doc); err != nil {
-		return nil, fmt.Errorf("%s: %w", pfad, err)
-	}
-
-	// Der Stand der Bibliothek als Prüfsumme der Datei. Eine Versionsnummer
-	// von Hand zu pflegen hieße, sie irgendwann zu vergessen.
-	summe := sha256.Sum256(roh)
-	version := hex.EncodeToString(summe[:])[:12]
-
-	for _, eintrag := range doc.Vorlagen {
-		var kopf struct {
-			ID string `json:"id"`
-		}
-		if err := json.Unmarshal(eintrag, &kopf); err != nil {
-			return nil, err
-		}
-		if kopf.ID == "" {
-			return nil, errors.New("eine Vorlage ohne id")
-		}
-		if err := store.UpsertCuratedTemplate(ctx, db.UpsertCuratedTemplateParams{
-			ID:         kopf.ID,
-			Version:    version,
-			Definition: eintrag,
-		}); err != nil {
-			return nil, err
-		}
-	}
-
-	geparst, err := library.LoadTemplates(pfad)
-	if err != nil {
-		return nil, err
-	}
-	nachID := make(map[string]planner.TaskTemplate, len(geparst))
-	for _, t := range geparst {
-		nachID[t.ID] = t
-	}
-	fmt.Printf("Bibliothek %s: %d Vorlagen\n", version, len(geparst))
-	return nachID, nil
 }
 
 func importHousehold(ctx context.Context, store *storage.DB, pfad string, templates map[string]planner.TaskTemplate) error {

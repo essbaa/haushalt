@@ -25,9 +25,7 @@ export function ApiStatus() {
     fetchHealth(controller.signal)
       .then((health) =>
         setState(
-          health.status === "ok"
-            ? { phase: "erreichbar", health }
-            : { phase: "gestoert", health },
+          health.status === "ok" ? { phase: "erreichbar", health } : { phase: "gestoert", health },
         ),
       )
       .catch((err: unknown) => {
@@ -109,9 +107,7 @@ function Dot({ phase }: { phase: State["phase"] }) {
 function Details({ state }: { state: State }) {
   if (state.phase === "laedt") {
     return (
-      <p className="mt-3 font-mono text-xs text-muted">
-        {API_BASE || "keine Adresse gesetzt"}
-      </p>
+      <p className="mt-3 font-mono text-xs text-muted">{API_BASE || "keine Adresse gesetzt"}</p>
     );
   }
 
