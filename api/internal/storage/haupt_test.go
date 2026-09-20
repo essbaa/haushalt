@@ -80,7 +80,10 @@ func vorbereiten(url string) error {
 	}
 
 	// Dieselbe Bibliothek wie im Betrieb, über denselben Weg. Damit prüft
-	// jeder Lauf nebenbei, dass vorlagen.json überhaupt importierbar ist.
+	// jeder Lauf nebenbei, dass vorlagen.json überhaupt importierbar ist —
+	// und scheitert hier mit einer Meldung über die Datei, statt später mit
+	// einer über eine fehlende Vorlage. `leeren` stellt sie danach vor jedem
+	// Test wieder her.
 	if _, err := testDB.ImportLibrary(ctx, "../../library/vorlagen.json"); err != nil {
 		return fmt.Errorf("bibliothek: %w", err)
 	}
@@ -89,23 +92,34 @@ func vorbereiten(url string) error {
 
 // leeren räumt zwischen den Tests auf.
 //
-// TRUNCATE ... CASCADE statt DELETE: Es setzt auch alles zurück, was per
-// Fremdschlüssel daran hängt, und darauf soll sich kein Test verlassen
-// müssen. task_template bleibt stehen, weil dort die kuratierte Bibliothek
-// liegt — die gehört keinem Haushalt und wird einmal importiert.
+// TRUNCATE ... CASCADE statt DELETE, damit sich kein Test darauf verlassen
+// muss, dass jede Tabelle einzeln aufgezählt wurde.
+//
+// **Und danach die Bibliothek noch einmal.** Der erste Anlauf tat das nicht,
+// mit der Begründung „task_template bleibt ja stehen" — falsch, und zwar auf
+// eine Art, die man einmal gesehen haben muss: CASCADE leert nicht die
+// verweisenden ZEILEN, sondern die ganzen verweisenden TABELLEN. `task_template`
+// hängt über household_id an `household`, also wurde bei jedem Aufräumen die
+// komplette kuratierte Bibliothek mitgeleert — auch die Zeilen mit
+// household_id IS NULL, die keinem Haushalt gehören. Die Tests meldeten
+// daraufhin „t-muell steht nicht im Stand des Haushalts", was stimmte und die
+// Ursache verschwieg.
+//
+// Ein DELETE FROM household würde zeilenweise kaskadieren und die kuratierten
+// Vorlagen in Ruhe lassen. Es hinge dann aber daran, dass jede Tabelle ihr
+// ON DELETE CASCADE hat — eine Annahme, die beim nächsten Schema still
+// bricht. Der Import ist idempotent und kostet Millisekunden; einen bekannten
+// Ausgangszustand herzustellen ist billiger, als ihn vorauszusetzen.
 func leeren(t *testing.T) {
 	t.Helper()
 	ctx := t.Context()
 	if _, err := testDB.Pool.Exec(ctx,
 		`TRUNCATE household, member, task_instance, assignment, event, signal,
 		          invitation, week_plan, occasion, agreement, feedback,
-		          template_weekday CASCADE`); err != nil {
+		          task_template, template_weekday CASCADE`); err != nil {
 		t.Fatalf("leeren: %v", err)
 	}
-	// Eigene Vorlagen gehören einem Haushalt und müssen mit ihm verschwinden;
-	// die kuratierten bleiben.
-	if _, err := testDB.Pool.Exec(ctx,
-		`DELETE FROM task_template WHERE household_id IS NOT NULL`); err != nil {
-		t.Fatalf("leeren: %v", err)
+	if _, err := testDB.ImportLibrary(ctx, "../../library/vorlagen.json"); err != nil {
+		t.Fatalf("leeren: Bibliothek: %v", err)
 	}
 }

@@ -683,6 +683,36 @@ eindeutig — sie ist nur unangefochten.** Beim Bauen einer neuen Funktion lohnt
 die Frage, welche bestehende Regel dadurch zum ersten Mal in einen Fall
 gerät, für den sie nie geschrieben wurde.
 
+### 4.5 TRUNCATE ... CASCADE leert Tabellen, nicht Zeilen
+
+**Symptom** — Die ersten Tests gegen eine echte Datenbank meldeten
+„Vorlage \"t-muell\" steht nicht im Stand des Haushalts". Die Migrationen
+liefen durch, der Import der Bibliothek in `TestMain` lief durch, und trotzdem
+war die Bibliothek beim ersten Test weg.
+
+**Warum** — Das Aufräumen zwischen den Tests lautete
+`TRUNCATE household, member, … CASCADE`, mit der Begründung, `task_template`
+sei ja nicht aufgezählt. Aber CASCADE bei TRUNCATE bedeutet etwas anderes als
+bei DELETE: Es leert **jede Tabelle, die per Fremdschlüssel auf eine der
+genannten verweist**, vollständig. `task_template` hat ein
+`household_id uuid REFERENCES household (id)` — also flog die ganze Tabelle
+mit, samt der kuratierten Zeilen, die mit `household_id IS NULL` gar keinem
+Haushalt gehören.
+
+**Lösung** — `task_template` mit aufgezählt und die Bibliothek nach dem
+Aufräumen neu importiert. Der Import ist idempotent und kostet Millisekunden.
+
+Ein `DELETE FROM household` hätte zeilenweise kaskadiert und die kuratierten
+Vorlagen in Ruhe gelassen — hinge dann aber daran, dass jede verweisende
+Tabelle ihr `ON DELETE CASCADE` hat. Diese Annahme bricht beim nächsten Schema
+still.
+
+**Lehre** — **Einen bekannten Ausgangszustand herzustellen ist billiger, als
+ihn vorauszusetzen.** Und: Zwei SQL-Befehle mit demselben Schlüsselwort können
+Verschiedenes meinen. Bei DELETE folgt CASCADE den Zeilen, bei TRUNCATE den
+Tabellen.
+
+
 ## 5. Web
 
 ### 5.1 React Compiler verbietet die Zuweisung an `window.location`
