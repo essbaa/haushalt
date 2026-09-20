@@ -112,6 +112,34 @@ Dieser Abschnitt ist zum Danebenlegen, während die zweite Person es tut. **Sag
 ihr nichts, außer dem Link.** Was du wissen willst, ist nicht, ob sie es
 schafft — sie schafft es, wenn du hilfst. Du willst wissen, **wo sie zögert**.
 
+#### Vorher, allein, fünf Minuten
+
+1. Pushen, CI grün, Vercel-Deploy grün.
+2. In den Fly-Logs nachsehen, ob `migrate: … Vorlagen eingelesen` dasteht.
+   Seit dem 20. September spielt der `release_command` die Bibliothek mit ein;
+   der erste Lauf ist der, den man sich ansieht.
+3. **Melde dich selbst einmal auf dem Telefon an**, in der Produktion. Nicht
+   am Laptop. Was dort klemmt, willst du wissen, bevor sie danebensitzt — und
+   ein Laptop beweist über ein Telefon nichts.
+4. Nachsehen, dass sie im Plan steht und **noch kein Konto hat**. Nur dann
+   bietet „Einladen" sie zur Auswahl an.
+
+Der `RESEND_API_KEY` darf gesetzt bleiben. Mit dem Sandkasten-Absender leitet
+`mailErreichtAlle()` ab, dass nichts zugestellt werden kann; es wird dann auch
+nichts versucht. Nichts zu tun ist hier die richtige Handlung.
+
+#### Der Durchgang, zusammen, zehn Minuten
+
+**Ihr Telefon, ihr Browser.** Nicht deins: Sonst ist „sich abmelden" der erste
+Schritt, den nicht sie gegangen ist, und genau am Anfang entscheidet sich das
+meiste.
+
+Den Link **allein in einer eigenen Nachricht** schicken, ohne Text drumherum.
+Manche Messenger zerlegen lange Links, wenn etwas danebensteht — und dann
+scheitert der Durchgang an WhatsApp und nicht an der App.
+
+Dann Telefon weg, Zettel her, und **nichts sagen**. Das ist die ganze Übung.
+
 | Schritt | Was sie sieht | Worauf du achtest |
 |---|---|---|
 | 1 | Du: **Einladen** → Person auswählen → *Code erzeugen* | Steht sie schon im Plan, verbindet der Code sie damit — Aufgaben und Verlauf bleiben ihr. „Jemand Neues" legt eine **zweite** Person an. Das ist die häufigste Verwechslung, und sie passiert bei dir, nicht bei ihr |
@@ -130,9 +158,30 @@ leerer Haushalt, Einladung weiter offen und nirgends mehr sichtbar. Falls sie
 trotzdem dort landet und einen Haushalt anlegt, ist nichts verloren — die
 Einladung gilt eine Woche, und `/beitreten` nimmt sie danach an.
 
-**Was du dir notierst:** jede Stelle, an der sie länger als fünf Sekunden
-nichts tut, und jede Frage, die sie stellt. Beides ist wertvoller als „hat
-geklappt".
+#### Danach, sofort, fünf Minuten
+
+**Aufschreiben, solange es frisch ist:** jede Stelle, an der sie länger als
+fünf Sekunden nichts getan hat, und jede Frage, die sie gestellt hat. Beides
+ist wertvoller als „hat geklappt" — eine Stockung, die man am nächsten Tag
+rekonstruiert, ist keine Beobachtung mehr, sondern eine Erinnerung an eine.
+
+Dann drei Blicke: Sieht sie dieselbe Woche wie du? Hat sie ihre Farbe? Stehen
+ihre Aufgaben bei ihr — und nicht die einer zweiten, gleichnamigen Person?
+
+Und **lass sie eine Sache abhaken.** Der Beitritt ist erst bewiesen, wenn eine
+Schreibaktion von ihrem Gerät durchgeht. Bis dahin hast du gesehen, dass sie
+lesen kann.
+
+#### Zwei Regeln für diesen Abend
+
+**Repariere nichts währenddessen**, auch wenn es juckt. Ein Fehler, den du
+live behebst, ist ein Befund, den du nicht mehr hast — und die Woche danach
+weißt du nicht, ob er wiederkommt.
+
+**Zehn Minuten sind die Grenze.** Schafft sie es ohne Hilfe nicht hinein, wird
+abgebrochen, aufgeschrieben und repariert. Das ist kein Scheitern, sondern das
+Ergebnis, für das der Durchgang da ist. Ein Einladungsweg, der einen Fachmann
+daneben braucht, ist keiner.
 
 ### 2b. Den Haushalt einrichten (zusammen, 20 Minuten)
 
