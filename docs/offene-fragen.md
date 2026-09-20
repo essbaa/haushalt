@@ -183,7 +183,44 @@ Wiederholen ist die Entlastung.
 - Wie oft beißt es wirklich? **Das beantwortet die Probewoche**, und nicht
   dieser Absatz.
 
-## 5. Zeitfenster — wer setzt sie, und wie viele gibt es?
+## 5. Der Wochentag — erledigt. Das Zeitfenster und das Verschieben — offen.
+
+**Teilweise entschieden am 20. September 2026 — [ADR-0017](adr/0017-der-wochentag-gehoert-dem-haushalt.md), gebaut.**
+
+Der Wochentag gehört jetzt dem Haushalt: `template_weekday`, überschreibbar
+für jede Vorlage, bei der ein Tag überhaupt eine Antwort ist. Müll donnerstags
+statt dienstags kostet keinen Neuanlegen-Umweg mehr. Feste Tage schlagen jeden
+anderen Rhythmus, und weil das die Häufigkeit mitändert, sagt der Bildschirm
+es beim Wählen.
+
+**Offen bleibt das Verschieben einer einzelnen Aufgabe** — „diese Woche mache
+ich das Mittwoch statt Montag". Heute gibt es dafür nichts: erledigt, abgeben,
+streichen, zuteilen — kein Verschieben, und Streichen nimmt die Aufgabe aus
+der Woche *und* aus der Bilanz.
+
+Bewusst nicht gebaut, weil es größer ist, als es klingt:
+
+- **Innerhalb des Fensters** ist es eine Korrektur der Zuteilung. Der Planer
+  weiß ohnehin, dass der Tag weich ist — ein Fenster-Kandidat trägt `days
+  []Date`, „die möglichen Tage in bevorzugter Reihenfolge". Nur zeigt der Plan
+  den gewählten Tag so, als wäre er die Aufgabe.
+- **Über das Fenster hinaus** hebelt es den Rhythmus aus. Dann braucht es eine
+  Antwort darauf, was mit der nächsten Fälligkeit passiert.
+- **Sind „ich mache es Mittwoch" und „das geht diese Woche gar nicht"
+  dieselbe Handlung?** Das zweite gibt es schon (Streichen). Das erste als
+  Variante davon zu bauen, wäre bequem und vermutlich falsch.
+- **Zählt eine verschobene Aufgabe in die Bilanz welcher Woche?**
+
+Was in der Probewoche trotzdem geht: Es geht nichts kaputt. `MarkDone` hat
+keine Datumsprüfung — die Montagsaufgabe am Mittwoch abhaken funktioniert, die
+Bilanz zählt sie, und das Protokoll hält sogar fest, *wann* wirklich abgehakt
+wurde. Der Preis ist kosmetisch: Montag sieht bis dahin unerledigt aus, und ab
+Dienstag muss man „Schon gewesen" aufklappen. **Was zu messen ist: wie oft es
+vorkommt und ob es dasselbe Verschieben ist** (M7).
+
+---
+
+### 5b. Zeitfenster — wer setzt sie, und wie viele gibt es?
 
 **Stand: aus der Oberfläche wieder ausgebaut, 17. September 2026.**
 

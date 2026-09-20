@@ -28,6 +28,22 @@ func (q *Queries) ClearAgreementRow(ctx context.Context, arg ClearAgreementRowPa
 	return err
 }
 
+const clearTemplateWeekdays = `-- name: ClearTemplateWeekdays :exec
+DELETE FROM template_weekday WHERE household_id = $1 AND template_id = $2
+`
+
+type ClearTemplateWeekdaysParams struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+}
+
+// Alle Wochentage einer Vorlage löschen — der erste Schritt beim Setzen einer
+// neuen Auswahl und zugleich das Zurücksetzen auf den Rhythmus der Bibliothek.
+func (q *Queries) ClearTemplateWeekdays(ctx context.Context, arg ClearTemplateWeekdaysParams) error {
+	_, err := q.db.Exec(ctx, clearTemplateWeekdays, arg.HouseholdID, arg.TemplateID)
+	return err
+}
+
 const createHousehold = `-- name: CreateHousehold :one
 INSERT INTO household (name, home, has_car, has_yard, pets, timezone, facts, rooms, baths)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -280,6 +296,39 @@ func (q *Queries) ListHouseholdsForAuthUser(ctx context.Context, authUserID *str
 	return items, nil
 }
 
+const listTemplateWeekdays = `-- name: ListTemplateWeekdays :many
+SELECT template_id, weekday
+FROM template_weekday
+WHERE household_id = $1
+ORDER BY template_id, weekday
+`
+
+type ListTemplateWeekdaysRow struct {
+	TemplateID string
+	Weekday    int32
+}
+
+// Die Wochentage, die dieser Haushalt für Vorlagen festgelegt hat.
+func (q *Queries) ListTemplateWeekdays(ctx context.Context, householdID pgtype.UUID) ([]ListTemplateWeekdaysRow, error) {
+	rows, err := q.db.Query(ctx, listTemplateWeekdays, householdID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTemplateWeekdaysRow{}
+	for rows.Next() {
+		var i ListTemplateWeekdaysRow
+		if err := rows.Scan(&i.TemplateID, &i.Weekday); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setAgreement = `-- name: SetAgreement :exec
 INSERT INTO agreement (household_id, template_id, weekday, member_id)
 VALUES ($1, $2, $3, $4)
@@ -338,6 +387,24 @@ func (q *Queries) SetFacts(ctx context.Context, arg SetFactsParams) (Household, 
 		&i.Baths,
 	)
 	return i, err
+}
+
+const setTemplateWeekday = `-- name: SetTemplateWeekday :exec
+INSERT INTO template_weekday (household_id, template_id, weekday)
+VALUES ($1, $2, $3)
+ON CONFLICT (household_id, template_id, weekday) DO NOTHING
+`
+
+type SetTemplateWeekdayParams struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	Weekday     int32
+}
+
+// Einen Wochentag festlegen. Zweimal denselben zu setzen ist kein Fehler.
+func (q *Queries) SetTemplateWeekday(ctx context.Context, arg SetTemplateWeekdayParams) error {
+	_, err := q.db.Exec(ctx, setTemplateWeekday, arg.HouseholdID, arg.TemplateID, arg.Weekday)
+	return err
 }
 
 const updateHousehold = `-- name: UpdateHousehold :one

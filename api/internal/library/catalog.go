@@ -177,6 +177,10 @@ func (c *Catalog) SetAgreement(context.Context, string, string, string, [7]strin
 	return planner.ErrNotAllowed
 }
 
+func (c *Catalog) SetWeekdays(context.Context, string, string, string, [7]bool) error {
+	return planner.ErrNotAllowed
+}
+
 func (c *Catalog) ApplyAgreement(context.Context, string, string, string) (int, error) {
 	return 0, planner.ErrNotAllowed
 }

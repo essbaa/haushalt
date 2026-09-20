@@ -33,6 +33,13 @@ HAUSHALT ?= library/beispiele/familie-a.json
 plan: ## Wochenplan auf der Konsole ausgeben
 	go run ./cmd/plan --haushalt $(HAUSHALT) --woche 2026-W38 --uebersprungen
 
+# Die Tests in internal/storage brauchen eine echte Datenbank und überspringen
+# sich ohne. Lokal am schnellsten:
+#
+#   docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=probe \
+#     -e POSTGRES_DB=haushalt_test --name haushalt-test postgres:17-alpine
+#
+# Danach TEST_DATABASE_URL in api/.env eintragen — der Makefile liest sie.
 .PHONY: test
 test: ## Alle Tests
 	go test ./...

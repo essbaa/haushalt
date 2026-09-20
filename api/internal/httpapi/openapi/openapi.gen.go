@@ -1253,6 +1253,26 @@ type VorlagenStand struct {
 	//
 	// Example: Braucht ein Kind, das zur Schule geht.
 	Voraussetzung *string `json:"voraussetzung,omitempty"`
+
+	// Wochentage An welchen Tagen diese Aufgabe liegt, Index 0 = Montag. Alle
+	// sieben falsch heißt: an keinem festen Tag — der Planer sucht sich
+	// im Fenster einen.
+	//
+	// Das ist der **geltende** Stand, nicht der der Bibliothek: Hat der
+	// Haushalt eigene Tage festgelegt, stehen die hier. Ob sie eigene
+	// sind, sagt `wochentage_eigen`.
+	Wochentage *[]bool `json:"wochentage,omitempty"`
+
+	// WochentageEigen Die Tage stammen von diesem Haushalt und nicht aus der Bibliothek.
+	// Ohne dieses Feld könnte die Oberfläche „zurücksetzen" nicht von
+	// „nichts zu tun" unterscheiden.
+	WochentageEigen *bool `json:"wochentage_eigen,omitempty"`
+
+	// WochentageMoeglich Ob ein Wochentag für diese Aufgabe überhaupt eine Antwort ist.
+	// Falsch beim Auslöser, bei Saison und Phase und bei allem, was an
+	// einem Anlass hängt — dort bietet die Oberfläche die Wahl gar nicht
+	// erst an, statt eine `400` zu provozieren.
+	WochentageMoeglich *bool `json:"wochentage_moeglich,omitempty"`
 }
 
 // VorlagenStandArt defines model for VorlagenStand.Art.
@@ -1387,6 +1407,13 @@ type SetVorlageJSONBody struct {
 	Aktiv bool `json:"aktiv"`
 }
 
+// SetWochentageJSONBody defines parameters for SetWochentage.
+type SetWochentageJSONBody struct {
+	// Wochentage Index 0 = Montag. Alle sieben falsch heißt: zurück zum
+	// Rhythmus der Bibliothek.
+	Wochentage []bool `json:"wochentage"`
+}
+
 // AufgabeAbgebenJSONRequestBody defines body for AufgabeAbgeben for application/json ContentType.
 type AufgabeAbgebenJSONRequestBody AufgabeAbgebenJSONBody
 
@@ -1428,6 +1455,9 @@ type CreateEigeneVorlageJSONRequestBody = NeueVorlage
 
 // SetVorlageJSONRequestBody defines body for SetVorlage for application/json ContentType.
 type SetVorlageJSONRequestBody SetVorlageJSONBody
+
+// SetWochentageJSONRequestBody defines body for SetWochentage for application/json ContentType.
+type SetWochentageJSONRequestBody SetWochentageJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1500,6 +1530,9 @@ type ServerInterface interface {
 	// SetVorlage Eine Vorlage abbestellen oder wieder anbestellen
 	// (PATCH /api/haushalte/{haushaltId}/vorlagen/{vorlageId})
 	SetVorlage(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string)
+	// SetWochentage An welchen Wochentagen eine Aufgabe liegt
+	// (PUT /api/haushalte/{haushaltId}/wochentage/{vorlageId})
+	SetWochentage(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(w http.ResponseWriter, r *http.Request)
@@ -2154,6 +2187,41 @@ func (siw *ServerInterfaceWrapper) SetVorlage(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// SetWochentage operation middleware
+func (siw *ServerInterfaceWrapper) SetWochentage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "haushaltId" -------------
+	var haushaltId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "haushaltId", r.PathValue("haushaltId"), &haushaltId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "haushaltId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "vorlageId" -------------
+	var vorlageId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "vorlageId", r.PathValue("vorlageId"), &vorlageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "vorlageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWochentage(w, r, haushaltId, vorlageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetIch operation middleware
 func (siw *ServerInterfaceWrapper) GetIch(w http.ResponseWriter, r *http.Request) {
 
@@ -2315,6 +2383,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/haushalte/{haushaltId}/vorlagen/{vorlageId}", wrapper.SetVorlage)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/haushalte/{haushaltId}/absprachen/{vorlageId}", wrapper.SetAbsprache)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/absprachen/{vorlageId}/ab-heute", wrapper.AbsprachAbHeute)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/haushalte/{haushaltId}/wochentage/{vorlageId}", wrapper.SetWochentage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/rueckmeldungen", wrapper.ListRueckmeldungen)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/haushalte/{haushaltId}/rueckmeldungen", wrapper.Melden)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/haushalte/{haushaltId}/anlaesse", wrapper.ListAnlaesse)
@@ -3542,6 +3611,66 @@ func (response SetVorlage404JSONResponse) VisitSetVorlageResponse(w http.Respons
 	return err
 }
 
+type SetWochentageRequestObject struct {
+	HaushaltId string `json:"haushaltId"`
+	VorlageId  string `json:"vorlageId"`
+	Body       *SetWochentageJSONRequestBody
+}
+
+type SetWochentageResponseObject interface {
+	VisitSetWochentageResponse(w http.ResponseWriter) error
+}
+
+type SetWochentage204Response struct {
+}
+
+func (response SetWochentage204Response) VisitSetWochentageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetWochentage400JSONResponse Fehler
+
+func (response SetWochentage400JSONResponse) VisitSetWochentageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetWochentage403JSONResponse Fehler
+
+func (response SetWochentage403JSONResponse) VisitSetWochentageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetWochentage404JSONResponse Fehler
+
+func (response SetWochentage404JSONResponse) VisitSetWochentageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetIchRequestObject struct {
 }
 
@@ -3655,6 +3784,9 @@ type StrictServerInterface interface {
 	// SetVorlage Eine Vorlage abbestellen oder wieder anbestellen
 	// (PATCH /api/haushalte/{haushaltId}/vorlagen/{vorlageId})
 	SetVorlage(ctx context.Context, request SetVorlageRequestObject) (SetVorlageResponseObject, error)
+	// SetWochentage An welchen Wochentagen eine Aufgabe liegt
+	// (PUT /api/haushalte/{haushaltId}/wochentage/{vorlageId})
+	SetWochentage(ctx context.Context, request SetWochentageRequestObject) (SetWochentageResponseObject, error)
 	// GetIch Wer fragt
 	// (GET /api/ich)
 	GetIch(ctx context.Context, request GetIchRequestObject) (GetIchResponseObject, error)
@@ -4403,6 +4535,40 @@ func (sh *strictHandler) SetVorlage(w http.ResponseWriter, r *http.Request, haus
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetVorlageResponseObject); ok {
 		if err := validResponse.VisitSetVorlageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetWochentage operation middleware
+func (sh *strictHandler) SetWochentage(w http.ResponseWriter, r *http.Request, haushaltId string, vorlageId string) {
+	var request SetWochentageRequestObject
+
+	request.HaushaltId = haushaltId
+	request.VorlageId = vorlageId
+
+	var body SetWochentageJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetWochentage(ctx, request.(SetWochentageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetWochentage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetWochentageResponseObject); ok {
+		if err := validResponse.VisitSetWochentageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

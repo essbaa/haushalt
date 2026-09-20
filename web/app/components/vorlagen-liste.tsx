@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AbspracheRaster } from "@/app/components/absprache-raster";
 import { EigeneAufgabe } from "@/app/components/eigene-aufgabe";
+import { Wochentage } from "@/app/components/wochentage";
 import type { Mitglied, VorlagenStand } from "@/lib/api";
+import { bereiche } from "@/lib/bereiche";
 import { patchMitToken } from "@/lib/browser-token";
 
 const gruende: Record<string, string> = {
@@ -18,22 +20,6 @@ const gruende: Record<string, string> = {
   unbekannt: "ungeklärt",
   braucht_termin: "braucht Termin",
   braucht_absprache: "braucht Absprache",
-};
-
-// Alle zehn Bereiche aus planner.AllCategories. Eine Abbildung, die nur die
-// bekannten Fälle abdeckt, verrät sich beim ersten unbekannten — hier stand
-// schon einmal „termine" kleingeschrieben als Kennung.
-const bereiche: Record<string, string> = {
-  kueche: "Küche",
-  waesche: "Wäsche",
-  reinigung: "Reinigung",
-  kind: "Kinder",
-  vorrat: "Vorräte",
-  termine: "Termine",
-  verwaltung: "Verwaltung",
-  wartung: "Wartung",
-  sozial: "Soziales",
-  aussen: "Draußen",
 };
 
 export function VorlagenListe({
@@ -111,8 +97,8 @@ export function VorlagenListe({
   return (
     <div className="space-y-5">
       <p className="text-sm leading-relaxed text-muted">
-        <span className="font-bold text-fg">{aktive}</span> von {vorlagen.length}{" "}
-        gelten bei euch. Bei den übrigen steht, warum nicht.
+        <span className="font-bold text-fg">{aktive}</span> von {vorlagen.length} gelten bei euch.
+        Bei den übrigen steht, warum nicht.
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -142,7 +128,10 @@ export function VorlagenListe({
       </div>
 
       {fehler && (
-        <p role="alert" className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger"
+        >
           {fehler}
         </p>
       )}
@@ -314,8 +303,7 @@ function Bereich({
                     <div className="w-full space-y-2 rounded-md bg-surface-2 p-3">
                       {verneint && (
                         <p className="text-xs font-semibold text-clay">
-                          Ihr habt das mit Nein beantwortet. Ändert sich das,
-                          antwortet hier neu.
+                          Ihr habt das mit Nein beantwortet. Ändert sich das, antwortet hier neu.
                         </p>
                       )}
                       <p className="text-sm font-semibold text-pretty">{frage.frage}</p>
@@ -365,6 +353,22 @@ function Bereich({
                     </p>
                   )}
 
+                  {/* Der Wochentag steht bei jeder Aufgabe, für die er eine
+                      Antwort ist — auch wenn keiner gesetzt ist. „Kein fester
+                      Tag" ist eine Auskunft; gar nichts dastehen zu haben ist
+                      der Zustand, in dem man rät, warum der Müll am Dienstag
+                      steht. */}
+                  {v.wochentage_moeglich && v.aktiv && (
+                    <Wochentage
+                      haushaltId={haushaltId}
+                      vorlageId={v.id}
+                      titel={v.titel}
+                      gesetzt={v.wochentage ?? [false, false, false, false, false, false, false]}
+                      eigen={v.wochentage_eigen ?? false}
+                      planend={planend}
+                    />
+                  )}
+
                   {v.braucht_absprache && (
                     <AbspracheRaster
                       haushaltId={haushaltId}
@@ -378,9 +382,8 @@ function Bereich({
 
                   {v.grund === "braucht_termin" && (
                     <p className="w-full text-xs leading-relaxed text-muted">
-                      Entsteht aus einem Anlass, nicht aus einem Zeitraum. Trag
-                      einen Termin ein, dann taucht sie rechtzeitig davor im Plan
-                      auf — erfinden wird die App keinen.
+                      Entsteht aus einem Anlass, nicht aus einem Zeitraum. Trag einen Termin ein,
+                      dann taucht sie rechtzeitig davor im Plan auf — erfinden wird die App keinen.
                     </p>
                   )}
 

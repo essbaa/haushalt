@@ -324,7 +324,37 @@ func (p *Plans) household(ctx context.Context, z db.Household) (planner.Househol
 	return h, nil
 }
 
+// templates sind die Vorlagen dieses Haushalts, mit seinen eigenen
+// Wochentagen darüber.
+//
+// Fast alles im Dienst will diese Fassung: den Rhythmus, wie er hier gilt.
+// Wer die Bibliotheksfassung braucht — und das ist genau eine Stelle, die
+// Prüfung beim Festlegen —, nimmt templatesRoh.
 func (p *Plans) templates(ctx context.Context, haushalt pgtype.UUID) ([]planner.TaskTemplate, error) {
+	roh, err := p.templatesRoh(ctx, haushalt)
+	if err != nil {
+		return nil, err
+	}
+	tage, err := p.wochentage(ctx, haushalt)
+	if err != nil {
+		return nil, err
+	}
+	for i, t := range roh {
+		if wd, ok := tage[t.ID]; ok && len(wd) > 0 {
+			// Feste Tage schlagen jeden anderen Rhythmus: Wer „donnerstags"
+			// sagt, meint nicht „alle sieben Tage, bevorzugt donnerstags".
+			// Damit ändert sich auch die Häufigkeit — aus „alle 14 Tage,
+			// samstags" wird wöchentlich. Das ist keine Nebenwirkung, sondern
+			// die Aussage; die Oberfläche sagt es beim Setzen dazu.
+			roh[i].Rhythm.Type = planner.RhythmFixed
+			roh[i].Rhythm.Weekdays = wd
+		}
+	}
+	return roh, nil
+}
+
+// templatesRoh liest die Vorlagen so, wie sie in der Datenbank stehen.
+func (p *Plans) templatesRoh(ctx context.Context, haushalt pgtype.UUID) ([]planner.TaskTemplate, error) {
 	zeilen, err := p.db.ListTemplatesForHousehold(ctx, haushalt)
 	if err != nil {
 		return nil, err
@@ -341,6 +371,31 @@ func (p *Plans) templates(ctx context.Context, haushalt pgtype.UUID) ([]planner.
 	}
 	return out, nil
 }
+
+// wochentage sind die vom Haushalt festgelegten Tage, je Vorlage.
+//
+// Der Index in der Datenbank ist 0 = Montag, wie beim Wochenraster der
+// Absprache. Go zählt anders — time.Sunday ist 0 —, und genau diese
+// Umrechnung ist die Stelle, an der so etwas schiefgeht. Deshalb steht sie in
+// tagAusIndex und sonst nirgends; die Gegenrichtung liegt in
+// wochentageNachAussen, weil nur der Vertrag sie braucht.
+func (p *Plans) wochentage(ctx context.Context, haushalt pgtype.UUID) (map[string][]time.Weekday, error) {
+	zeilen, err := p.db.ListTemplateWeekdays(ctx, haushalt)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]time.Weekday{}
+	for _, z := range zeilen {
+		if z.Weekday < 0 || z.Weekday > 6 {
+			continue
+		}
+		out[z.TemplateID] = append(out[z.TemplateID], tagAusIndex(int(z.Weekday)))
+	}
+	return out, nil
+}
+
+// tagAusIndex: 0 = Montag … 6 = Sonntag, wie in der Datenbank.
+func tagAusIndex(i int) time.Weekday { return time.Weekday((i + 1) % 7) }
 
 // history verdichtet, was der Planer über die Vergangenheit wissen muss.
 //

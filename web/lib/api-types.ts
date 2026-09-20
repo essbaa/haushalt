@@ -307,6 +307,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/haushalte/{haushaltId}/wochentage/{vorlageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * An welchen Wochentagen eine Aufgabe liegt
+         * @description Sieben Plätze, Index 0 ist Montag. **Alle sieben falsch setzt
+         *     zurück** — dann gilt wieder der Rhythmus aus der Bibliothek.
+         *
+         *     Der Fall: Müll rausbringen steht in der Bibliothek auf Dienstag, weil
+         *     irgendein Tag dastehen musste. Bei euch kommt die Tonne donnerstags.
+         *     Bisher gab es dagegen ein einziges Mittel — die Vorlage abbestellen
+         *     und von Hand neu anlegen, womit die Zahlen der Bibliothek verloren
+         *     gehen und die Aufgabe als geschätzte „eigene" dasteht.
+         *
+         *     **Feste Tage schlagen jeden anderen Rhythmus.** Wer „donnerstags"
+         *     sagt, meint nicht „alle sieben Tage, bevorzugt donnerstags". Damit
+         *     ändert sich auch die Häufigkeit: Aus „alle 14 Tage" wird durch die
+         *     Wahl eines Tages „wöchentlich, samstags". Das ist die Aussage und
+         *     keine Nebenwirkung — die Oberfläche sagt es beim Setzen dazu.
+         *
+         *     Nicht für jeden Rhythmus. Beim Auslöser („der Wäschekorb ist voll")
+         *     ist ein Wochentag keine Antwort, sondern eine andere Frage; Saison und
+         *     Phase laufen über Monate; und was an einem Anlass hängt, hat seinen
+         *     Tag schon. Für die gibt es `400`.
+         *
+         *     Nur planende Personen: Der Tag gilt für alle.
+         */
+        put: operations["setWochentage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/haushalte/{haushaltId}/rueckmeldungen": {
         parameters: {
             query?: never;
@@ -769,6 +809,29 @@ export interface components {
              *     Tag ist nichts abgesprochen.
              */
             absprache?: string[];
+            /**
+             * @description An welchen Tagen diese Aufgabe liegt, Index 0 = Montag. Alle
+             *     sieben falsch heißt: an keinem festen Tag — der Planer sucht sich
+             *     im Fenster einen.
+             *
+             *     Das ist der **geltende** Stand, nicht der der Bibliothek: Hat der
+             *     Haushalt eigene Tage festgelegt, stehen die hier. Ob sie eigene
+             *     sind, sagt `wochentage_eigen`.
+             */
+            wochentage?: boolean[];
+            /**
+             * @description Die Tage stammen von diesem Haushalt und nicht aus der Bibliothek.
+             *     Ohne dieses Feld könnte die Oberfläche „zurücksetzen" nicht von
+             *     „nichts zu tun" unterscheiden.
+             */
+            wochentage_eigen?: boolean;
+            /**
+             * @description Ob ein Wochentag für diese Aufgabe überhaupt eine Antwort ist.
+             *     Falsch beim Auslöser, bei Saison und Phase und bei allem, was an
+             *     einem Anlass hängt — dort bietet die Oberfläche die Wahl gar nicht
+             *     erst an, statt eine `400` zu provozieren.
+             */
+            wochentage_moeglich?: boolean;
             /**
              * @description Bei `gilt_nicht`: die fehlende Bedingung als Satz — „Braucht ein
              *     Kind, das zur Schule geht." Fehlt, wenn ein verneintes Faktum die
@@ -1655,6 +1718,64 @@ export interface operations {
                          */
                         eingetragen: number;
                     };
+                };
+            };
+            /** @description das dürfen die planenden Personen */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+            /** @description den Haushalt gibt es nicht */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
+                };
+            };
+        };
+    };
+    setWochentage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haushaltId: string;
+                vorlageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Index 0 = Montag. Alle sieben falsch heißt: zurück zum
+                     *     Rhythmus der Bibliothek.
+                     */
+                    wochentage: boolean[];
+                };
+            };
+        };
+        responses: {
+            /** @description gesetzt */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description diese Aufgabe hat keinen Wochenrhythmus */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fehler"];
                 };
             };
             /** @description das dürfen die planenden Personen */

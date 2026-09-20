@@ -73,6 +73,10 @@ type Plans interface {
 	// Wochentag, Index 0 ist Montag. Alle sieben Plätze auf einmal — ein halb
 	// gesetztes Raster wäre ein Zustand, den niemand gewollt hätte.
 	SetAgreement(ctx context.Context, subject, id, templateID string, raster [7]string) error
+	// SetWeekdays legt fest, an welchen Wochentagen eine Vorlage in diesem
+	// Haushalt liegt, Index 0 ist Montag. Alle sieben falsch setzt zurück:
+	// Dann gilt wieder der Rhythmus aus der Bibliothek (ADR-0017).
+	SetWeekdays(ctx context.Context, subject, id, templateID string, tage [7]bool) error
 	// ApplyAgreement trägt das Raster in die laufende Woche ein, ab heute.
 	// Nur diese Vorlage und nur dort, wo noch nichts geschehen ist — die
 	// Antwort sagt, wie viele Termine entstanden sind.
@@ -853,6 +857,19 @@ func (a api) ListVorlagen(ctx context.Context, r openapi.ListVorlagenRequestObje
 			eigene := true
 			eintrag.Eigene = &eigene
 		}
+		// Die Wochentage gehen immer mit hinaus, auch wenn keiner gesetzt ist.
+		// Die Oberfläche braucht drei Auskünfte und nicht eine: welche Tage
+		// gelten, ob sie von euch stammen, und ob ein Wochentag für diese
+		// Aufgabe überhaupt eine Antwort ist. Fehlte die dritte, böte der
+		// Bildschirm die Wahl auch dort an, wo der Dienst sie ablehnt — eine
+		// Einladung in eine 400.
+		tage := wochentageNachAussen(v.Template.Rhythm)
+		eintrag.Wochentage = &tage
+		eigeneTage := v.WeekdaysOwn
+		eintrag.WochentageEigen = &eigeneTage
+		moeglich := !v.Template.AppliesTo.RequiresEvent &&
+			(v.Template.Rhythm.Type == planner.RhythmFixed || v.Template.Rhythm.Type == planner.RhythmWindow)
+		eintrag.WochentageMoeglich = &moeglich
 		if v.Reason != "" {
 			grund := openapi.VorlagenStandGrund(v.Reason)
 			eintrag.Grund = &grund
@@ -941,6 +958,57 @@ func (a api) SetAbsprache(ctx context.Context, r openapi.SetAbspracheRequestObje
 		return nil, err
 	}
 	return openapi.SetAbsprache204Response{}, nil
+}
+
+// SetWochentage legt fest, an welchen Tagen eine Aufgabe liegt.
+func (a api) SetWochentage(ctx context.Context, r openapi.SetWochentageRequestObject) (openapi.SetWochentageResponseObject, error) {
+	id, ok := auth.From(ctx)
+	if !ok {
+		return openapi.SetWochentage403JSONResponse{Fehler: "dafür musst du angemeldet sein"}, nil
+	}
+	if r.Body == nil {
+		return openapi.SetWochentage400JSONResponse{Fehler: "leere Anfrage"}, nil
+	}
+	if len(r.Body.Wochentage) != 7 {
+		return openapi.SetWochentage400JSONResponse{
+			Fehler: fmt.Sprintf("eine Woche hat sieben Tage, hier kamen %d", len(r.Body.Wochentage)),
+		}, nil
+	}
+
+	var tage [7]bool
+	copy(tage[:], r.Body.Wochentage)
+
+	switch err := a.plans.SetWeekdays(ctx, id.Subject, r.HaushaltId, r.VorlageId, tage); {
+	case errors.Is(err, planner.ErrUnknownHousehold):
+		return openapi.SetWochentage404JSONResponse{
+			Fehler: fmt.Sprintf("den Haushalt %q gibt es nicht", r.HaushaltId),
+		}, nil
+	case errors.Is(err, planner.ErrNotAllowed):
+		return openapi.SetWochentage403JSONResponse{Fehler: "das dürfen die planenden Personen"}, nil
+	case errors.Is(err, planner.ErrInvalidSetup):
+		return openapi.SetWochentage400JSONResponse{Fehler: err.Error()}, nil
+	case err != nil:
+		return nil, err
+	}
+	return openapi.SetWochentage204Response{}, nil
+}
+
+// wochentageNachAussen macht aus dem Rhythmus sieben Wahrheitswerte,
+// Index 0 = Montag.
+//
+// Go zählt Wochentage ab Sonntag, die Oberfläche und die Datenbank ab Montag.
+// Diese Umrechnung steht an genau zwei Stellen — hier für den Weg nach
+// draußen und in tagAusIndex im Speicher für den Weg herein. Eine dritte wäre
+// die, die niemand findet.
+func wochentageNachAussen(r planner.Rhythm) []bool {
+	tage := make([]bool, 7)
+	if r.Type != planner.RhythmFixed {
+		return tage
+	}
+	for _, w := range r.Weekdays {
+		tage[(int(w)+6)%7] = true
+	}
+	return tage
 }
 
 // AbsprachAbHeute trägt die Absprache in die laufende Woche ein.

@@ -594,6 +594,83 @@ paths:
               schema:
                 $ref: "#/components/schemas/Fehler"
 
+  /api/haushalte/{haushaltId}/wochentage/{vorlageId}:
+    put:
+      tags: [haushalt]
+      summary: An welchen Wochentagen eine Aufgabe liegt
+      description: |
+        Sieben Plätze, Index 0 ist Montag. **Alle sieben falsch setzt
+        zurück** — dann gilt wieder der Rhythmus aus der Bibliothek.
+
+        Der Fall: Müll rausbringen steht in der Bibliothek auf Dienstag, weil
+        irgendein Tag dastehen musste. Bei euch kommt die Tonne donnerstags.
+        Bisher gab es dagegen ein einziges Mittel — die Vorlage abbestellen
+        und von Hand neu anlegen, womit die Zahlen der Bibliothek verloren
+        gehen und die Aufgabe als geschätzte „eigene" dasteht.
+
+        **Feste Tage schlagen jeden anderen Rhythmus.** Wer „donnerstags"
+        sagt, meint nicht „alle sieben Tage, bevorzugt donnerstags". Damit
+        ändert sich auch die Häufigkeit: Aus „alle 14 Tage" wird durch die
+        Wahl eines Tages „wöchentlich, samstags". Das ist die Aussage und
+        keine Nebenwirkung — die Oberfläche sagt es beim Setzen dazu.
+
+        Nicht für jeden Rhythmus. Beim Auslöser („der Wäschekorb ist voll")
+        ist ein Wochentag keine Antwort, sondern eine andere Frage; Saison und
+        Phase laufen über Monate; und was an einem Anlass hängt, hat seinen
+        Tag schon. Für die gibt es `400`.
+
+        Nur planende Personen: Der Tag gilt für alle.
+      operationId: setWochentage
+      parameters:
+        - name: haushaltId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vorlageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wochentage]
+              properties:
+                wochentage:
+                  type: array
+                  minItems: 7
+                  maxItems: 7
+                  items:
+                    type: boolean
+                  description: |
+                    Index 0 = Montag. Alle sieben falsch heißt: zurück zum
+                    Rhythmus der Bibliothek.
+      responses:
+        "204":
+          description: gesetzt
+        "400":
+          description: diese Aufgabe hat keinen Wochenrhythmus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "403":
+          description: das dürfen die planenden Personen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+        "404":
+          description: den Haushalt gibt es nicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fehler"
+
   /api/haushalte/{haushaltId}/rueckmeldungen:
     get:
       tags: [haushalt]
@@ -1460,6 +1537,33 @@ components:
           description: |
             Das Wochenraster, Index 0 = Montag. Leerer Text heißt: für diesen
             Tag ist nichts abgesprochen.
+        wochentage:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items:
+            type: boolean
+          description: |
+            An welchen Tagen diese Aufgabe liegt, Index 0 = Montag. Alle
+            sieben falsch heißt: an keinem festen Tag — der Planer sucht sich
+            im Fenster einen.
+
+            Das ist der **geltende** Stand, nicht der der Bibliothek: Hat der
+            Haushalt eigene Tage festgelegt, stehen die hier. Ob sie eigene
+            sind, sagt `wochentage_eigen`.
+        wochentage_eigen:
+          type: boolean
+          description: |
+            Die Tage stammen von diesem Haushalt und nicht aus der Bibliothek.
+            Ohne dieses Feld könnte die Oberfläche „zurücksetzen" nicht von
+            „nichts zu tun" unterscheiden.
+        wochentage_moeglich:
+          type: boolean
+          description: |
+            Ob ein Wochentag für diese Aufgabe überhaupt eine Antwort ist.
+            Falsch beim Auslöser, bei Saison und Phase und bei allem, was an
+            einem Anlass hängt — dort bietet die Oberfläche die Wahl gar nicht
+            erst an, statt eine `400` zu provozieren.
         voraussetzung:
           type: string
           description: |

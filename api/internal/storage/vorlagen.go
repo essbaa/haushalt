@@ -49,16 +49,24 @@ func (p *Plans) TemplatesFor(ctx context.Context, subject, id string) ([]planner
 	// und der Nutzer hätte zwei Wahrheiten vor sich.
 	vorlagen = planner.ScaleTemplates(vorlagen, haushalt)
 
+	// Welche Tage von euch stammen. Die Tage selbst stecken schon in den
+	// Vorlagen oben — hier geht es nur um die Herkunft.
+	eigeneTage, err := p.wochentage(ctx, zeile.ID)
+	if err != nil {
+		return nil, planner.Household{}, err
+	}
+
 	out := make([]planner.TemplateState, 0, len(vorlagen))
 	for _, t := range vorlagen {
 		grund, faktum, fehlt := planner.Status(t, haushalt, hist)
 		out = append(out, planner.TemplateState{
-			Template:  t,
-			Active:    grund == "",
-			Reason:    grund,
-			Fact:      faktum,
-			Need:      fehlt,
-			Agreement: hist.Agreement(t.ID),
+			Template:    t,
+			Active:      grund == "",
+			Reason:      grund,
+			Fact:        faktum,
+			Need:        fehlt,
+			Agreement:   hist.Agreement(t.ID),
+			WeekdaysOwn: len(eigeneTage[t.ID]) > 0,
 		})
 	}
 	return out, haushalt, nil
@@ -213,6 +221,86 @@ func (p *Plans) SetAgreement(ctx context.Context, subject, id, vorlageID string,
 			TemplateID:  vorlageID,
 			Weekday:     int32(tag),
 			MemberID:    kennung,
+		}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+// SetWeekdays legt fest, an welchen Wochentagen eine Vorlage in diesem
+// Haushalt liegt — alle sieben Plätze auf einmal, Index 0 = Montag.
+//
+// Eine leere Auswahl setzt zurück: Dann gilt wieder der Rhythmus aus der
+// Bibliothek. Ein eigenes Kennzeichen dafür gäbe es nicht, weil es keinen
+// dritten Zustand geben soll — „nichts gesagt" und „wieder Vorgabe" wirken
+// gleich, dieselbe Regel wie beim Abbestellen.
+//
+// Geprüft wird gegen die **Bibliotheksfassung** (templatesRoh) und nicht
+// gegen die, die dieser Haushalt gerade sieht. Sonst wäre die Prüfung nach
+// dem ersten Festlegen wirkungslos: Eine überschriebene Vorlage liest sich
+// als „fest", und „fest" wäre dann immer erlaubt.
+//
+// Nur planende Personen: Der Tag gilt für alle.
+func (p *Plans) SetWeekdays(ctx context.Context, subject, id, vorlageID string, tage [7]bool) error {
+	zeile, err := p.alsPlanende(ctx, subject, id)
+	if err != nil {
+		return err
+	}
+
+	roh, err := p.templatesRoh(ctx, zeile.ID)
+	if err != nil {
+		return err
+	}
+	var vorlage planner.TaskTemplate
+	gefunden := false
+	for _, t := range roh {
+		if t.ID == vorlageID {
+			vorlage, gefunden = t, true
+			break
+		}
+	}
+	if !gefunden {
+		return fmt.Errorf("%w: die Aufgabe %q kennt dieser Haushalt nicht", planner.ErrInvalidSetup, vorlageID)
+	}
+
+	// Nur Rhythmen, für die ein Wochentag überhaupt eine Antwort ist.
+	//
+	// „Fest" und „Fenster" fragen beide: an welchem Tag der Woche? Beim
+	// Auslöser ist der Tag keine Antwort, sondern eine andere Frage — die
+	// Wäsche kommt, wenn der Korb voll ist, nicht samstags. „Saison" und
+	// „Phase" laufen über Monate und Jahre, ein Wochentag sagt dort nichts.
+	// Und was an einem Anlass hängt, hat seinen Tag schon.
+	//
+	// Diese Grenze steht hier und nicht nur in der Oberfläche: Eine Regel,
+	// die nur der Bildschirm kennt, gilt für den nächsten Aufrufer nicht.
+	if vorlage.AppliesTo.RequiresEvent ||
+		(vorlage.Rhythm.Type != planner.RhythmFixed && vorlage.Rhythm.Type != planner.RhythmWindow) {
+		return fmt.Errorf("%w: %q hat keinen Wochenrhythmus", planner.ErrInvalidSetup, vorlage.Title)
+	}
+
+	tx, err := p.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := p.db.Queries.WithTx(tx)
+
+	if err := q.ClearTemplateWeekdays(ctx, db.ClearTemplateWeekdaysParams{
+		HouseholdID: zeile.ID,
+		TemplateID:  vorlageID,
+	}); err != nil {
+		return err
+	}
+
+	for i, an := range tage {
+		if !an {
+			continue
+		}
+		if err := q.SetTemplateWeekday(ctx, db.SetTemplateWeekdayParams{
+			HouseholdID: zeile.ID,
+			TemplateID:  vorlageID,
+			Weekday:     int32(i),
 		}); err != nil {
 			return err
 		}

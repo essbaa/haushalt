@@ -124,6 +124,12 @@ type TaskTemplate struct {
 	CreatedAt   pgtype.Timestamptz
 }
 
+type TemplateWeekday struct {
+	HouseholdID pgtype.UUID
+	TemplateID  string
+	Weekday     int32
+}
+
 type WeekPlan struct {
 	HouseholdID pgtype.UUID
 	ISOWeek     string

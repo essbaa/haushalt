@@ -92,3 +92,21 @@ DO UPDATE SET member_id = EXCLUDED.member_id;
 -- kompletten Zeile. Sieben Plätze einzeln abzugleichen wäre sieben Abfragen
 -- und dieselbe Wirkung.
 DELETE FROM agreement WHERE household_id = $1 AND template_id = $2;
+
+-- name: ListTemplateWeekdays :many
+-- Die Wochentage, die dieser Haushalt für Vorlagen festgelegt hat.
+SELECT template_id, weekday
+FROM template_weekday
+WHERE household_id = $1
+ORDER BY template_id, weekday;
+
+-- name: SetTemplateWeekday :exec
+-- Einen Wochentag festlegen. Zweimal denselben zu setzen ist kein Fehler.
+INSERT INTO template_weekday (household_id, template_id, weekday)
+VALUES ($1, $2, $3)
+ON CONFLICT (household_id, template_id, weekday) DO NOTHING;
+
+-- name: ClearTemplateWeekdays :exec
+-- Alle Wochentage einer Vorlage löschen — der erste Schritt beim Setzen einer
+-- neuen Auswahl und zugleich das Zurücksetzen auf den Rhythmus der Bibliothek.
+DELETE FROM template_weekday WHERE household_id = $1 AND template_id = $2;

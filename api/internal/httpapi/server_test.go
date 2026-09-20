@@ -357,6 +357,10 @@ func (fakePlans) SetAgreement(context.Context, string, string, string, [7]string
 	return planner.ErrNotAllowed
 }
 
+func (fakePlans) SetWeekdays(context.Context, string, string, string, [7]bool) error {
+	return planner.ErrNotAllowed
+}
+
 func (fakePlans) ApplyAgreement(context.Context, string, string, string) (int, error) {
 	return 0, planner.ErrNotAllowed
 }

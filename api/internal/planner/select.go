@@ -226,6 +226,15 @@ type TemplateState struct {
 	// Leere Plätze heißen: für diesen Tag ist nichts abgesprochen.
 	Agreement [7]string
 
+	// WeekdaysOwn sagt, dass die Wochentage in Template.Rhythm von diesem
+	// Haushalt stammen und nicht aus der Bibliothek.
+	//
+	// Die Tage selbst stehen schon in der Vorlage — der Aufrufer bekommt sie
+	// bereits überschrieben, weil sonst zwei Fassungen im Umlauf wären. Was
+	// dabei verlorengeht, ist genau diese eine Auskunft, und ohne sie kann
+	// die Oberfläche „zurücksetzen" nicht von „nichts zu tun" unterscheiden.
+	WeekdaysOwn bool
+
 	// Need ist die fehlende Bedingung als Satz für Menschen: „Braucht ein
 	// Kind, das zur Schule geht." Leer, wenn keine fehlt — oder wenn ein
 	// verneintes Faktum die Ursache ist; dann steht in Fact, was zu fragen
